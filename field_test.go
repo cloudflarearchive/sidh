@@ -34,6 +34,10 @@ func (x *Fp751Element) toBigInt() *big.Int {
 	return radix64ToBigInt(x[:])
 }
 
+func (x *Fp751UnreducedProduct) toBigInt() *big.Int {
+	return radix64ToBigInt(x[:])
+}
+
 func (x Fp751Element) Generate(rand *rand.Rand, size int) reflect.Value {
 	// Generation strategy: low limbs taken from [0,2^64); high limb
 	// taken from smaller range
@@ -135,6 +139,39 @@ func TestFp751SubVersusBigInt(t *testing.T) {
 		// Compute z = x - y using big.Int
 		tmp := new(big.Int)
 		tmp.Sub(xBig, yBig)
+
+		// Reduce both mod p and check that they are equal.
+		zBig.Mod(zBig, p)
+		tmp.Mod(tmp, p)
+		return zBig.Cmp(tmp) == 0
+	}
+
+	// Run 1M tests
+	config := &quick.Config{MaxCount: (1 << 20)}
+	if err := quick.Check(assertion, config); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestFp751MulVersusBigInt(t *testing.T) {
+	// The CLN16-SIDH prime
+	p := new(big.Int)
+	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
+
+	// Returns true if computing x * y in this implementation matches
+	// computing x * y using big.Int
+	assertion := func(x, y Fp751Element) bool {
+		z := new(Fp751UnreducedProduct)
+		// Compute z = x * y using Fp751Mul
+		Fp751Mul(z, &x, &y)
+
+		xBig := x.toBigInt()
+		yBig := y.toBigInt()
+		zBig := z.toBigInt()
+
+		// Compute z = x * y using big.Int
+		tmp := new(big.Int)
+		tmp.Mul(xBig, yBig)
 
 		// Reduce both mod p and check that they are equal.
 		zBig.Mod(zBig, p)
