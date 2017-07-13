@@ -11,7 +11,7 @@ import (
 // Convert an Fp751Element to a big.Int for testing.  Because this is only
 // for testing, no big.Int to Fp751Element conversion is provided.
 
-func (x *Fp751Element) toBigInt() *big.Int {
+func radix64ToBigInt(x []uint64) *big.Int {
 	radix := new(big.Int)
 	// 2^64
 	radix.UnmarshalText(([]byte)("18446744073709551616"))
@@ -28,6 +28,10 @@ func (x *Fp751Element) toBigInt() *big.Int {
 	}
 
 	return val
+}
+
+func (x *Fp751Element) toBigInt() *big.Int {
+	return radix64ToBigInt(x[:])
 }
 
 func (x Fp751Element) Generate(rand *rand.Rand, size int) reflect.Value {
