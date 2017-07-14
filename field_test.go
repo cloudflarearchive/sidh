@@ -153,25 +153,30 @@ func TestFp751SubVersusBigInt(t *testing.T) {
 	}
 }
 
-func TestFp751MulVersusBigInt(t *testing.T) {
+func TestFp751MulReduceVersusBigInt(t *testing.T) {
 	// The CLN16-SIDH prime
 	p := new(big.Int)
 	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
+	// The inverse of the Montgomery constant 1/(2^768) (mod p)
+	Rprime := new(big.Int)
+	Rprime.UnmarshalText(([]byte)("1518725603824737389819053798918035007730761831988339415201705393383230549778130460683426736321139507281132743779724182711261647601379839529950740166978024981554536824910527087746254630334120179536606671225338947864384536159295"))
 
 	// Returns true if computing x * y in this implementation matches
 	// computing x * y using big.Int
 	assertion := func(x, y Fp751Element) bool {
-		z := new(Fp751UnreducedProduct)
 		// Compute z = x * y using Fp751Mul
+		z := new(Fp751UnreducedProduct)
 		Fp751Mul(z, &x, &y)
+		zReduced := new(Fp751Element)
+		Fp751Reduce(zReduced, z)
+		zBig := zReduced.toBigInt()
 
+		// Compute z = x * y * Rprime using big.Int
+		tmp := new(big.Int)
 		xBig := x.toBigInt()
 		yBig := y.toBigInt()
-		zBig := z.toBigInt()
-
-		// Compute z = x * y using big.Int
-		tmp := new(big.Int)
 		tmp.Mul(xBig, yBig)
+		tmp.Mul(tmp, Rprime)
 
 		// Reduce both mod p and check that they are equal.
 		zBig.Mod(zBig, p)
