@@ -40,7 +40,7 @@ func (x *Fp751X2) toBigInt() *big.Int {
 	return radix64ToBigInt(x[:])
 }
 
-func (x Fp751Element) Generate(rand *rand.Rand, size int) reflect.Value {
+func generateFp751(rand *rand.Rand) Fp751Element {
 	// Generation strategy: low limbs taken from [0,2^64); high limb
 	// taken from smaller range
 	//
@@ -58,21 +58,28 @@ func (x Fp751Element) Generate(rand *rand.Rand, size int) reflect.Value {
 	//
 	highLimb := rand.Uint64() % 246065832128056
 
-	return reflect.ValueOf(
-		Fp751Element{
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			rand.Uint64(),
-			highLimb,
-		})
+	return Fp751Element{
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		rand.Uint64(),
+		highLimb,
+	}
+}
+
+func (x Fp751Element) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(generateFp751(rand))
+}
+
+func (x FieldElement) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(FieldElement{A: generateFp751(rand), B: generateFp751(rand)})
 }
 
 func TestFp751ElementToBigInt(t *testing.T) {
@@ -86,6 +93,39 @@ func TestFp751ElementToBigInt(t *testing.T) {
 
 	if xValue.Cmp(xValueFromPython) != 0 {
 		t.Error("Expected", xValueFromPython, "found", xValue)
+	}
+}
+
+func TestFieldElementMulIsAssociative(t *testing.T) {
+	// The CLN16-SIDH prime
+	p := new(big.Int)
+	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
+
+	is_associative := func(x, y, z FieldElement) bool {
+		// Compute t1 = (x*y)*z
+		t1 := new(FieldElement)
+		t1.Mul(&x, &y)
+		t1.Mul(t1, &z)
+
+		// Compute t2 = (y*z)*x
+		t2 := new(FieldElement)
+		t2.Mul(&y, &z)
+		t2.Mul(t2, &x)
+
+		a1 := t1.A.toBigInt()
+		a1.Mod(a1, p)
+		a2 := t2.A.toBigInt()
+		a2.Mod(a2, p)
+		b1 := t1.B.toBigInt()
+		b1.Mod(b1, p)
+		b2 := t2.B.toBigInt()
+		b2.Mod(b2, p)
+
+		return (a1.Cmp(a2) == 0) && (b1.Cmp(b2) == 0)
+	}
+
+	if err := quick.Check(is_associative, quickCheckConfig); err != nil {
+		t.Error(err)
 	}
 }
 
