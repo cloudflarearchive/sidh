@@ -8,6 +8,8 @@ import (
 	"testing/quick"
 )
 
+var quickCheckConfig = &quick.Config{MaxCount: (1 << 16)}
+
 // Convert an Fp751Element to a big.Int for testing.  Because this is only
 // for testing, no big.Int to Fp751Element conversion is provided.
 
@@ -103,9 +105,7 @@ func TestFp751StrongReduceVersusBigInt(t *testing.T) {
 		return xRed.Cmp(xOrig) == 0
 	}
 
-	// Run 1M tests
-	config := &quick.Config{MaxCount: (1 << 10)}
-	if err := quick.Check(reductionIsCorrect, config); err != nil {
+	if err := quick.Check(reductionIsCorrect, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
@@ -136,9 +136,7 @@ func TestFp751AddReducedVersusBigInt(t *testing.T) {
 		return zBig.Cmp(tmp) == 0
 	}
 
-	// Run 1M tests
-	config := &quick.Config{MaxCount: (1 << 20)}
-	if err := quick.Check(assertion, config); err != nil {
+	if err := quick.Check(assertion, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
@@ -169,9 +167,7 @@ func TestFp751SubReducedVersusBigInt(t *testing.T) {
 		return zBig.Cmp(tmp) == 0
 	}
 
-	// Run 1M tests
-	config := &quick.Config{MaxCount: (1 << 20)}
-	if err := quick.Check(assertion, config); err != nil {
+	if err := quick.Check(assertion, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
@@ -207,9 +203,7 @@ func TestFp751MulReduceVersusBigInt(t *testing.T) {
 		return zBig.Cmp(tmp) == 0
 	}
 
-	// Run 1M tests
-	config := &quick.Config{MaxCount: (1 << 20)}
-	if err := quick.Check(assertion, config); err != nil {
+	if err := quick.Check(assertion, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
