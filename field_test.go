@@ -87,6 +87,29 @@ func TestFp751ElementToBigInt(t *testing.T) {
 	}
 }
 
+func TestFp751StrongReduceVersusBigInt(t *testing.T) {
+	// The CLN16-SIDH prime
+	p := new(big.Int)
+	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
+
+	reductionIsCorrect := func(x Fp751Element) bool {
+		xOrig := x.toBigInt()
+		xOrig.Mod(xOrig, p)
+
+		Fp751StrongReduce(&x)
+
+		xRed := x.toBigInt()
+
+		return xRed.Cmp(xOrig) == 0
+	}
+
+	// Run 1M tests
+	config := &quick.Config{MaxCount: (1 << 10)}
+	if err := quick.Check(reductionIsCorrect, config); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestFp751AddReducedVersusBigInt(t *testing.T) {
 	// The CLN16-SIDH prime
 	p := new(big.Int)
@@ -168,7 +191,7 @@ func TestFp751MulReduceVersusBigInt(t *testing.T) {
 		z := new(Fp751X2)
 		Fp751Mul(z, &x, &y)
 		zReduced := new(Fp751Element)
-		Fp751Reduce(zReduced, z)
+		Fp751MontgomeryReduce(zReduced, z)
 		zBig := zReduced.toBigInt()
 
 		// Compute z = x * y * Rprime using big.Int
@@ -206,14 +229,14 @@ func BenchmarkFp751Multiply(b *testing.B) {
 	}
 }
 
-func BenchmarkFp751Reduce(b *testing.B) {
+func BenchmarkFp751MontgomeryReduce(b *testing.B) {
 	z := Fp751X2{1595347748594595712, 10854920567160033970, 16877102267020034574, 12435724995376660096, 3757940912203224231, 8251999420280413600, 3648859773438820227, 17622716832674727914, 11029567000887241528, 11216190007549447055, 17606662790980286987, 4720707159513626555, 12887743598335030915, 14954645239176589309, 14178817688915225254, 1191346797768989683, 12629157932334713723, 6348851952904485603, 16444232588597434895, 7809979927681678066, 14642637672942531613, 3092657597757640067, 10160361564485285723, 240071237}
 
 	// This benchmark actually computes garbage, because Fp751 mangles its
 	// input, but since it's constant-time that shouldn't matter for the
 	// benchmarks.
 	for n := 0; n < b.N; n++ {
-		Fp751Reduce(&benchmarkFp751Element, &z)
+		Fp751MontgomeryReduce(&benchmarkFp751Element, &z)
 	}
 }
 

@@ -10,6 +10,10 @@
 #define P751P1_11  $0x00006FE5D541F71C
 
 #define P751_0     $0xFFFFFFFFFFFFFFFF
+#define P751_1     $0xFFFFFFFFFFFFFFFF
+#define P751_2     $0xFFFFFFFFFFFFFFFF
+#define P751_3     $0xFFFFFFFFFFFFFFFF
+#define P751_4     $0xFFFFFFFFFFFFFFFF
 #define P751_5     $0xEEAFFFFFFFFFFFFF
 #define P751_6     $0xE3EC968549F878A8
 #define P751_7     $0xDA959B1A13F7CC76
@@ -60,6 +64,72 @@
 // Avoid the bug by dropping the bytes for `mov eax, 0` in directly:
 
 #define ZERO_AX_WITHOUT_CLOBBERING_FLAGS BYTE	$0xB8; BYTE $0; BYTE $0; BYTE $0; BYTE $0;
+
+TEXT ·Fp751StrongReduce(SB), NOSPLIT, $0-8
+	MOVQ	x+0(FP), REG_P1
+
+	// Zero AX for later use:
+	XORQ	AX, AX
+
+	// Load p into registers:
+	MOVQ	P751_0, R8
+	MOVQ	P751_1, R9
+	MOVQ	P751_2, R10
+	MOVQ	P751_3, R11
+	MOVQ	P751_4, R12
+	MOVQ	P751_5, R13
+	MOVQ	P751_6, R14
+	MOVQ	P751_7, R15
+	MOVQ	P751_8, BX
+	MOVQ	P751_9, CX
+	MOVQ	P751_10, DX
+	MOVQ	P751_11, SI
+
+	// Set x <- x - p
+	SUBQ	R8, (REG_P1)
+	SBBQ	R9, (8)(REG_P1)
+	SBBQ	R10, (16)(REG_P1)
+	SBBQ	R11, (24)(REG_P1)
+	SBBQ	R12, (32)(REG_P1)
+	SBBQ	R13, (40)(REG_P1)
+	SBBQ	R14, (48)(REG_P1)
+	SBBQ	R15, (56)(REG_P1)
+	SBBQ	BX, (64)(REG_P1)
+	SBBQ	CX, (72)(REG_P1)
+	SBBQ	DX, (80)(REG_P1)
+	SBBQ    SI, (88)(REG_P1)
+
+	// Save carry flag indicating x-p < 0 as a mask in AX
+	SBBQ	$0, AX
+
+	// Conditionally add p to x if x-p < 0
+	ANDQ	AX, R8
+	ANDQ	AX, R9
+	ANDQ	AX, R10
+	ANDQ	AX, R11
+	ANDQ	AX, R12
+	ANDQ	AX, R13
+	ANDQ	AX, R14
+	ANDQ	AX, R15
+	ANDQ	AX, BX
+	ANDQ	AX, CX
+	ANDQ	AX, DX
+	ANDQ	AX, SI
+
+	ADDQ	R8, (REG_P1)
+	ADCQ	R9, (8)(REG_P1)
+	ADCQ	R10, (16)(REG_P1)
+	ADCQ	R11, (24)(REG_P1)
+	ADCQ	R12, (32)(REG_P1)
+	ADCQ	R13, (40)(REG_P1)
+	ADCQ	R14, (48)(REG_P1)
+	ADCQ	R15, (56)(REG_P1)
+	ADCQ	BX, (64)(REG_P1)
+	ADCQ	CX, (72)(REG_P1)
+	ADCQ	DX, (80)(REG_P1)
+	ADCQ    SI, (88)(REG_P1)
+
+	RET
 
 TEXT ·Fp751AddReduced(SB), NOSPLIT, $0-24
 
@@ -1226,7 +1296,7 @@ TEXT ·Fp751Mul(SB), $96-24
 
 	RET
 
-TEXT ·Fp751Reduce(SB), $0-16
+TEXT ·Fp751MontgomeryReduce(SB), $0-16
 
 	MOVQ z+0(FP), REG_P2
 	MOVQ x+8(FP), REG_P1

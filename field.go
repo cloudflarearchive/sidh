@@ -37,10 +37,10 @@ func (dest *FieldElement) Mul(lhs, rhs *FieldElement) {
 	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)
 	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)
 
-	Fp751Reduce(&dest.B, &ad_plus_bc)
+	Fp751MontgomeryReduce(&dest.B, &ad_plus_bc)
 
 	Fp751X2AddLazy(&ac, &ac, &bd)
-	Fp751Reduce(&dest.A, &ac)
+	Fp751MontgomeryReduce(&dest.A, &ac)
 }
 
 func (dest *FieldElement) Add(lhs, rhs *FieldElement) {
@@ -81,7 +81,11 @@ func Fp751X2AddLazy(z, x, y *Fp751X2)
 //go:noescape
 func Fp751Mul(z *Fp751X2, x, y *Fp751Element)
 
-// Reduce an X2 to a field element: set z = x (mod p).
+// Perform Montgomery reduction: set z = x R^{-1} (mod p).
 // Destroys the input value.
 //go:noescape
-func Fp751Reduce(z *Fp751Element, x *Fp751X2)
+func Fp751MontgomeryReduce(z *Fp751Element, x *Fp751X2)
+
+// Reduce a field element in [0, 2*p) to one in [0,p).
+//go:noescape
+func Fp751StrongReduce(x *Fp751Element)
