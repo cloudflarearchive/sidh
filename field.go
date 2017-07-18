@@ -122,6 +122,18 @@ func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) {
 	fp751MontgomeryReduce(&dest.a, &ab)	// = a*b*R mod p
 }
 
+// Set dest = x^2
+//
+// Allowed to overlap lhs or rhs with dest.
+func (dest *PrimeFieldElement) Sqr(x *PrimeFieldElement) {
+	a := &x.a				// = a*R
+	b := &x.a				// = b*R
+
+	var ab fp751X2
+	fp751Mul(&ab, a, b)			// = a*b*R*R
+	fp751MontgomeryReduce(&dest.a, &ab)	// = a*b*R mod p
+}
+
 // Set dest = lhs + rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
