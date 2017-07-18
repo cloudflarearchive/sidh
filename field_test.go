@@ -231,6 +231,79 @@ var bench_x = fp751Element{17026702066521327207, 5108203422050077993, 1022539668
 var bench_y = fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
 var bench_z = fp751X2{1595347748594595712, 10854920567160033970, 16877102267020034574, 12435724995376660096, 3757940912203224231, 8251999420280413600, 3648859773438820227, 17622716832674727914, 11029567000887241528, 11216190007549447055, 17606662790980286987, 4720707159513626555, 12887743598335030915, 14954645239176589309, 14178817688915225254, 1191346797768989683, 12629157932334713723, 6348851952904485603, 16444232588597434895, 7809979927681678066, 14642637672942531613, 3092657597757640067, 10160361564485285723, 240071237}
 
+
+func BenchmarkExtensionFieldElementMul(b *testing.B) {
+	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	w := new(ExtensionFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Mul(z, z)
+	}
+}
+
+func BenchmarkExtensionFieldElementSqr(b *testing.B) {
+	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	w := new(ExtensionFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Sqr(z)
+	}
+}
+
+func BenchmarkExtensionFieldElementAdd(b *testing.B) {
+	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	w := new(ExtensionFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Add(z, z)
+	}
+}
+
+func BenchmarkExtensionFieldElementSub(b *testing.B) {
+	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	w := new(ExtensionFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Sub(z, z)
+	}
+}
+
+func BenchmarkPrimeFieldElementMul(b *testing.B) {
+	z := &PrimeFieldElement{a: bench_x}
+	w := new(PrimeFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Mul(z, z)
+	}
+}
+
+func BenchmarkPrimeFieldElementSqr(b *testing.B) {
+	z := &PrimeFieldElement{a: bench_x}
+	w := new(PrimeFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Sqr(z)
+	}
+}
+
+func BenchmarkPrimeFieldElementAdd(b *testing.B) {
+	z := &PrimeFieldElement{a: bench_x}
+	w := new(PrimeFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Add(z, z)
+	}
+}
+
+func BenchmarkPrimeFieldElementSub(b *testing.B) {
+	z := &PrimeFieldElement{a: bench_x}
+	w := new(PrimeFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Sub(z, z)
+	}
+}
+
 func BenchmarkFp751Multiply(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		fp751Mul(&benchmarkFp751X2, &bench_x, &bench_y)
@@ -257,14 +330,5 @@ func BenchmarkFp751AddReduced(b *testing.B) {
 func BenchmarkFp751SubReduced(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		fp751SubReduced(&benchmarkFp751Element, &bench_x, &bench_y)
-	}
-}
-
-func BenchmarkExtensionFieldElementMul(b *testing.B) {
-	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
-	w := new(ExtensionFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Mul(z, z)
 	}
 }
