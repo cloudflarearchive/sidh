@@ -18,8 +18,7 @@ type ExtensionFieldElement struct {
 //
 // Allowed to overlap lhs or rhs with dest.
 func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) {
-	// Let (a,b,c,d) = (lhs.A,lhs.B,rhs.A,rhs.B).
-
+	// Let (a,b,c,d) = (lhs.a,lhs.b,rhs.a,rhs.b).
 	a := &lhs.a
 	b := &lhs.b
 	c := &rhs.a
@@ -45,13 +44,38 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) {
 
 	var ad_plus_bc fp751X2
 	fp751Mul(&ad_plus_bc, &b_minus_a, &c_minus_d)	// = (b-a)*(c-d)*R*R
-	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)	// = ((b-a)*(c-d) - a*c)*R*R
-	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)	// = ((b-a)*(c-d) - a*c - b*d)*R*R
+	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)	// = ((b-a)*(c-d) + a*c)*R*R
+	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)	// = ((b-a)*(c-d) + a*c + b*d)*R*R
 
-	fp751MontgomeryReduce(&dest.a, &ad_plus_bc)	// = (a*d + b*c)*R mod p
+	fp751MontgomeryReduce(&dest.b, &ad_plus_bc)	// = (a*d + b*c)*R mod p
 
-	fp751X2AddLazy(&ac, &ac, &bd)			// = (a*c + b*d)*R*R
-	fp751MontgomeryReduce(&dest.b, &ac)		// = (a*c + b*d)*R mod p
+	var ac_minus_bd fp751X2
+	fp751X2SubLazy(&ac_minus_bd, &ac, &bd)		// = (a*c - b*d)*R*R
+	fp751MontgomeryReduce(&dest.a, &ac_minus_bd)	// = (a*c - b*d)*R mod p
+}
+
+// Set dest = x * x
+//
+// Allowed to overlap dest with x.
+func (dest *ExtensionFieldElement) Sqr(x *ExtensionFieldElement) {
+	a := &x.a
+	b := &x.b
+
+	// We want to compute
+	//
+	// (a + bi)*(a + bi) = (a^2 - b^2) + 2abi.
+
+	var a2, a_plus_b, a_minus_b fp751Element
+	fp751AddReduced(&a2, a, a)				// = a*R + a*R = 2*a*R
+	fp751AddReduced(&a_plus_b, a, b)			// = a*R + b*R = (a+b)*R
+	fp751SubReduced(&a_minus_b, a, b)			// = a*R - b*R = (a-b)*R
+
+	var asq_minus_bsq, ab2 fp751X2
+	fp751Mul(&asq_minus_bsq, &a_plus_b, &a_minus_b)		// = (a+b)*(a-b)*R*R = (a^2 - b^2)*R*R
+	fp751Mul(&ab2, &a2, b)					// = 2*a*b*R*R
+
+	fp751MontgomeryReduce(&dest.a, &asq_minus_bsq)		// = (a^2 - b^2)*R mod p
+	fp751MontgomeryReduce(&dest.b, &ab2)			// = 2*a*b*R mod p
 }
 
 // Set dest = lhs + rhs.
@@ -149,6 +173,10 @@ func fp751AddLazy(z, x, y *fp751Element)
 // Compute z = x + y, without reducing mod p.
 //go:noescape
 func fp751X2AddLazy(z, x, y *fp751X2)
+
+// Compute z = x - y, without reducing mod p.
+//go:noescape
+func fp751X2SubLazy(z, x, y *fp751X2)
 
 // Compute z = x * y.
 //go:noescape

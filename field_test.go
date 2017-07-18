@@ -104,6 +104,10 @@ func (x ExtensionFieldElement) Generate(rand *rand.Rand, size int) reflect.Value
 	return reflect.ValueOf(ExtensionFieldElement{a: generateFp751(rand), b: generateFp751(rand)})
 }
 
+//------------------------------------------------------------------------------
+// Extension Field
+//------------------------------------------------------------------------------
+
 func TestExtensionFieldElementMulDistributesOverAdd(t *testing.T) {
 	mulDistributesOverAdd := func(x, y, z ExtensionFieldElement) bool {
 		// Compute t1 = (x+y)*z
@@ -145,6 +149,28 @@ func TestExtensionFieldElementMulIsAssociative(t *testing.T) {
 		t.Error(err)
 	}
 }
+
+func TestExtensionFieldElementSqrMatchesMul(t *testing.T) {
+	sqrMatchesMul := func(x ExtensionFieldElement) bool {
+		// Compute t1 = (x*x)
+		t1 := new(ExtensionFieldElement)
+		t1.Mul(&x, &x)
+
+		// Compute t2 = x^2
+		t2 := new(ExtensionFieldElement)
+		t2.Sqr(&x)
+
+		return t1.VartimeEq(t2)
+	}
+
+	if err := quick.Check(sqrMatchesMul, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
+//------------------------------------------------------------------------------
+// Prime Field
+//------------------------------------------------------------------------------
 
 func TestPrimeFieldElementAddVersusBigInt(t *testing.T) {
 	addMatchesBigInt := func(x, y PrimeFieldElement) bool {
