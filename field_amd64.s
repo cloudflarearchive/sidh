@@ -65,7 +65,7 @@
 
 #define ZERO_AX_WITHOUT_CLOBBERING_FLAGS BYTE	$0xB8; BYTE $0; BYTE $0; BYTE $0; BYTE $0;
 
-TEXT ·Fp751StrongReduce(SB), NOSPLIT, $0-8
+TEXT ·fp751StrongReduce(SB), NOSPLIT, $0-8
 	MOVQ	x+0(FP), REG_P1
 
 	// Zero AX for later use:
@@ -131,7 +131,7 @@ TEXT ·Fp751StrongReduce(SB), NOSPLIT, $0-8
 
 	RET
 
-TEXT ·Fp751AddReduced(SB), NOSPLIT, $0-24
+TEXT ·fp751AddReduced(SB), NOSPLIT, $0-24
 
 	MOVQ	z+0(FP), REG_P3
 	MOVQ	x+8(FP), REG_P1
@@ -262,7 +262,7 @@ TEXT ·Fp751AddReduced(SB), NOSPLIT, $0-24
 
 	RET
 
-TEXT ·Fp751SubReduced(SB), NOSPLIT, $0-24
+TEXT ·fp751SubReduced(SB), NOSPLIT, $0-24
 
 	MOVQ	z+0(FP),  REG_P3
 	MOVQ	x+8(FP),  REG_P1
@@ -365,7 +365,7 @@ TEXT ·Fp751SubReduced(SB), NOSPLIT, $0-24
 
 	RET
 
-TEXT ·Fp751Mul(SB), $96-24
+TEXT ·fp751Mul(SB), $96-24
 
 	// Here we store the destination in CX instead of in REG_P3 because the
 	// multiplication instructions use DX as an implicit destination
@@ -1296,7 +1296,7 @@ TEXT ·Fp751Mul(SB), $96-24
 
 	RET
 
-TEXT ·Fp751MontgomeryReduce(SB), $0-16
+TEXT ·fp751MontgomeryReduce(SB), $0-16
 
 	MOVQ z+0(FP), REG_P2
 	MOVQ x+8(FP), REG_P1
@@ -1904,7 +1904,7 @@ TEXT ·Fp751MontgomeryReduce(SB), $0-16
 
 	RET
 
-TEXT ·Fp751AddLazy(SB), NOSPLIT, $0-24
+TEXT ·fp751AddLazy(SB), NOSPLIT, $0-24
 
 	MOVQ z+0(FP), REG_P3
 	MOVQ x+8(FP), REG_P1
@@ -1951,7 +1951,7 @@ TEXT ·Fp751AddLazy(SB), NOSPLIT, $0-24
 
 	RET
 
-TEXT ·Fp751X2AddLazy(SB), NOSPLIT, $0-24
+TEXT ·fp751X2AddLazy(SB), NOSPLIT, $0-24
 
 	MOVQ z+0(FP), REG_P3
 	MOVQ x+8(FP), REG_P1

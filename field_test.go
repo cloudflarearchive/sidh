@@ -11,8 +11,8 @@ import (
 var quickCheckConfig = &quick.Config{MaxCount: (1 << 16)}
 var cln16prime, _ = new(big.Int).SetString("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831", 10)
 
-// Convert an Fp751Element to a big.Int for testing.  Because this is only
-// for testing, no big.Int to Fp751Element conversion is provided.
+// Convert an fp751Element to a big.Int for testing.  Because this is only
+// for testing, no big.Int to fp751Element conversion is provided.
 
 func radix64ToBigInt(x []uint64) *big.Int {
 	radix := new(big.Int)
@@ -33,15 +33,36 @@ func radix64ToBigInt(x []uint64) *big.Int {
 	return val
 }
 
-func (x *Fp751Element) toBigInt() *big.Int {
-	return radix64ToBigInt(x[:])
+func (x *PrimeFieldElement) toBigInt() *big.Int {
+	// Convert from Montgomery form
+	a := fp751Element{}
+	aR := fp751X2{}
+	copy(aR[:], x.a[:])            // = a*R
+	fp751MontgomeryReduce(&a, &aR) // = a mod p  in [0,2p)
+	fp751StrongReduce(&a)          // = a mod p  in [0,p)
+	return radix64ToBigInt(a[:])
 }
 
-func (x *Fp751X2) toBigInt() *big.Int {
-	return radix64ToBigInt(x[:])
+func TestPrimeFieldElementToBigInt(t *testing.T) {
+	// Chosen so that p < xR < 2p
+	x := PrimeFieldElement{a: fp751Element{
+		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 140737488355328,
+	}}
+	// Computed using Sage:
+	// sage: p = 2^372 * 3^239 - 1
+	// sage: R = 2^768
+	// sage: from_radix_64 = lambda xs: sum((xi * (2**64)**i for i,xi in enumerate(xs)))
+	// sage: xR = from_radix_64([1]*11 + [2^47])
+	// sage: assert(p < xR)
+	// sage: assert(xR < 2*p)
+	// sage: (xR / R) % p
+	xBig, _ := new(big.Int).SetString("4469946751055876387821312289373600189787971305258234719850789711074696941114031433609871105823930699680637820852699269802003300352597419024286385747737509380032982821081644521634652750355306547718505685107272222083450567982240", 10)
+	if xBig.Cmp(x.toBigInt()) != 0 {
+		t.Error("Expected", xBig, "found", x.toBigInt())
+	}
 }
 
-func generateFp751(rand *rand.Rand) Fp751Element {
+func generateFp751(rand *rand.Rand) fp751Element {
 	// Generation strategy: low limbs taken from [0,2^64); high limb
 	// taken from smaller range
 	//
@@ -59,7 +80,7 @@ func generateFp751(rand *rand.Rand) Fp751Element {
 	//
 	highLimb := rand.Uint64() % 246065832128056
 
-	return Fp751Element{
+	return fp751Element{
 		rand.Uint64(),
 		rand.Uint64(),
 		rand.Uint64(),
@@ -75,38 +96,24 @@ func generateFp751(rand *rand.Rand) Fp751Element {
 	}
 }
 
-func (x Fp751Element) Generate(rand *rand.Rand, size int) reflect.Value {
-	return reflect.ValueOf(generateFp751(rand))
+func (x PrimeFieldElement) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(PrimeFieldElement{a: generateFp751(rand)})
 }
 
-func (x FieldElement) Generate(rand *rand.Rand, size int) reflect.Value {
-	return reflect.ValueOf(FieldElement{a: generateFp751(rand), b: generateFp751(rand)})
+func (x ExtensionFieldElement) Generate(rand *rand.Rand, size int) reflect.Value {
+	return reflect.ValueOf(ExtensionFieldElement{a: generateFp751(rand), b: generateFp751(rand)})
 }
 
-func TestFp751ElementToBigInt(t *testing.T) {
-	x := Fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
-	// Generated using:
-	// from_radix_64 = lambda xs: sum((xi * (2**64)**i for i,xi in enumerate(xs)))
-	xValueFromPython := new(big.Int)
-	xValueFromPython.UnmarshalText(([]byte)("2306321702539636385951781662938907950351672982559361883294272447056580097879230968214879481380598127719197355217101680007303754413021721583686358737065759814651127760172383109266658276160240175619638712486220677169799330645607"))
-
-	xValue := x.toBigInt()
-
-	if xValue.Cmp(xValueFromPython) != 0 {
-		t.Error("Expected", xValueFromPython, "found", xValue)
-	}
-}
-
-func TestFieldElementMulDistributesOverAdd(t *testing.T) {
-	mulDistributesOverAdd := func(x, y, z FieldElement) bool {
+func TestExtensionFieldElementMulDistributesOverAdd(t *testing.T) {
+	mulDistributesOverAdd := func(x, y, z ExtensionFieldElement) bool {
 		// Compute t1 = (x+y)*z
-		t1 := new(FieldElement)
+		t1 := new(ExtensionFieldElement)
 		t1.Add(&x, &y)
 		t1.Mul(t1, &z)
 
 		// Compute t2 = x*z + y*z
-		t2 := new(FieldElement)
-		t3 := new(FieldElement)
+		t2 := new(ExtensionFieldElement)
+		t3 := new(ExtensionFieldElement)
 		t2.Mul(&x, &z)
 		t3.Mul(&y, &z)
 		t2.Add(t2, t3)
@@ -119,15 +126,15 @@ func TestFieldElementMulDistributesOverAdd(t *testing.T) {
 	}
 }
 
-func TestFieldElementMulIsAssociative(t *testing.T) {
-	is_associative := func(x, y, z FieldElement) bool {
+func TestExtensionFieldElementMulIsAssociative(t *testing.T) {
+	is_associative := func(x, y, z ExtensionFieldElement) bool {
 		// Compute t1 = (x*y)*z
-		t1 := new(FieldElement)
+		t1 := new(ExtensionFieldElement)
 		t1.Mul(&x, &y)
 		t1.Mul(t1, &z)
 
 		// Compute t2 = (y*z)*x
-		t2 := new(FieldElement)
+		t2 := new(ExtensionFieldElement)
 		t2.Mul(&y, &z)
 		t2.Mul(t2, &x)
 
@@ -139,156 +146,97 @@ func TestFieldElementMulIsAssociative(t *testing.T) {
 	}
 }
 
-func TestFp751StrongReduceVersusBigInt(t *testing.T) {
-	reductionIsCorrect := func(x Fp751Element) bool {
-		xOrig := x.toBigInt()
-		xOrig.Mod(xOrig, cln16prime)
+func TestPrimeFieldElementAddVersusBigInt(t *testing.T) {
+	addMatchesBigInt := func(x, y PrimeFieldElement) bool {
+		z := new(PrimeFieldElement)
+		z.Add(&x, &y)
 
-		Fp751StrongReduce(&x)
-		xRed := x.toBigInt()
+		check := new(big.Int)
+		check.Add(x.toBigInt(), y.toBigInt())
+		check.Mod(check, cln16prime)
 
-		return xRed.Cmp(xOrig) == 0
+		return check.Cmp(z.toBigInt()) == 0
 	}
 
-	if err := quick.Check(reductionIsCorrect, quickCheckConfig); err != nil {
+	if err := quick.Check(addMatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
 
-func TestFp751AddReducedVersusBigInt(t *testing.T) {
-	additionMatchesBigInt := func(x, y Fp751Element) bool {
-		// Compute z = x + y using Fp751AddReduced
-		z := new(Fp751Element)
-		Fp751AddReduced(z, &x, &y)
+func TestPrimeFieldElementSubVersusBigInt(t *testing.T) {
+	subMatchesBigInt := func(x, y PrimeFieldElement) bool {
+		z := new(PrimeFieldElement)
+		z.Sub(&x, &y)
 
-		xBig := x.toBigInt()
-		yBig := y.toBigInt()
-		zBig := z.toBigInt()
+		check := new(big.Int)
+		check.Sub(x.toBigInt(), y.toBigInt())
+		check.Mod(check, cln16prime)
 
-		// Compute z = x + y using big.Int
-		tmp := new(big.Int)
-		tmp.Add(xBig, yBig)
-
-		// Reduce both mod p and check that they are equal.
-		zBig.Mod(zBig, cln16prime)
-		tmp.Mod(tmp, cln16prime)
-		return zBig.Cmp(tmp) == 0
+		return check.Cmp(z.toBigInt()) == 0
 	}
 
-	if err := quick.Check(additionMatchesBigInt, quickCheckConfig); err != nil {
+	if err := quick.Check(subMatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
 
-func TestFp751SubReducedVersusBigInt(t *testing.T) {
-	subtractionMatchesBigInt := func(x, y Fp751Element) bool {
-		// Compute z = x - y using Fp751SubReduced
-		z := new(Fp751Element)
-		Fp751SubReduced(z, &x, &y)
+func TestPrimeFieldElementMulVersusBigInt(t *testing.T) {
+	mulMatchesBigInt := func(x, y PrimeFieldElement) bool {
+		z := new(PrimeFieldElement)
+		z.Mul(&x, &y)
 
-		xBig := x.toBigInt()
-		yBig := y.toBigInt()
-		zBig := z.toBigInt()
+		check := new(big.Int)
+		check.Mul(x.toBigInt(), y.toBigInt())
+		check.Mod(check, cln16prime)
 
-		// Compute z = x - y using big.Int
-		tmp := new(big.Int)
-		tmp.Sub(xBig, yBig)
-
-		// Reduce both mod p and check that they are equal.
-		zBig.Mod(zBig, cln16prime)
-		tmp.Mod(tmp, cln16prime)
-		return zBig.Cmp(tmp) == 0
+		return check.Cmp(z.toBigInt()) == 0
 	}
 
-	if err := quick.Check(subtractionMatchesBigInt, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestFp751MulReduceVersusBigInt(t *testing.T) {
-	// The inverse of the Montgomery constant 1/(2^768) (mod p)
-	Rprime := new(big.Int)
-	Rprime.UnmarshalText(([]byte)("1518725603824737389819053798918035007730761831988339415201705393383230549778130460683426736321139507281132743779724182711261647601379839529950740166978024981554536824910527087746254630334120179536606671225338947864384536159295"))
-
-	montgomeryMultiplicationMatchesBigInt := func(x, y Fp751Element) bool {
-		// Compute z = x * y using Fp751Mul
-		z := new(Fp751X2)
-		Fp751Mul(z, &x, &y)
-		zReduced := new(Fp751Element)
-		Fp751MontgomeryReduce(zReduced, z)
-		zBig := zReduced.toBigInt()
-
-		// Compute z = x * y * Rprime using big.Int
-		tmp := new(big.Int)
-		xBig := x.toBigInt()
-		yBig := y.toBigInt()
-		tmp.Mul(xBig, yBig)
-		tmp.Mul(tmp, Rprime)
-
-		// Reduce both mod p and check that they are equal.
-		zBig.Mod(zBig, cln16prime)
-		tmp.Mod(tmp, cln16prime)
-		return zBig.Cmp(tmp) == 0
-	}
-
-	if err := quick.Check(montgomeryMultiplicationMatchesBigInt, quickCheckConfig); err != nil {
+	if err := quick.Check(mulMatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
 
 // Package-level storage for this field element is intended to deter
 // compiler optimizations.
-var benchmarkFp751Element Fp751Element
-var benchmarkFp751X2 Fp751X2
+var benchmarkFp751Element fp751Element
+var benchmarkFp751X2 fp751X2
+var bench_x = fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
+var bench_y = fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
+var bench_z = fp751X2{1595347748594595712, 10854920567160033970, 16877102267020034574, 12435724995376660096, 3757940912203224231, 8251999420280413600, 3648859773438820227, 17622716832674727914, 11029567000887241528, 11216190007549447055, 17606662790980286987, 4720707159513626555, 12887743598335030915, 14954645239176589309, 14178817688915225254, 1191346797768989683, 12629157932334713723, 6348851952904485603, 16444232588597434895, 7809979927681678066, 14642637672942531613, 3092657597757640067, 10160361564485285723, 240071237}
 
 func BenchmarkFp751Multiply(b *testing.B) {
-	x := Fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
-
-	y := Fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
-
 	for n := 0; n < b.N; n++ {
-		Fp751Mul(&benchmarkFp751X2, &x, &y)
+		fp751Mul(&benchmarkFp751X2, &bench_x, &bench_y)
 	}
 }
 
 func BenchmarkFp751MontgomeryReduce(b *testing.B) {
-	z := Fp751X2{1595347748594595712, 10854920567160033970, 16877102267020034574, 12435724995376660096, 3757940912203224231, 8251999420280413600, 3648859773438820227, 17622716832674727914, 11029567000887241528, 11216190007549447055, 17606662790980286987, 4720707159513626555, 12887743598335030915, 14954645239176589309, 14178817688915225254, 1191346797768989683, 12629157932334713723, 6348851952904485603, 16444232588597434895, 7809979927681678066, 14642637672942531613, 3092657597757640067, 10160361564485285723, 240071237}
+	z := bench_z
 
-	// This benchmark actually computes garbage, because Fp751 mangles its
-	// input, but since it's constant-time that shouldn't matter for the
-	// benchmarks.
+	// This benchmark actually computes garbage, because
+	// fp751MontgomeryReduce mangles its input, but since it's
+	// constant-time that shouldn't matter for the benchmarks.
 	for n := 0; n < b.N; n++ {
-		Fp751MontgomeryReduce(&benchmarkFp751Element, &z)
+		fp751MontgomeryReduce(&benchmarkFp751Element, &z)
 	}
 }
 
 func BenchmarkFp751AddReduced(b *testing.B) {
-	x := Fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
-
-	y := Fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
-
 	for n := 0; n < b.N; n++ {
-		Fp751AddReduced(&benchmarkFp751Element, &x, &y)
+		fp751AddReduced(&benchmarkFp751Element, &bench_x, &bench_y)
 	}
 }
 
 func BenchmarkFp751SubReduced(b *testing.B) {
-	x := Fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
-
-	y := Fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
-
 	for n := 0; n < b.N; n++ {
-		Fp751SubReduced(&benchmarkFp751Element, &x, &y)
+		fp751SubReduced(&benchmarkFp751Element, &bench_x, &bench_y)
 	}
 }
 
-func BenchmarkFieldElementMultiply(b *testing.B) {
-	x := Fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
-
-	y := Fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
-
-	z := &FieldElement{a: x, b: y}
-	w := new(FieldElement)
+func BenchmarkExtensionFieldElementMul(b *testing.B) {
+	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	w := new(ExtensionFieldElement)
 
 	for n := 0; n < b.N; n++ {
 		w.Mul(z, z)

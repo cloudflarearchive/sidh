@@ -1,12 +1,23 @@
 package cln16sidh
 
+//------------------------------------------------------------------------------
+// Extension Field
+//------------------------------------------------------------------------------
+
 // Represents an element of the extension field F_{p^2}.
-type FieldElement struct {
-	a Fp751Element
-	b Fp751Element
+type ExtensionFieldElement struct {
+	// This field element is in Montgomery form, so that the value `a` is
+	// represented by `aR mod p`.
+	a fp751Element
+	// This field element is in Montgomery form, so that the value `b` is
+	// represented by `bR mod p`.
+	b fp751Element
 }
 
-func (dest *FieldElement) Mul(lhs, rhs *FieldElement) {
+// Set dest = lhs * rhs.
+//
+// Allowed to overlap lhs or rhs with dest.
+func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) {
 	// Let (a,b,c,d) = (lhs.A,lhs.B,rhs.A,rhs.B).
 
 	a := &lhs.a
@@ -24,82 +35,139 @@ func (dest *FieldElement) Mul(lhs, rhs *FieldElement) {
 	//
 	// so (a*d + b*c) = (b-a)*(c-d) + a*c + b*d.
 
-	var ac, bd Fp751X2
-	Fp751Mul(&ac, a, c)				// = a*c*R*R
-	Fp751Mul(&bd, b, d)				// = b*d*R*R
+	var ac, bd fp751X2
+	fp751Mul(&ac, a, c)				// = a*c*R*R
+	fp751Mul(&bd, b, d)				// = b*d*R*R
 
-	var b_minus_a, c_minus_d Fp751Element
-	Fp751SubReduced(&b_minus_a, b, a)		// = (b-a)*R
-	Fp751SubReduced(&c_minus_d, c, d)		// = (c-d)*R
+	var b_minus_a, c_minus_d fp751Element
+	fp751SubReduced(&b_minus_a, b, a)		// = (b-a)*R
+	fp751SubReduced(&c_minus_d, c, d)		// = (c-d)*R
 
-	var ad_plus_bc Fp751X2
-	Fp751Mul(&ad_plus_bc, &b_minus_a, &c_minus_d)	// = (b-a)*(c-d)*R*R
-	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)	// = ((b-a)*(c-d) - a*c)*R*R
-	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)	// = ((b-a)*(c-d) - a*c - b*d)*R*R
+	var ad_plus_bc fp751X2
+	fp751Mul(&ad_plus_bc, &b_minus_a, &c_minus_d)	// = (b-a)*(c-d)*R*R
+	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)	// = ((b-a)*(c-d) - a*c)*R*R
+	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)	// = ((b-a)*(c-d) - a*c - b*d)*R*R
 
-	Fp751MontgomeryReduce(&dest.a, &ad_plus_bc)	// = (a*d + b*c)*R mod p
+	fp751MontgomeryReduce(&dest.a, &ad_plus_bc)	// = (a*d + b*c)*R mod p
 
-	Fp751X2AddLazy(&ac, &ac, &bd)			// = (a*c + b*d)*R*R
-	Fp751MontgomeryReduce(&dest.b, &ac)		// = (a*c + b*d)*R mod p
+	fp751X2AddLazy(&ac, &ac, &bd)			// = (a*c + b*d)*R*R
+	fp751MontgomeryReduce(&dest.b, &ac)		// = (a*c + b*d)*R mod p
 }
 
-func (dest *FieldElement) Add(lhs, rhs *FieldElement) {
-	Fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
-	Fp751AddReduced(&dest.b, &lhs.b, &rhs.b)
+// Set dest = lhs + rhs.
+//
+// Allowed to overlap lhs or rhs with dest.
+func (dest *ExtensionFieldElement) Add(lhs, rhs *ExtensionFieldElement) {
+	fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
+	fp751AddReduced(&dest.b, &lhs.b, &rhs.b)
 }
 
-func (dest *FieldElement) Sub(lhs, rhs *FieldElement) {
-	Fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
-	Fp751SubReduced(&dest.b, &lhs.b, &rhs.b)
+// Set dest = lhs - rhs.
+//
+// Allowed to overlap lhs or rhs with dest.
+func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) {
+	fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
+	fp751SubReduced(&dest.b, &lhs.b, &rhs.b)
 }
 
-func (lhs *FieldElement) VartimeEq(rhs *FieldElement) bool {
-	return lhs.a.VartimeEq(rhs.a) && lhs.b.VartimeEq(rhs.b)
+// Returns true if lhs = rhs.  Takes variable time.
+func (lhs *ExtensionFieldElement) VartimeEq(rhs *ExtensionFieldElement) bool {
+	return lhs.a.vartimeEq(rhs.a) && lhs.b.vartimeEq(rhs.b)
 }
 
+//------------------------------------------------------------------------------
+// Prime Field
+//------------------------------------------------------------------------------
 
-const Fp751NumWords = 12
+// Represents an element of the prime field F_p.
+type PrimeFieldElement struct {
+	// This field element is in Montgomery form, so that the value `a` is
+	// represented by `aR mod p`.
+	a fp751Element
+}
 
-// Represents an element of the base field F_p, in Montgomery form.
-type Fp751Element [Fp751NumWords]uint64
+// Set dest = lhs * rhs.
+//
+// Allowed to overlap lhs or rhs with dest.
+func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) {
+	a := &lhs.a				// = a*R
+	b := &rhs.a				// = b*R
+
+	var ab fp751X2
+	fp751Mul(&ab, a, b)			// = a*b*R*R
+	fp751MontgomeryReduce(&dest.a, &ab)	// = a*b*R mod p
+}
+
+// Set dest = lhs + rhs.
+//
+// Allowed to overlap lhs or rhs with dest.
+func (dest *PrimeFieldElement) Add(lhs, rhs *PrimeFieldElement) {
+	fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
+}
+
+// Set dest = lhs - rhs.
+//
+// Allowed to overlap lhs or rhs with dest.
+func (dest *PrimeFieldElement) Sub(lhs, rhs *PrimeFieldElement) {
+	fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
+}
+
+// Returns true if lhs = rhs.  Takes variable time.
+func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
+	return lhs.a.vartimeEq(rhs.a)
+}
+
+//------------------------------------------------------------------------------
+// Internals
+//------------------------------------------------------------------------------
+
+const fp751NumWords = 12
+
+// Internal representation of an element of the base field F_p.
+//
+// This type is distinct from PrimeFieldElement in that no particular meaning
+// is assigned to the representation -- it could represent an element in
+// Montgomery form, or not.  Tracking the meaning of the field element is left
+// to higher types.
+type fp751Element [fp751NumWords]uint64
 
 // Represents an intermediate product of two elements of the base field F_p.
-type Fp751X2 [2 * Fp751NumWords]uint64
+type fp751X2 [2 * fp751NumWords]uint64
 
 // Compute z = x + y (mod p).
 //go:noescape
-func Fp751AddReduced(z, x, y *Fp751Element)
+func fp751AddReduced(z, x, y *fp751Element)
 
 // Compute z = x - y (mod p).
 //go:noescape
-func Fp751SubReduced(z, x, y *Fp751Element)
+func fp751SubReduced(z, x, y *fp751Element)
 
 // Compute z = x + y, without reducing mod p.
 //go:noescape
-func Fp751AddLazy(z, x, y *Fp751Element)
+func fp751AddLazy(z, x, y *fp751Element)
 
 // Compute z = x + y, without reducing mod p.
 //go:noescape
-func Fp751X2AddLazy(z, x, y *Fp751X2)
+func fp751X2AddLazy(z, x, y *fp751X2)
 
 // Compute z = x * y.
 //go:noescape
-func Fp751Mul(z *Fp751X2, x, y *Fp751Element)
+func fp751Mul(z *fp751X2, x, y *fp751Element)
 
 // Perform Montgomery reduction: set z = x R^{-1} (mod p).
 // Destroys the input value.
 //go:noescape
-func Fp751MontgomeryReduce(z *Fp751Element, x *Fp751X2)
+func fp751MontgomeryReduce(z *fp751Element, x *fp751X2)
 
 // Reduce a field element in [0, 2*p) to one in [0,p).
 //go:noescape
-func Fp751StrongReduce(x *Fp751Element)
+func fp751StrongReduce(x *fp751Element)
 
-func (x Fp751Element) VartimeEq(y Fp751Element) bool {
-	Fp751StrongReduce(&x)
-	Fp751StrongReduce(&y)
+func (x fp751Element) vartimeEq(y fp751Element) bool {
+	fp751StrongReduce(&x)
+	fp751StrongReduce(&y)
 	eq := true
-	for i := 0; i < Fp751NumWords; i++ {
+	for i := 0; i < fp751NumWords; i++ {
 		eq = (x[i] == y[i]) && eq
 	}
 
