@@ -80,7 +80,7 @@ func (x Fp751Element) Generate(rand *rand.Rand, size int) reflect.Value {
 }
 
 func (x FieldElement) Generate(rand *rand.Rand, size int) reflect.Value {
-	return reflect.ValueOf(FieldElement{A: generateFp751(rand), B: generateFp751(rand)})
+	return reflect.ValueOf(FieldElement{a: generateFp751(rand), b: generateFp751(rand)})
 }
 
 func TestFp751ElementToBigInt(t *testing.T) {
@@ -287,7 +287,7 @@ func BenchmarkFieldElementMultiply(b *testing.B) {
 
 	y := Fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
 
-	z := &FieldElement{A: x, B: y}
+	z := &FieldElement{a: x, b: y}
 	w := new(FieldElement)
 
 	for n := 0; n < b.N; n++ {

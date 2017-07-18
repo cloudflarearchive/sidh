@@ -2,17 +2,17 @@ package cln16sidh
 
 // Represents an element of the extension field F_{p^2}.
 type FieldElement struct {
-	A Fp751Element
-	B Fp751Element
+	a Fp751Element
+	b Fp751Element
 }
 
 func (dest *FieldElement) Mul(lhs, rhs *FieldElement) {
 	// Let (a,b,c,d) = (lhs.A,lhs.B,rhs.A,rhs.B).
 
-	a := &lhs.A
-	b := &lhs.B
-	c := &rhs.A
-	d := &rhs.B
+	a := &lhs.a
+	b := &lhs.b
+	c := &rhs.a
+	d := &rhs.b
 
 	// We want to compute
 	//
@@ -37,25 +37,26 @@ func (dest *FieldElement) Mul(lhs, rhs *FieldElement) {
 	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)	// = ((b-a)*(c-d) - a*c)*R*R
 	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)	// = ((b-a)*(c-d) - a*c - b*d)*R*R
 
-	Fp751MontgomeryReduce(&dest.B, &ad_plus_bc)	// = (a*d + b*c)*R mod p
+	Fp751MontgomeryReduce(&dest.a, &ad_plus_bc)	// = (a*d + b*c)*R mod p
 
 	Fp751X2AddLazy(&ac, &ac, &bd)			// = (a*c + b*d)*R*R
-	Fp751MontgomeryReduce(&dest.A, &ac)		// = (a*c + b*d)*R mod p
+	Fp751MontgomeryReduce(&dest.b, &ac)		// = (a*c + b*d)*R mod p
 }
 
 func (dest *FieldElement) Add(lhs, rhs *FieldElement) {
-	Fp751AddReduced(&dest.A, &lhs.A, &rhs.A)
-	Fp751AddReduced(&dest.B, &lhs.B, &rhs.B)
+	Fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
+	Fp751AddReduced(&dest.b, &lhs.b, &rhs.b)
 }
 
 func (dest *FieldElement) Sub(lhs, rhs *FieldElement) {
-	Fp751SubReduced(&dest.A, &lhs.A, &rhs.A)
-	Fp751SubReduced(&dest.B, &lhs.B, &rhs.B)
+	Fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
+	Fp751SubReduced(&dest.b, &lhs.b, &rhs.b)
 }
 
 func (lhs *FieldElement) VartimeEq(rhs *FieldElement) bool {
-	return lhs.A.VartimeEq(rhs.A) && lhs.B.VartimeEq(rhs.B)
+	return lhs.a.VartimeEq(rhs.a) && lhs.b.VartimeEq(rhs.b)
 }
+
 
 const Fp751NumWords = 12
 
