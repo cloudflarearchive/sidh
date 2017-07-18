@@ -53,6 +53,10 @@ func (dest *FieldElement) Sub(lhs, rhs *FieldElement) {
 	Fp751SubReduced(&dest.B, &lhs.B, &rhs.B)
 }
 
+func (lhs *FieldElement) VartimeEq(rhs *FieldElement) bool {
+	return lhs.A.VartimeEq(rhs.A) && lhs.B.VartimeEq(rhs.B)
+}
+
 const Fp751NumWords = 12
 
 // Represents an element of the base field F_p, in Montgomery form.
@@ -89,3 +93,14 @@ func Fp751MontgomeryReduce(z *Fp751Element, x *Fp751X2)
 // Reduce a field element in [0, 2*p) to one in [0,p).
 //go:noescape
 func Fp751StrongReduce(x *Fp751Element)
+
+func (x Fp751Element) VartimeEq(y Fp751Element) bool {
+	Fp751StrongReduce(&x)
+	Fp751StrongReduce(&y)
+	eq := true
+	for i := 0; i < Fp751NumWords; i++ {
+		eq = (x[i] == y[i]) && eq
+	}
+
+	return eq
+}

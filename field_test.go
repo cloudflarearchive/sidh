@@ -9,6 +9,7 @@ import (
 )
 
 var quickCheckConfig = &quick.Config{MaxCount: (1 << 16)}
+var cln16prime, _ = new(big.Int).SetString("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831", 10)
 
 // Convert an Fp751Element to a big.Int for testing.  Because this is only
 // for testing, no big.Int to Fp751Element conversion is provided.
@@ -96,11 +97,29 @@ func TestFp751ElementToBigInt(t *testing.T) {
 	}
 }
 
-func TestFieldElementMulIsAssociative(t *testing.T) {
-	// The CLN16-SIDH prime
-	p := new(big.Int)
-	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
+func TestFieldElementMulDistributesOverAdd(t *testing.T) {
+	mulDistributesOverAdd := func(x, y, z FieldElement) bool {
+		// Compute t1 = (x+y)*z
+		t1 := new(FieldElement)
+		t1.Add(&x, &y)
+		t1.Mul(t1, &z)
 
+		// Compute t2 = x*z + y*z
+		t2 := new(FieldElement)
+		t3 := new(FieldElement)
+		t2.Mul(&x, &z)
+		t3.Mul(&y, &z)
+		t2.Add(t2, t3)
+
+		return t1.VartimeEq(t2)
+	}
+
+	if err := quick.Check(mulDistributesOverAdd, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
+func TestFieldElementMulIsAssociative(t *testing.T) {
 	is_associative := func(x, y, z FieldElement) bool {
 		// Compute t1 = (x*y)*z
 		t1 := new(FieldElement)
@@ -112,16 +131,7 @@ func TestFieldElementMulIsAssociative(t *testing.T) {
 		t2.Mul(&y, &z)
 		t2.Mul(t2, &x)
 
-		a1 := t1.A.toBigInt()
-		a1.Mod(a1, p)
-		a2 := t2.A.toBigInt()
-		a2.Mod(a2, p)
-		b1 := t1.B.toBigInt()
-		b1.Mod(b1, p)
-		b2 := t2.B.toBigInt()
-		b2.Mod(b2, p)
-
-		return (a1.Cmp(a2) == 0) && (b1.Cmp(b2) == 0)
+		return t1.VartimeEq(t2)
 	}
 
 	if err := quick.Check(is_associative, quickCheckConfig); err != nil {
@@ -130,16 +140,11 @@ func TestFieldElementMulIsAssociative(t *testing.T) {
 }
 
 func TestFp751StrongReduceVersusBigInt(t *testing.T) {
-	// The CLN16-SIDH prime
-	p := new(big.Int)
-	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
-
 	reductionIsCorrect := func(x Fp751Element) bool {
 		xOrig := x.toBigInt()
-		xOrig.Mod(xOrig, p)
+		xOrig.Mod(xOrig, cln16prime)
 
 		Fp751StrongReduce(&x)
-
 		xRed := x.toBigInt()
 
 		return xRed.Cmp(xOrig) == 0
@@ -151,15 +156,9 @@ func TestFp751StrongReduceVersusBigInt(t *testing.T) {
 }
 
 func TestFp751AddReducedVersusBigInt(t *testing.T) {
-	// The CLN16-SIDH prime
-	p := new(big.Int)
-	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
-
-	// Returns true if computing x + y in this implementation matches
-	// computing x + y using big.Int
-	assertion := func(x, y Fp751Element) bool {
-		z := new(Fp751Element)
+	additionMatchesBigInt := func(x, y Fp751Element) bool {
 		// Compute z = x + y using Fp751AddReduced
+		z := new(Fp751Element)
 		Fp751AddReduced(z, &x, &y)
 
 		xBig := x.toBigInt()
@@ -171,26 +170,20 @@ func TestFp751AddReducedVersusBigInt(t *testing.T) {
 		tmp.Add(xBig, yBig)
 
 		// Reduce both mod p and check that they are equal.
-		zBig.Mod(zBig, p)
-		tmp.Mod(tmp, p)
+		zBig.Mod(zBig, cln16prime)
+		tmp.Mod(tmp, cln16prime)
 		return zBig.Cmp(tmp) == 0
 	}
 
-	if err := quick.Check(assertion, quickCheckConfig); err != nil {
+	if err := quick.Check(additionMatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestFp751SubReducedVersusBigInt(t *testing.T) {
-	// The CLN16-SIDH prime
-	p := new(big.Int)
-	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
-
-	// Returns true if computing x - y in this implementation matches
-	// computing x - y using big.Int
-	assertion := func(x, y Fp751Element) bool {
-		z := new(Fp751Element)
+	subtractionMatchesBigInt := func(x, y Fp751Element) bool {
 		// Compute z = x - y using Fp751SubReduced
+		z := new(Fp751Element)
 		Fp751SubReduced(z, &x, &y)
 
 		xBig := x.toBigInt()
@@ -202,27 +195,22 @@ func TestFp751SubReducedVersusBigInt(t *testing.T) {
 		tmp.Sub(xBig, yBig)
 
 		// Reduce both mod p and check that they are equal.
-		zBig.Mod(zBig, p)
-		tmp.Mod(tmp, p)
+		zBig.Mod(zBig, cln16prime)
+		tmp.Mod(tmp, cln16prime)
 		return zBig.Cmp(tmp) == 0
 	}
 
-	if err := quick.Check(assertion, quickCheckConfig); err != nil {
+	if err := quick.Check(subtractionMatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestFp751MulReduceVersusBigInt(t *testing.T) {
-	// The CLN16-SIDH prime
-	p := new(big.Int)
-	p.UnmarshalText(([]byte)("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831"))
 	// The inverse of the Montgomery constant 1/(2^768) (mod p)
 	Rprime := new(big.Int)
 	Rprime.UnmarshalText(([]byte)("1518725603824737389819053798918035007730761831988339415201705393383230549778130460683426736321139507281132743779724182711261647601379839529950740166978024981554536824910527087746254630334120179536606671225338947864384536159295"))
 
-	// Returns true if computing x * y in this implementation matches
-	// computing x * y using big.Int
-	assertion := func(x, y Fp751Element) bool {
+	montgomeryMultiplicationMatchesBigInt := func(x, y Fp751Element) bool {
 		// Compute z = x * y using Fp751Mul
 		z := new(Fp751X2)
 		Fp751Mul(z, &x, &y)
@@ -238,12 +226,12 @@ func TestFp751MulReduceVersusBigInt(t *testing.T) {
 		tmp.Mul(tmp, Rprime)
 
 		// Reduce both mod p and check that they are equal.
-		zBig.Mod(zBig, p)
-		tmp.Mod(tmp, p)
+		zBig.Mod(zBig, cln16prime)
+		tmp.Mod(tmp, cln16prime)
 		return zBig.Cmp(tmp) == 0
 	}
 
-	if err := quick.Check(assertion, quickCheckConfig); err != nil {
+	if err := quick.Check(montgomeryMultiplicationMatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
