@@ -131,7 +131,7 @@ func TestExtensionFieldElementMulDistributesOverAdd(t *testing.T) {
 }
 
 func TestExtensionFieldElementMulIsAssociative(t *testing.T) {
-	is_associative := func(x, y, z ExtensionFieldElement) bool {
+	isAssociative := func(x, y, z ExtensionFieldElement) bool {
 		// Compute t1 = (x*y)*z
 		t1 := new(ExtensionFieldElement)
 		t1.Mul(&x, &y)
@@ -145,7 +145,7 @@ func TestExtensionFieldElementMulIsAssociative(t *testing.T) {
 		return t1.VartimeEq(t2)
 	}
 
-	if err := quick.Check(is_associative, quickCheckConfig); err != nil {
+	if err := quick.Check(isAssociative, quickCheckConfig); err != nil {
 		t.Error(err)
 	}
 }
