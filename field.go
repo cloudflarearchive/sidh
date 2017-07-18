@@ -25,22 +25,22 @@ func (dest *FieldElement) Mul(lhs, rhs *FieldElement) {
 	// so (a*d + b*c) = (b-a)*(c-d) + a*c + b*d.
 
 	var ac, bd Fp751X2
-	Fp751Mul(&ac, a, c)
-	Fp751Mul(&bd, b, d)
+	Fp751Mul(&ac, a, c)				// = a*c*R*R
+	Fp751Mul(&bd, b, d)				// = b*d*R*R
 
 	var b_minus_a, c_minus_d Fp751Element
-	Fp751SubReduced(&b_minus_a, b, a)
-	Fp751SubReduced(&c_minus_d, c, d)
+	Fp751SubReduced(&b_minus_a, b, a)		// = (b-a)*R
+	Fp751SubReduced(&c_minus_d, c, d)		// = (c-d)*R
 
 	var ad_plus_bc Fp751X2
-	Fp751Mul(&ad_plus_bc, &b_minus_a, &c_minus_d)
-	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)
-	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)
+	Fp751Mul(&ad_plus_bc, &b_minus_a, &c_minus_d)	// = (b-a)*(c-d)*R*R
+	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)	// = ((b-a)*(c-d) - a*c)*R*R
+	Fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)	// = ((b-a)*(c-d) - a*c - b*d)*R*R
 
-	Fp751MontgomeryReduce(&dest.B, &ad_plus_bc)
+	Fp751MontgomeryReduce(&dest.B, &ad_plus_bc)	// = (a*d + b*c)*R mod p
 
-	Fp751X2AddLazy(&ac, &ac, &bd)
-	Fp751MontgomeryReduce(&dest.A, &ac)
+	Fp751X2AddLazy(&ac, &ac, &bd)			// = (a*c + b*d)*R*R
+	Fp751MontgomeryReduce(&dest.A, &ac)		// = (a*c + b*d)*R mod p
 }
 
 func (dest *FieldElement) Add(lhs, rhs *FieldElement) {
