@@ -163,6 +163,17 @@ func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
 	return lhs.a.vartimeEq(rhs.a)
 }
 
+// Set dest = 1/x.
+//
+// Allowed to overlap x with dest.
+func (dest *PrimeFieldElement) Inv(x *PrimeFieldElement) {
+	tmp_x := *x            // Copy x in case dest == x
+	dest.Sqr(x)            // dest = x^2
+	dest.P34(dest)         // dest = (x^2)^((p-3)/4) = x^((p-3)/2)
+	dest.Sqr(dest)         // dest = x^(p-3)
+	dest.Mul(dest, &tmp_x) // dest = x^(p-2)
+}
+
 // Set dest = x^((p-3)/4)
 //
 // Allowed to overlap x with dest.
