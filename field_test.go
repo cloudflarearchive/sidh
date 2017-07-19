@@ -8,7 +8,9 @@ import (
 	"testing/quick"
 )
 
-var quickCheckConfig = &quick.Config{MaxCount: (1 << 16)}
+var quickCheckScaleFactor = uint8(3)
+var quickCheckConfig = &quick.Config{MaxCount: (1 << (12 + quickCheckScaleFactor))}
+
 var cln16prime, _ = new(big.Int).SetString("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831", 10)
 
 // Convert an fp751Element to a big.Int for testing.  Because this is only
@@ -223,6 +225,25 @@ func TestPrimeFieldElementMulVersusBigInt(t *testing.T) {
 	}
 }
 
+func TestPrimeFieldElementP34VersusBigInt(t *testing.T) {
+	var p34, _ = new(big.Int).SetString("2588679435442326313244442059466701330356847411387267792529047419763669735170619711625720724140266678406138302904710050596300977994130638598261040117192787954244176710019728333589599932738193731745058771712747875468166412894207", 10)
+	p34MatchesBigInt := func(x PrimeFieldElement) bool {
+		z := new(PrimeFieldElement)
+		z.P34(&x)
+
+		check := x.toBigInt()
+		check.Exp(check, p34, cln16prime)
+
+		return check.Cmp(z.toBigInt()) == 0
+	}
+
+	// This is more expensive; run fewer tests
+	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
+	if err := quick.Check(p34MatchesBigInt, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
 // Package-level storage for this field element is intended to deter
 // compiler optimizations.
 var benchmarkFp751Element fp751Element
@@ -274,6 +295,15 @@ func BenchmarkPrimeFieldElementMul(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		w.Mul(z, z)
+	}
+}
+
+func BenchmarkPrimeFieldElementP34(b *testing.B) {
+	z := &PrimeFieldElement{a: bench_x}
+	w := new(PrimeFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.P34(z)
 	}
 }
 

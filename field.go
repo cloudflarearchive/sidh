@@ -122,9 +122,19 @@ func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) {
 	fp751MontgomeryReduce(&dest.a, &ab)	// = a*b*R mod p
 }
 
+// Set dest = x^(2^k), for k >= 1, by repeated squarings.
+//
+// Allowed to overlap x with dest.
+func (dest *PrimeFieldElement) Pow2k(x *PrimeFieldElement, k uint8) {
+	dest.Sqr(x)
+	for i := uint8(1); i < k; i++ {
+		dest.Sqr(dest)
+	}
+}
+
 // Set dest = x^2
 //
-// Allowed to overlap lhs or rhs with dest.
+// Allowed to overlap x with dest.
 func (dest *PrimeFieldElement) Sqr(x *PrimeFieldElement) {
 	a := &x.a				// = a*R
 	b := &x.a				// = b*R
@@ -151,6 +161,34 @@ func (dest *PrimeFieldElement) Sub(lhs, rhs *PrimeFieldElement) {
 // Returns true if lhs = rhs.  Takes variable time.
 func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
 	return lhs.a.vartimeEq(rhs.a)
+}
+
+// Set dest = x^((p-3)/4)
+//
+// Allowed to overlap x with dest.
+func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) {
+	// Sliding-window strategy computed with Sage, awk, sed, and tr
+	powStrategy := [137]uint8{5, 7, 6, 2, 10, 4, 6, 9, 8, 5, 9, 4, 7, 5, 5, 4, 8, 3, 9, 5, 5, 4, 10, 4, 6, 6, 6, 5, 8, 9, 3, 4, 9, 4, 5, 6, 6, 2, 9, 4, 5, 5, 5, 7, 7, 9, 4, 6, 4, 8, 5, 8, 6, 6, 2, 9, 7, 4, 8, 8, 8, 4, 6, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 2}
+	mulStrategy := [137]uint8{31, 23, 21, 1, 31, 7, 7, 7, 9, 9, 19, 15, 23, 23, 11, 7, 25, 5, 21, 17, 11, 5, 17, 7, 11, 9, 23, 9, 1, 19, 5, 3, 25, 15, 11, 29, 31, 1, 29, 11, 13, 9, 11, 27, 13, 19, 15, 31, 3, 29, 23, 31, 25, 11, 1, 21, 19, 15, 15, 21, 29, 13, 23, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 3}
+	initialMul := uint8(27)
+
+	// Build a lookup table of odd multiples of x.
+	lookup := [16]PrimeFieldElement{}
+	xx := &PrimeFieldElement{}
+	xx.Sqr(x) // Set xx = x^2
+	lookup[0] = *x
+	for i := 1; i < 16; i++ {
+		lookup[i].Mul(&lookup[i-1], xx)
+	}
+	// Now lookup = {x, x^3, x^5, ... }
+	// so that lookup[i] = x^{2*i + 1}
+	// so that lookup[k/2] = x^k, for odd k
+
+	*dest = lookup[initialMul/2]
+	for i := uint8(0); i < 137; i++ {
+		dest.Pow2k(dest, powStrategy[i])
+		dest.Mul(dest, &lookup[mulStrategy[i]/2])
+	}
 }
 
 //------------------------------------------------------------------------------
