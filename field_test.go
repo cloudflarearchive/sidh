@@ -170,6 +170,25 @@ func TestExtensionFieldElementSqrMatchesMul(t *testing.T) {
 	}
 }
 
+func TestExtensionFieldElementInv(t *testing.T) {
+	inverseIsCorrect := func(x ExtensionFieldElement) bool {
+		z := new(ExtensionFieldElement)
+		z.Inv(&x)
+
+		// Now z = (1/x), so (z * x) * x == x
+		z.Mul(z, &x)
+		z.Mul(z, &x)
+
+		return z.VartimeEq(&x)
+	}
+
+	// This is more expensive; run fewer tests
+	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
+	if err := quick.Check(inverseIsCorrect, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
 //------------------------------------------------------------------------------
 // Prime Field
 //------------------------------------------------------------------------------
@@ -208,7 +227,7 @@ func TestPrimeFieldElementSubVersusBigInt(t *testing.T) {
 	}
 }
 
-func TestPrimeFieldElementInverse(t *testing.T) {
+func TestPrimeFieldElementInv(t *testing.T) {
 	inverseIsCorrect := func(x PrimeFieldElement) bool {
 		z := new(PrimeFieldElement)
 		z.Inv(&x)
@@ -277,6 +296,15 @@ func BenchmarkExtensionFieldElementMul(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		w.Mul(z, z)
+	}
+}
+
+func BenchmarkExtensionFieldElementInv(b *testing.B) {
+	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	w := new(ExtensionFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Inv(z)
 	}
 }
 

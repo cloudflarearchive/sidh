@@ -54,6 +54,46 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) {
 	fp751MontgomeryReduce(&dest.a, &ac_minus_bd)	// = (a*c - b*d)*R mod p
 }
 
+// Set dest = 1/x
+//
+// Allowed to overlap dest with x.
+func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) {
+	a := &x.a
+	b := &x.b
+
+	// We want to compute
+	//
+	//    1          1     (a - bi)	    (a - bi)
+	// -------- = -------- -------- = -----------
+	// (a + bi)   (a + bi) (a - bi)   (a^2 + b^2)
+	//
+	// Letting c = 1/(a^2 + b^2), this is
+	//
+	// 1/(a+bi) = a*c - b*ci.
+
+	var asq_plus_bsq PrimeFieldElement
+	var asq, bsq fp751X2
+	fp751Mul(&asq, a, a)                         // = a*a*R*R
+	fp751Mul(&bsq, b, b)                         // = b*b*R*R
+	fp751X2AddLazy(&asq, &asq, &bsq)             // = (a^2 + b^2)*R*R
+	fp751MontgomeryReduce(&asq_plus_bsq.a, &asq) // = (a^2 + b^2)*R mod p
+	// Now asq_plus_bsq = a^2 + b^2
+
+	var asq_plus_bsq_inv PrimeFieldElement
+	asq_plus_bsq_inv.Inv(&asq_plus_bsq)
+	c := &asq_plus_bsq_inv.a
+
+	var ac fp751X2
+	fp751Mul(&ac, a, c)
+	fp751MontgomeryReduce(&dest.a, &ac)
+
+	var minus_b fp751Element
+	fp751SubReduced(&minus_b, &minus_b, b)
+	var minus_bc fp751X2
+	fp751Mul(&minus_bc, &minus_b, c)
+	fp751MontgomeryReduce(&dest.b, &minus_bc)
+}
+
 // Set dest = x * x
 //
 // Allowed to overlap dest with x.
