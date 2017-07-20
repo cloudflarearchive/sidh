@@ -203,6 +203,17 @@ func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
 	return lhs.a.vartimeEq(rhs.a)
 }
 
+// Set dest = sqrt(x), if x is a square.  If x is nonsquare dest is undefined.
+//
+// Allowed to overlap x with dest.
+func (dest *PrimeFieldElement) Sqrt(x *PrimeFieldElement) {
+	tmp_x := *x // Copy x in case dest == x
+	// Since x is assumed to be square, x = y^2
+	dest.P34(x)            // dest = (y^2)^((p-3)/4) = y^((p-3)/2)
+	dest.Mul(dest, &tmp_x) // dest = y^2 * y^((p-3)/2) = y^((p+1)/2)
+	// Now dest^2 = y^(p+1) = y^2 = x, so dest = sqrt(x)
+}
+
 // Set dest = 1/x.
 //
 // Allowed to overlap x with dest.

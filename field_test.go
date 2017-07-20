@@ -246,6 +246,27 @@ func TestPrimeFieldElementInv(t *testing.T) {
 	}
 }
 
+func TestPrimeFieldElementSqrt(t *testing.T) {
+	inverseIsCorrect := func(x PrimeFieldElement) bool {
+		// Construct y = x^2 so we're sure y is square.
+		y := new(PrimeFieldElement)
+		y.Sqr(&x)
+
+		z := new(PrimeFieldElement)
+		z.Sqrt(y)
+
+		// Now z = sqrt(y), so z^2 == y
+		z.Sqr(z)
+		return z.VartimeEq(y)
+	}
+
+	// This is more expensive; run fewer tests
+	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
+	if err := quick.Check(inverseIsCorrect, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestPrimeFieldElementMulVersusBigInt(t *testing.T) {
 	mulMatchesBigInt := func(x, y PrimeFieldElement) bool {
 		z := new(PrimeFieldElement)
