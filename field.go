@@ -286,7 +286,7 @@ func (dest *PrimeFieldElement) Inv(x *PrimeFieldElement) *PrimeFieldElement {
 	return dest
 }
 
-// Set dest = x^((p-3)/4)
+// Set dest = x^((p-3)/4).  If x is square, this is 1/sqrt(x).
 //
 // Allowed to overlap x with dest.
 //
