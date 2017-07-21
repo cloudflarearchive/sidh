@@ -154,6 +154,18 @@ func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) *Extensi
 	return dest
 }
 
+// Set dest = if choice == 0 { x } else { y }, in constant time.
+//
+// Can overlap z with x or y or both.
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) ConditionalAssign(x, y *ExtensionFieldElement, choice uint8) *ExtensionFieldElement {
+	fp751ConditionalAssign(&dest.a, &x.a, &y.a, choice)
+	fp751ConditionalAssign(&dest.b, &x.b, &y.b, choice)
+
+	return dest
+}
+
 // Returns true if lhs = rhs.  Takes variable time.
 func (lhs *ExtensionFieldElement) VartimeEq(rhs *ExtensionFieldElement) bool {
 	return lhs.a.vartimeEq(rhs.a) && lhs.b.vartimeEq(rhs.b)
@@ -256,6 +268,17 @@ func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
 	return lhs.a.vartimeEq(rhs.a)
 }
 
+// Set dest = if choice == 0 { x } else { y }, in constant time.
+//
+// Can overlap z with x or y or both.
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) ConditionalAssign(x, y *PrimeFieldElement, choice uint8) *PrimeFieldElement {
+	fp751ConditionalAssign(&dest.a, &x.a, &y.a, choice)
+
+	return dest
+}
+
 // Set dest = sqrt(x), if x is a square.  If x is nonsquare dest is undefined.
 //
 // Allowed to overlap x with dest.
@@ -352,6 +375,12 @@ type fp751Element [fp751NumWords]uint64
 
 // Represents an intermediate product of two elements of the base field F_p.
 type fp751X2 [2 * fp751NumWords]uint64
+
+// Set z = if choice == 0 { x } else { y }, in constant time.
+//
+// Can overlap z with x or y or both.
+//go:noescape
+func fp751ConditionalAssign(z, x, y *fp751Element, choice uint8)
 
 // Compute z = x + y (mod p).
 //go:noescape

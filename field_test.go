@@ -313,6 +313,24 @@ func TestPrimeFieldElementP34VersusBigInt(t *testing.T) {
 	}
 }
 
+func TestFp751ElementConditionalAssign(t *testing.T) {
+	var one = fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	var two = fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+	var three = fp751Element{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}
+
+	fp751ConditionalAssign(&one, &two, &three, 0)
+
+	if one != two {
+		t.Error("Found", one, "expected", two)
+	}
+
+	fp751ConditionalAssign(&one, &two, &three, 1)
+
+	if one != three {
+		t.Error("Found", one, "expected", three)
+	}
+}
+
 // Package-level storage for this field element is intended to deter
 // compiler optimizations.
 var benchmarkFp751Element fp751Element

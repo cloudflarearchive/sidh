@@ -120,6 +120,101 @@ TEXT ·fp751StrongReduce(SB), NOSPLIT, $0-8
 
 	RET
 
+TEXT ·fp751ConditionalAssign(SB), NOSPLIT, $0-25
+
+	MOVQ	z+0(FP), REG_P3
+	MOVQ	x+8(FP), REG_P1
+	MOVQ	y+16(FP), REG_P2
+	MOVB	choice+24(FP), AL	// AL = 0 or 1
+	MOVBLZX	AL, AX			// AX = 0 or 1
+	NEGQ	AX			// RAX = 0x00..00 or 0xff..ff
+
+	MOVQ	(0*8)(REG_P1), BX	// BX = x[0]
+	MOVQ 	(0*8)(REG_P2), CX	// CX = y[0]
+	XORQ	BX, CX			// CX = y[0] ^ x[0]
+	ANDQ	AX, CX			// CX = (y[0] ^ x[0]) & mask
+	XORQ	BX, CX			// CX = (y[0] ^ x[0]) & mask) ^ x[0]
+	MOVQ	CX, (0*8)(REG_P3)	//    = x[0] or y[0]
+
+	MOVQ	(1*8)(REG_P1), BX
+	MOVQ 	(1*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (1*8)(REG_P3)
+
+	MOVQ	(2*8)(REG_P1), BX
+	MOVQ 	(2*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (2*8)(REG_P3)
+
+	MOVQ	(3*8)(REG_P1), BX
+	MOVQ 	(3*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (3*8)(REG_P3)
+
+	MOVQ	(4*8)(REG_P1), BX
+	MOVQ 	(4*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (4*8)(REG_P3)
+
+	MOVQ	(5*8)(REG_P1), BX
+	MOVQ 	(5*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (5*8)(REG_P3)
+
+	MOVQ	(6*8)(REG_P1), BX
+	MOVQ 	(6*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (6*8)(REG_P3)
+
+	MOVQ	(7*8)(REG_P1), BX
+	MOVQ 	(7*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (7*8)(REG_P3)
+
+	MOVQ	(8*8)(REG_P1), BX
+	MOVQ 	(8*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (8*8)(REG_P3)
+
+	MOVQ	(9*8)(REG_P1), BX
+	MOVQ 	(9*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (9*8)(REG_P3)
+
+	MOVQ	(10*8)(REG_P1), BX
+	MOVQ 	(10*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (10*8)(REG_P3)
+
+	MOVQ	(11*8)(REG_P1), BX
+	MOVQ 	(11*8)(REG_P2), CX
+	XORQ	BX, CX
+	ANDQ	AX, CX
+	XORQ	BX, CX
+	MOVQ	CX, (11*8)(REG_P3)
+
+	RET
+
 TEXT ·fp751AddReduced(SB), NOSPLIT, $0-24
 
 	MOVQ	z+0(FP), REG_P3
