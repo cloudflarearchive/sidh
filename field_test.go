@@ -152,7 +152,7 @@ func TestExtensionFieldElementMulIsAssociative(t *testing.T) {
 	}
 }
 
-func TestExtensionFieldElementSqrMatchesMul(t *testing.T) {
+func TestExtensionFieldElementSquareMatchesMul(t *testing.T) {
 	sqrMatchesMul := func(x ExtensionFieldElement) bool {
 		// Compute t1 = (x*x)
 		t1 := new(ExtensionFieldElement)
@@ -160,7 +160,7 @@ func TestExtensionFieldElementSqrMatchesMul(t *testing.T) {
 
 		// Compute t2 = x^2
 		t2 := new(ExtensionFieldElement)
-		t2.Sqr(&x)
+		t2.Square(&x)
 
 		return t1.VartimeEq(t2)
 	}
@@ -233,8 +233,7 @@ func TestPrimeFieldElementInv(t *testing.T) {
 		z.Inv(&x)
 
 		// Now z = (1/x), so (z * x) * x == x
-		z.Mul(z, &x)
-		z.Mul(z, &x)
+		z.Mul(z, &x).Mul(z, &x)
 
 		return z.VartimeEq(&x)
 	}
@@ -250,13 +249,13 @@ func TestPrimeFieldElementSqrt(t *testing.T) {
 	inverseIsCorrect := func(x PrimeFieldElement) bool {
 		// Construct y = x^2 so we're sure y is square.
 		y := new(PrimeFieldElement)
-		y.Sqr(&x)
+		y.Square(&x)
 
 		z := new(PrimeFieldElement)
 		z.Sqrt(y)
 
 		// Now z = sqrt(y), so z^2 == y
-		z.Sqr(z)
+		z.Square(z)
 		return z.VartimeEq(y)
 	}
 
@@ -329,12 +328,12 @@ func BenchmarkExtensionFieldElementInv(b *testing.B) {
 	}
 }
 
-func BenchmarkExtensionFieldElementSqr(b *testing.B) {
+func BenchmarkExtensionFieldElementSquare(b *testing.B) {
 	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
 	w := new(ExtensionFieldElement)
 
 	for n := 0; n < b.N; n++ {
-		w.Sqr(z)
+		w.Square(z)
 	}
 }
 
@@ -374,12 +373,12 @@ func BenchmarkPrimeFieldElementP34(b *testing.B) {
 	}
 }
 
-func BenchmarkPrimeFieldElementSqr(b *testing.B) {
+func BenchmarkPrimeFieldElementSquare(b *testing.B) {
 	z := &PrimeFieldElement{a: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
-		w.Sqr(z)
+		w.Square(z)
 	}
 }
 

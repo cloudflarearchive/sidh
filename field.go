@@ -17,7 +17,9 @@ type ExtensionFieldElement struct {
 // Set dest = lhs * rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
-func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) *ExtensionFieldElement {
 	// Let (a,b,c,d) = (lhs.a,lhs.b,rhs.a,rhs.b).
 	a := &lhs.a
 	b := &lhs.b
@@ -35,29 +37,33 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) {
 	// so (a*d + b*c) = (b-a)*(c-d) + a*c + b*d.
 
 	var ac, bd fp751X2
-	fp751Mul(&ac, a, c)				// = a*c*R*R
-	fp751Mul(&bd, b, d)				// = b*d*R*R
+	fp751Mul(&ac, a, c) // = a*c*R*R
+	fp751Mul(&bd, b, d) // = b*d*R*R
 
 	var b_minus_a, c_minus_d fp751Element
-	fp751SubReduced(&b_minus_a, b, a)		// = (b-a)*R
-	fp751SubReduced(&c_minus_d, c, d)		// = (c-d)*R
+	fp751SubReduced(&b_minus_a, b, a) // = (b-a)*R
+	fp751SubReduced(&c_minus_d, c, d) // = (c-d)*R
 
 	var ad_plus_bc fp751X2
-	fp751Mul(&ad_plus_bc, &b_minus_a, &c_minus_d)	// = (b-a)*(c-d)*R*R
-	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac)	// = ((b-a)*(c-d) + a*c)*R*R
-	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd)	// = ((b-a)*(c-d) + a*c + b*d)*R*R
+	fp751Mul(&ad_plus_bc, &b_minus_a, &c_minus_d) // = (b-a)*(c-d)*R*R
+	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac) // = ((b-a)*(c-d) + a*c)*R*R
+	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd) // = ((b-a)*(c-d) + a*c + b*d)*R*R
 
-	fp751MontgomeryReduce(&dest.b, &ad_plus_bc)	// = (a*d + b*c)*R mod p
+	fp751MontgomeryReduce(&dest.b, &ad_plus_bc) // = (a*d + b*c)*R mod p
 
 	var ac_minus_bd fp751X2
-	fp751X2SubLazy(&ac_minus_bd, &ac, &bd)		// = (a*c - b*d)*R*R
-	fp751MontgomeryReduce(&dest.a, &ac_minus_bd)	// = (a*c - b*d)*R mod p
+	fp751X2SubLazy(&ac_minus_bd, &ac, &bd)       // = (a*c - b*d)*R*R
+	fp751MontgomeryReduce(&dest.a, &ac_minus_bd) // = (a*c - b*d)*R mod p
+
+	return dest
 }
 
 // Set dest = 1/x
 //
 // Allowed to overlap dest with x.
-func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) *ExtensionFieldElement {
 	a := &x.a
 	b := &x.b
 
@@ -92,12 +98,16 @@ func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) {
 	var minus_bc fp751X2
 	fp751Mul(&minus_bc, &minus_b, c)
 	fp751MontgomeryReduce(&dest.b, &minus_bc)
+
+	return dest
 }
 
 // Set dest = x * x
 //
 // Allowed to overlap dest with x.
-func (dest *ExtensionFieldElement) Sqr(x *ExtensionFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) Square(x *ExtensionFieldElement) *ExtensionFieldElement {
 	a := &x.a
 	b := &x.b
 
@@ -106,32 +116,42 @@ func (dest *ExtensionFieldElement) Sqr(x *ExtensionFieldElement) {
 	// (a + bi)*(a + bi) = (a^2 - b^2) + 2abi.
 
 	var a2, a_plus_b, a_minus_b fp751Element
-	fp751AddReduced(&a2, a, a)				// = a*R + a*R = 2*a*R
-	fp751AddReduced(&a_plus_b, a, b)			// = a*R + b*R = (a+b)*R
-	fp751SubReduced(&a_minus_b, a, b)			// = a*R - b*R = (a-b)*R
+	fp751AddReduced(&a2, a, a)        // = a*R + a*R = 2*a*R
+	fp751AddReduced(&a_plus_b, a, b)  // = a*R + b*R = (a+b)*R
+	fp751SubReduced(&a_minus_b, a, b) // = a*R - b*R = (a-b)*R
 
 	var asq_minus_bsq, ab2 fp751X2
-	fp751Mul(&asq_minus_bsq, &a_plus_b, &a_minus_b)		// = (a+b)*(a-b)*R*R = (a^2 - b^2)*R*R
-	fp751Mul(&ab2, &a2, b)					// = 2*a*b*R*R
+	fp751Mul(&asq_minus_bsq, &a_plus_b, &a_minus_b) // = (a+b)*(a-b)*R*R = (a^2 - b^2)*R*R
+	fp751Mul(&ab2, &a2, b)                          // = 2*a*b*R*R
 
-	fp751MontgomeryReduce(&dest.a, &asq_minus_bsq)		// = (a^2 - b^2)*R mod p
-	fp751MontgomeryReduce(&dest.b, &ab2)			// = 2*a*b*R mod p
+	fp751MontgomeryReduce(&dest.a, &asq_minus_bsq) // = (a^2 - b^2)*R mod p
+	fp751MontgomeryReduce(&dest.b, &ab2)           // = 2*a*b*R mod p
+
+	return dest
 }
 
 // Set dest = lhs + rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
-func (dest *ExtensionFieldElement) Add(lhs, rhs *ExtensionFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) Add(lhs, rhs *ExtensionFieldElement) *ExtensionFieldElement {
 	fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
 	fp751AddReduced(&dest.b, &lhs.b, &rhs.b)
+
+	return dest
 }
 
 // Set dest = lhs - rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
-func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) *ExtensionFieldElement {
 	fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
 	fp751SubReduced(&dest.b, &lhs.b, &rhs.b)
+
+	return dest
 }
 
 // Returns true if lhs = rhs.  Takes variable time.
@@ -153,49 +173,69 @@ type PrimeFieldElement struct {
 // Set dest = lhs * rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
-func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) {
-	a := &lhs.a				// = a*R
-	b := &rhs.a				// = b*R
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
+	a := &lhs.a // = a*R
+	b := &rhs.a // = b*R
 
 	var ab fp751X2
-	fp751Mul(&ab, a, b)			// = a*b*R*R
-	fp751MontgomeryReduce(&dest.a, &ab)	// = a*b*R mod p
+	fp751Mul(&ab, a, b)                 // = a*b*R*R
+	fp751MontgomeryReduce(&dest.a, &ab) // = a*b*R mod p
+
+	return dest
 }
 
 // Set dest = x^(2^k), for k >= 1, by repeated squarings.
 //
 // Allowed to overlap x with dest.
-func (dest *PrimeFieldElement) Pow2k(x *PrimeFieldElement, k uint8) {
-	dest.Sqr(x)
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Pow2k(x *PrimeFieldElement, k uint8) *PrimeFieldElement {
+	dest.Square(x)
 	for i := uint8(1); i < k; i++ {
-		dest.Sqr(dest)
+		dest.Square(dest)
 	}
+
+	return dest
 }
 
 // Set dest = x^2
 //
 // Allowed to overlap x with dest.
-func (dest *PrimeFieldElement) Sqr(x *PrimeFieldElement) {
-	a := &x.a				// = a*R
-	b := &x.a				// = b*R
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Square(x *PrimeFieldElement) *PrimeFieldElement {
+	a := &x.a // = a*R
+	b := &x.a // = b*R
 
 	var ab fp751X2
-	fp751Mul(&ab, a, b)			// = a*b*R*R
-	fp751MontgomeryReduce(&dest.a, &ab)	// = a*b*R mod p
+	fp751Mul(&ab, a, b)                 // = a*b*R*R
+	fp751MontgomeryReduce(&dest.a, &ab) // = a*b*R mod p
+
+	return dest
 }
 
 // Set dest = lhs + rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
-func (dest *PrimeFieldElement) Add(lhs, rhs *PrimeFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Add(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
 	fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
+
+	return dest
 }
 
 // Set dest = lhs - rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
-func (dest *PrimeFieldElement) Sub(lhs, rhs *PrimeFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Sub(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
 	fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
+
+	return dest
 }
 
 // Returns true if lhs = rhs.  Takes variable time.
@@ -206,29 +246,39 @@ func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
 // Set dest = sqrt(x), if x is a square.  If x is nonsquare dest is undefined.
 //
 // Allowed to overlap x with dest.
-func (dest *PrimeFieldElement) Sqrt(x *PrimeFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Sqrt(x *PrimeFieldElement) *PrimeFieldElement {
 	tmp_x := *x // Copy x in case dest == x
 	// Since x is assumed to be square, x = y^2
 	dest.P34(x)            // dest = (y^2)^((p-3)/4) = y^((p-3)/2)
 	dest.Mul(dest, &tmp_x) // dest = y^2 * y^((p-3)/2) = y^((p+1)/2)
 	// Now dest^2 = y^(p+1) = y^2 = x, so dest = sqrt(x)
+
+	return dest
 }
 
 // Set dest = 1/x.
 //
 // Allowed to overlap x with dest.
-func (dest *PrimeFieldElement) Inv(x *PrimeFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Inv(x *PrimeFieldElement) *PrimeFieldElement {
 	tmp_x := *x            // Copy x in case dest == x
-	dest.Sqr(x)            // dest = x^2
+	dest.Square(x)         // dest = x^2
 	dest.P34(dest)         // dest = (x^2)^((p-3)/4) = x^((p-3)/2)
-	dest.Sqr(dest)         // dest = x^(p-3)
+	dest.Square(dest)      // dest = x^(p-3)
 	dest.Mul(dest, &tmp_x) // dest = x^(p-2)
+
+	return dest
 }
 
 // Set dest = x^((p-3)/4)
 //
 // Allowed to overlap x with dest.
-func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) {
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) *PrimeFieldElement {
 	// Sliding-window strategy computed with Sage, awk, sed, and tr.
 	//
 	// This performs sum(powStrategy) = 744 squarings and len(mulStrategy)
@@ -245,7 +295,7 @@ func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) {
 	// Build a lookup table of odd multiples of x.
 	lookup := [16]PrimeFieldElement{}
 	xx := &PrimeFieldElement{}
-	xx.Sqr(x) // Set xx = x^2
+	xx.Square(x) // Set xx = x^2
 	lookup[0] = *x
 	for i := 1; i < 16; i++ {
 		lookup[i].Mul(&lookup[i-1], xx)
@@ -259,6 +309,8 @@ func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) {
 		dest.Pow2k(dest, powStrategy[i])
 		dest.Mul(dest, &lookup[mulStrategy[i]/2])
 	}
+
+	return dest
 }
 
 //------------------------------------------------------------------------------
