@@ -393,12 +393,21 @@ func BenchmarkPrimeFieldElementMul(b *testing.B) {
 	}
 }
 
-func BenchmarkPrimeFieldElementP34(b *testing.B) {
+func BenchmarkPrimeFieldElementInv(b *testing.B) {
 	z := &PrimeFieldElement{a: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
-		w.P34(z)
+		w.Inv(z)
+	}
+}
+
+func BenchmarkPrimeFieldElementSqrt(b *testing.B) {
+	z := &PrimeFieldElement{a: bench_x}
+	w := new(PrimeFieldElement)
+
+	for n := 0; n < b.N; n++ {
+		w.Sqrt(z)
 	}
 }
 
