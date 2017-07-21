@@ -193,6 +193,17 @@ func TestExtensionFieldElementInv(t *testing.T) {
 // Prime Field
 //------------------------------------------------------------------------------
 
+func TestPrimeFieldElementSetUint64VersusBigInt(t *testing.T) {
+	setUint64RoundTrips := func(x uint64) bool {
+		z := new(PrimeFieldElement).SetUint64(x).toBigInt().Uint64()
+		return x == z
+	}
+
+	if err := quick.Check(setUint64RoundTrips, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestPrimeFieldElementAddVersusBigInt(t *testing.T) {
 	addMatchesBigInt := func(x, y PrimeFieldElement) bool {
 		z := new(PrimeFieldElement)

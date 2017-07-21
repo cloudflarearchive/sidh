@@ -170,6 +170,19 @@ type PrimeFieldElement struct {
 	a fp751Element
 }
 
+// Set dest to x.
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) SetUint64(x uint64) *PrimeFieldElement {
+	var xRR fp751X2
+	dest.a = fp751Element{}                 // = 0
+	dest.a[0] = x                           // = x
+	fp751Mul(&xRR, &dest.a, &montgomeryRsq) // = x*R*R
+	fp751MontgomeryReduce(&dest.a, &xRR)    // = x*R mod p
+
+	return dest
+}
+
 // Set dest = lhs * rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
@@ -318,6 +331,16 @@ func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) *PrimeFieldElement {
 //------------------------------------------------------------------------------
 
 const fp751NumWords = 12
+
+// (2^768) mod p.
+// This can't be a constant because Go doesn't allow array constants, so try
+// not to modify it.
+var montgomeryR = fp751Element{149933, 0, 0, 0, 0, 9444048418595930112, 6136068611055053926, 7599709743867700432, 14455912356952952366, 5522737203492907350, 1222606818372667369, 49869481633250}
+
+// (2^768)^2 mod p
+// This can't be a constant because Go doesn't allow array constants, so try
+// not to modify it.
+var montgomeryRsq = fp751Element{2535603850726686808, 15780896088201250090, 6788776303855402382, 17585428585582356230, 5274503137951975249, 2266259624764636289, 11695651972693921304, 13072885652150159301, 4908312795585420432, 6229583484603254826, 488927695601805643, 72213483953973}
 
 // Internal representation of an element of the base field F_p.
 //
