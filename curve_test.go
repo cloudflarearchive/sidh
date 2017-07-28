@@ -118,6 +118,18 @@ func TestPointTripleVersusAddDouble(t *testing.T) {
 	}
 }
 
+func BenchmarkPointAddition(b *testing.B) {
+	var xP = ProjectivePoint{x: curve_A, z: curve_C}
+	var xP2, xP3 ProjectivePoint
+	// This is an incorrect use of the API (wrong curve
+	// parameters), but it doesn't affect the benchmark.
+	xP2.Double(&xP, &curve_A, &curve_C)
+
+	for n := 0; n < b.N; n++ {
+		xP3.Add(&xP2, &xP, &xP)
+	}
+}
+
 func BenchmarkPointDouble(b *testing.B) {
 	var xP = ProjectivePoint{x: curve_A, z: curve_C}
 
