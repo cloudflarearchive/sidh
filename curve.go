@@ -8,6 +8,33 @@ type ProjectiveCurveParameters struct {
 	C ExtensionFieldElement
 }
 
+// = 256
+var const256 = ExtensionFieldElement{
+	a: fp751Element{0x249ad67, 0x0, 0x0, 0x0, 0x0, 0x730000000000000, 0x738154969973da8b, 0x856657c146718c7f, 0x461860e4e363a697, 0xf9fd6510bba838cd, 0x4e1a3c3f06993c0c, 0x55abef5b75c7},
+	b: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+}
+
+func (curveParams *ProjectiveCurveParameters) jInvariant() *ExtensionFieldElement {
+	var v0, v1, v2, v3 ExtensionFieldElement
+	A := &curveParams.A
+	C := &curveParams.C
+	v0.Square(C)           // C^2
+	v1.Square(A)           // A^2
+	v2.Add(&v0, &v0)       // 2C^2
+	v3.Add(&v2, &v0)       // 3C^2
+	v2.Add(&v2, &v2)       // 4C^2
+	v2.Sub(&v1, &v2)       // A^2 - 4C^2
+	v1.Sub(&v1, &v3)       // A^2 - 3C^2
+	v3.Square(&v1)         // (A^2 - 3C^2)^2
+	v3.Mul(&v3, &v1)       // (A^2 - 3C^2)^3
+	v0.Square(&v0)         // C^4
+	v3.Mul(&v3, &const256) // 256(A^2 - 3C^2)^3
+	v2.Mul(&v2, &v0)       // C^4(A^2 - 4C^2)
+	v2.Inv(&v2)            // 1/C^4(A^2 - 4C^2)
+	v0.Mul(&v3, &v2)       // 256(A^2 - 3C^2)^3 / C^4(A^2 - 4C^2)
+	return &v0
+}
+
 // A point on the projective line P^1(F_{p^2}).
 //
 // This represents a point on the (Kummer line) of a Montgomery curve.  The
