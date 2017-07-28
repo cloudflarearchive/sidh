@@ -194,6 +194,28 @@ func TestExtensionFieldElementInv(t *testing.T) {
 	}
 }
 
+func TestExtensionFieldElementBatch4Inv(t *testing.T) {
+	batchInverseIsCorrect := func(x1, x2, x3, x4 ExtensionFieldElement) bool {
+		var x1Inv, x2Inv, x3Inv, x4Inv ExtensionFieldElement
+		x1Inv.Inv(&x1)
+		x2Inv.Inv(&x2)
+		x3Inv.Inv(&x3)
+		x4Inv.Inv(&x4)
+
+		var y1, y2, y3, y4 ExtensionFieldElement
+		ExtensionFieldBatch4Inv(&x1, &x2, &x3, &x4, &y1, &y2, &y3, &y4)
+
+		return (y1.VartimeEq(&x1Inv) && y2.VartimeEq(&x2Inv) &&
+			y3.VartimeEq(&x3Inv) && y4.VartimeEq(&x4Inv))
+	}
+
+	// This is more expensive; run fewer tests
+	var quickCheckConfig = &quick.Config{MaxCount: (1 << (5 + quickCheckScaleFactor))}
+	if err := quick.Check(batchInverseIsCorrect, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
 //------------------------------------------------------------------------------
 // Prime Field
 //------------------------------------------------------------------------------
