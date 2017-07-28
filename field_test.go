@@ -37,9 +37,14 @@ func radix64ToBigInt(x []uint64) *big.Int {
 
 func (x *PrimeFieldElement) toBigInt() *big.Int {
 	// Convert from Montgomery form
+	return x.a.toBigIntFromMontgomeryForm()
+}
+
+func (x *fp751Element) toBigIntFromMontgomeryForm() *big.Int {
+	// Convert from Montgomery form
 	a := fp751Element{}
 	aR := fp751X2{}
-	copy(aR[:], x.a[:])            // = a*R
+	copy(aR[:], x[:])              // = a*R
 	fp751MontgomeryReduce(&a, &aR) // = a mod p  in [0,2p)
 	fp751StrongReduce(&a)          // = a mod p  in [0,p)
 	return radix64ToBigInt(a[:])
