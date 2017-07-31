@@ -14,6 +14,32 @@ type ExtensionFieldElement struct {
 	b fp751Element
 }
 
+var zeroExtensionField = ExtensionFieldElement{
+	a: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	b: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+}
+
+var oneExtensionField = ExtensionFieldElement{
+	a: fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
+	b: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+}
+
+// Set dest = 0.
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) Zero() *ExtensionFieldElement {
+	*dest = zeroExtensionField
+	return dest
+}
+
+// Set dest = 1.
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) One() *ExtensionFieldElement {
+	*dest = oneExtensionField
+	return dest
+}
+
 // Set dest = lhs * rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
