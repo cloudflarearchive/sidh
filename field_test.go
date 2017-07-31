@@ -340,6 +340,26 @@ func TestPrimeFieldElementP34VersusBigInt(t *testing.T) {
 	}
 }
 
+func TestFp751ElementConditionalSwap(t *testing.T) {
+	var one = fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	var two = fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+
+	var x = one
+	var y = two
+
+	fp751ConditionalSwap(&x, &y, 0)
+
+	if !(x == one && y == two) {
+		t.Error("Found", x, "expected", one)
+	}
+
+	fp751ConditionalSwap(&x, &y, 1)
+
+	if !(x == two && y == one) {
+		t.Error("Found", x, "expected", two)
+	}
+}
+
 func TestFp751ElementConditionalAssign(t *testing.T) {
 	var one = fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 	var two = fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}

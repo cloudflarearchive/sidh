@@ -194,6 +194,14 @@ func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) *Extensi
 	return dest
 }
 
+// If choice = 1u8, set (x,y) = (y,x). If choice = 0u8, set (x,y) = (x,y).
+//
+// Returns dest to allow chaining operations.
+func ExtensionFieldElementConditionalSwap(x, y *ExtensionFieldElement, choice uint8) {
+	fp751ConditionalSwap(&x.a, &y.a, choice)
+	fp751ConditionalSwap(&x.b, &y.b, choice)
+}
+
 // Set dest = if choice == 0 { x } else { y }, in constant time.
 //
 // Can overlap z with x or y or both.
@@ -308,6 +316,13 @@ func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
 	return lhs.a.vartimeEq(rhs.a)
 }
 
+// If choice = 1u8, set (x,y) = (y,x). If choice = 0u8, set (x,y) = (x,y).
+//
+// Returns dest to allow chaining operations.
+func PrimeFieldConditionalSwap(x, y *PrimeFieldElement, choice uint8) {
+	fp751ConditionalSwap(&x.a, &y.a, choice)
+}
+
 // Set dest = if choice == 0 { x } else { y }, in constant time.
 //
 // Can overlap z with x or y or both.
@@ -416,7 +431,13 @@ type fp751Element [fp751NumWords]uint64
 // Represents an intermediate product of two elements of the base field F_p.
 type fp751X2 [2 * fp751NumWords]uint64
 
-// Set z = if choice == 0 { x } else { y }, in constant time.
+// If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
+// This function executes in constant time.
+//go:noescape
+func fp751ConditionalSwap(x, y *fp751Element, choice uint8)
+
+// If choice = 0, set z = x. If choice = 1, set z = y.
+// This function executes in constant time.
 //
 // Can overlap z with x or y or both.
 //go:noescape
