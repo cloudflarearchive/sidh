@@ -57,6 +57,11 @@ func (lhs *ProjectivePoint) VartimeEq(rhs *ProjectivePoint) bool {
 	return t0.VartimeEq(&t1)
 }
 
+func ProjectivePointConditionalSwap(xP, xQ *ProjectivePoint, choice uint8) {
+	ExtensionFieldElementConditionalSwap(&xP.x, &xQ.x, choice)
+	ExtensionFieldElementConditionalSwap(&xP.z, &xQ.z, choice)
+}
+
 // Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xR = x(P+Q).
 //
 // Returns xR to allow chaining.  Safe to overlap xP, xQ, xR.
@@ -162,5 +167,36 @@ func (xQ *ProjectivePoint) Pow3k(curve *ProjectiveCurveParameters, xP *Projectiv
 		xQ.Triple(xQ, &Aplus2C, &C4)
 	}
 
+	return xQ
+}
+
+func (xQ *ProjectivePoint) ScalarMult(curve *ProjectiveCurveParameters, xP *ProjectivePoint, scalar []uint8) *ProjectivePoint {
+	// XXX move this boilerplate to a function
+	var Aplus2C, C4 ExtensionFieldElement
+	Aplus2C.Add(&curve.C, &curve.C) // = 2*C
+	C4.Add(&Aplus2C, &Aplus2C)      // = 4*C
+	Aplus2C.Add(&Aplus2C, &curve.A) // = 2*C + A
+
+	var x0, x1, tmp ProjectivePoint
+	x0.x.One()
+	x0.z.Zero()
+	x1 = *xP
+	prevBit := uint8(0)
+	// Iterate over the bits of the scalar, top to bottom
+	for i := len(scalar) - 1; i >= 0; i-- {
+		scalarByte := scalar[i]
+		for j := 7; j >= 0; j-- {
+			bit := (scalarByte >> uint(j)) & 0x1
+			ProjectivePointConditionalSwap(&x0, &x1, (bit ^ prevBit))
+			// could avoid use of tmp by having unified double/add
+			tmp.Double(&x0, &Aplus2C, &C4)
+			x1.Add(&x0, &x1, xP)
+			x0 = tmp
+			prevBit = bit
+		}
+	}
+	// now prevBit is the lowest bit of the scalar
+	ProjectivePointConditionalSwap(&x0, &x1, prevBit)
+	*xQ = x0
 	return xQ
 }
