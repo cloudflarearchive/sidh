@@ -24,6 +24,8 @@ var curve_A = ExtensionFieldElement{a: fp751Element{0x8319eb18ca2c435e, 0x3a93be
 // C = 933177602672972392833143808100058748100491911694554386487433154761658932801917030685312352302083870852688835968069519091048283111836766101703759957146191882367397129269726925521881467635358356591977198680477382414690421049768*i + 9088894745865170214288643088620446862479558967886622582768682946704447519087179261631044546285104919696820250567182021319063155067584445633834024992188567423889559216759336548208016316396859149888322907914724065641454773776307
 var curve_C = ExtensionFieldElement{a: fp751Element{0x4fb2358bbf723107, 0x3a791521ac79e240, 0x283e24ef7c4c922f, 0xc89baa1205e33cc, 0x3031be81cff6fee1, 0xaf7a494a2f6a95c4, 0x248d251eaac83a1d, 0xc122fca1e2550c88, 0xbc0451b11b6cfd3d, 0x9c0a114ab046222c, 0x43b957b32f21f6ea, 0x5b9c87fa61de}, b: fp751Element{0xacf142afaac15ec6, 0xfd1322a504a071d5, 0x56bb205e10f6c5c6, 0xe204d2849a97b9bd, 0x40b0122202fe7f2e, 0xecf72c6fafacf2cb, 0x45dfc681f869f60a, 0x11814c9aff4af66c, 0x9278b0c4eea54fe7, 0x9a633d5baf7f2e2e, 0x69a329e6f1a05112, 0x1d874ace23e4}}
 
+var curve = ProjectiveCurveParameters{A: curve_A, C: curve_C}
+
 // x(P) = 8172151271761071554796221948801462094972242987811852753144865524899433583596839357223411088919388342364651632180452081960511516040935428737829624206426287774255114241789158000915683252363913079335550843837650671094705509470594*i + 9326574858039944121604015439381720195556183422719505497448541073272720545047742235526963773359004021838961919129020087515274115525812121436661025030481584576474033630899768377131534320053412545346268645085054880212827284581557
 var affine_xP = ExtensionFieldElement{a: fp751Element{0xe8d05f30aac47247, 0x576ec00c55441de7, 0xbf1a8ec5fe558518, 0xd77cb17f77515881, 0x8e9852837ee73ec4, 0x8159634ad4f44a6b, 0x2e4eb5533a798c5, 0x9be8c4354d5bc849, 0xf47dc61806496b84, 0x25d0e130295120e0, 0xdbef54095f8139e3, 0x5a724f20862c}, b: fp751Element{0x3ca30d7623602e30, 0xfb281eddf45f07b7, 0xd2bf62d5901a45bc, 0xc67c9baf86306dd2, 0x4e2bd93093f538ca, 0xcfd92075c25b9cbe, 0xceafe9a3095bcbab, 0x7d928ad380c85414, 0x37c5f38b2afdc095, 0x75325899a7b779f4, 0xf130568249f20fdd, 0x178f264767d1}}
 
@@ -140,17 +142,12 @@ func TestScalarMultVersusSage(t *testing.T) {
 }
 
 func TestPointTripleVersusAddDouble(t *testing.T) {
-	tripleEqualsAddDouble := func(curve ProjectiveCurveParameters,
-		P ProjectivePoint) bool {
-		// XXX move this boilerplate to a function
-		var Aplus2C, C4 ExtensionFieldElement
-		Aplus2C.Add(&curve.C, &curve.C) // = 2*C
-		C4.Add(&Aplus2C, &Aplus2C)      // = 4*C
-		Aplus2C.Add(&Aplus2C, &curve.A) // = 2*C + A
+	tripleEqualsAddDouble := func(curve ProjectiveCurveParameters, P ProjectivePoint) bool {
 
+		cachedParams := curve.cachedParams()
 		var P2, P3, P2plusP ProjectivePoint
-		P2.Double(&P, &Aplus2C, &C4) // = x([2]P)
-		P3.Triple(&P, &Aplus2C, &C4) // = x([3]P)
+		P2.Double(&P, &cachedParams) // = x([2]P)
+		P3.Triple(&P, &cachedParams) // = x([3]P)
 		P2plusP.Add(&P2, &P, &P)     // = x([2]P + P)
 
 		return P3.VartimeEq(&P2plusP)
@@ -164,9 +161,8 @@ func TestPointTripleVersusAddDouble(t *testing.T) {
 func BenchmarkPointAddition(b *testing.B) {
 	var xP = ProjectivePoint{x: curve_A, z: curve_C}
 	var xP2, xP3 ProjectivePoint
-	// This is an incorrect use of the API (wrong curve
-	// parameters), but it doesn't affect the benchmark.
-	xP2.Double(&xP, &curve_A, &curve_C)
+	cachedParams := curve.cachedParams()
+	xP2.Double(&xP, &cachedParams)
 
 	for n := 0; n < b.N; n++ {
 		xP3.Add(&xP2, &xP, &xP)
@@ -175,20 +171,18 @@ func BenchmarkPointAddition(b *testing.B) {
 
 func BenchmarkPointDouble(b *testing.B) {
 	var xP = ProjectivePoint{x: curve_A, z: curve_C}
+	cachedParams := curve.cachedParams()
 
 	for n := 0; n < b.N; n++ {
-		// This is an incorrect use of the API (wrong curve
-		// parameters), but it doesn't affect the benchmark.
-		xP.Double(&xP, &curve_A, &curve_C)
+		xP.Double(&xP, &cachedParams)
 	}
 }
 
 func BenchmarkPointTriple(b *testing.B) {
 	var xP = ProjectivePoint{x: curve_A, z: curve_C}
+	cachedParams := curve.cachedParams()
 
 	for n := 0; n < b.N; n++ {
-		// This is an incorrect use of the API (wrong curve
-		// parameters), but it doesn't affect the benchmark.
-		xP.Triple(&xP, &curve_A, &curve_C)
+		xP.Triple(&xP, &cachedParams)
 	}
 }

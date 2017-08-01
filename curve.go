@@ -8,6 +8,11 @@ type ProjectiveCurveParameters struct {
 	C ExtensionFieldElement
 }
 
+type CachedCurveParameters struct {
+	Aplus2C ExtensionFieldElement
+	C4      ExtensionFieldElement
+}
+
 // = 256
 var const256 = ExtensionFieldElement{
 	a: fp751Element{0x249ad67, 0x0, 0x0, 0x0, 0x0, 0x730000000000000, 0x738154969973da8b, 0x856657c146718c7f, 0x461860e4e363a697, 0xf9fd6510bba838cd, 0x4e1a3c3f06993c0c, 0x55abef5b75c7},
@@ -33,6 +38,15 @@ func (curveParams *ProjectiveCurveParameters) jInvariant() *ExtensionFieldElemen
 	v2.Inv(&v2)            // 1/C^4(A^2 - 4C^2)
 	v0.Mul(&v3, &v2)       // 256(A^2 - 3C^2)^3 / C^4(A^2 - 4C^2)
 	return &v0
+}
+
+// Compute cached parameters A + 2C, 4C.
+func (curve *ProjectiveCurveParameters) cachedParams() CachedCurveParameters {
+	var cached CachedCurveParameters
+	cached.Aplus2C.Add(&curve.C, &curve.C)          // = 2*C
+	cached.C4.Add(&cached.Aplus2C, &cached.Aplus2C) // = 4*C
+	cached.Aplus2C.Add(&cached.Aplus2C, &curve.A)   // = 2*C + A
+	return cached
 }
 
 // A point on the projective line P^1(F_{p^2}).
@@ -83,15 +97,15 @@ func (xR *ProjectivePoint) Add(xP, xQ, xPmQ *ProjectivePoint) *ProjectivePoint {
 // Given xP = x(P) and cached curve parameters Aplus2C = A + 2*C, C4 = 4*C, compute xQ = x([2]P).
 //
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
-func (xQ *ProjectivePoint) Double(xP *ProjectivePoint, Aplus2C, C4 *ExtensionFieldElement) *ProjectivePoint {
+func (xQ *ProjectivePoint) Double(xP *ProjectivePoint, curve *CachedCurveParameters) *ProjectivePoint {
 	// Algorithm 2 of Costello-Smith, amended to work with projective curve coefficients.
 	var v1, v2, v3, xz4 ExtensionFieldElement
 	v1.Add(&xP.x, &xP.z).Square(&v1) // (X+Z)^2
 	v2.Sub(&xP.x, &xP.z).Square(&v2) // (X-Z)^2
 	xz4.Sub(&v1, &v2)                // 4XZ = (X+Z)^2 - (X-Z)^2
-	v2.Mul(&v2, C4)                  // 4C(X-Z)^2
+	v2.Mul(&v2, &curve.C4)           // 4C(X-Z)^2
 	xQ.x.Mul(&v1, &v2)               // 4C(X+Z)^2(X-Z)^2
-	v3.Mul(&xz4, Aplus2C)            // 4XZ(A + 2C)
+	v3.Mul(&xz4, &curve.Aplus2C)     // 4XZ(A + 2C)
 	v3.Add(&v3, &v2)                 // 4XZ(A + 2C) + 4C(X-Z)^2
 	xQ.z.Mul(&v3, &xz4)              // (4XZ(A + 2C) + 4C(X-Z)^2)4XZ
 	// Now (xQ.x : xQ.z)
@@ -109,14 +123,10 @@ func (xQ *ProjectivePoint) Pow2k(curve *ProjectiveCurveParameters, xP *Projectiv
 		panic("Called Pow2k with k == 0")
 	}
 
-	var Aplus2C, C4 ExtensionFieldElement
-	Aplus2C.Add(&curve.C, &curve.C) // = 2*C
-	C4.Add(&Aplus2C, &Aplus2C)      // = 4*C
-	Aplus2C.Add(&Aplus2C, &curve.A) // = 2*C + A
-
+	cachedParams := curve.cachedParams()
 	*xQ = *xP
 	for i := uint32(0); i < k; i++ {
-		xQ.Double(xQ, &Aplus2C, &C4)
+		xQ.Double(xQ, &cachedParams)
 	}
 
 	return xQ
@@ -125,7 +135,7 @@ func (xQ *ProjectivePoint) Pow2k(curve *ProjectiveCurveParameters, xP *Projectiv
 // Given xP = x(P) and cached curve parameters Aplus2C = A + 2*C, C4 = 4*C, compute xQ = x([3]P).
 //
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
-func (xQ *ProjectivePoint) Triple(xP *ProjectivePoint, Aplus2C, C4 *ExtensionFieldElement) *ProjectivePoint {
+func (xQ *ProjectivePoint) Triple(xP *ProjectivePoint, curve *CachedCurveParameters) *ProjectivePoint {
 	// Uses the efficient Montgomery tripling formulas from Costello-Longa-Naehrig.
 	var v0, v1, v2, v3, v4, v5 ExtensionFieldElement
 	// Compute (X_2 : Z_2) = x([2]P)
@@ -133,10 +143,10 @@ func (xQ *ProjectivePoint) Triple(xP *ProjectivePoint, Aplus2C, C4 *ExtensionFie
 	v3.Add(&xP.x, &xP.z)           // X + Z
 	v0.Square(&v2)                 // (X-Z)^2
 	v1.Square(&v3)                 // (X+Z)^2
-	v4.Mul(&v0, C4)                // 4C(X-Z)^2
+	v4.Mul(&v0, &curve.C4)         // 4C(X-Z)^2
 	v5.Mul(&v4, &v1)               // 4C(X-Z)^2(X+Z)^2 = X_2
 	v1.Sub(&v1, &v0)               // (X+Z)^2 - (X-Z)^2 = 4XZ
-	v0.Mul(&v1, Aplus2C)           // 4XZ(A+2C)
+	v0.Mul(&v1, &curve.Aplus2C)    // 4XZ(A+2C)
 	v4.Add(&v4, &v0).Mul(&v4, &v1) // (4C(X-Z)^2 + 4XZ(A+2C))4XZ = Z_2
 	// Compute (X_3 : Z_3) = x(P + [2]P)
 	v0.Add(&v5, &v4).Mul(&v0, &v2) // (X_2 + Z_2)(X-Z)
@@ -157,26 +167,17 @@ func (xQ *ProjectivePoint) Pow3k(curve *ProjectiveCurveParameters, xP *Projectiv
 		panic("Called Pow3k with k == 0")
 	}
 
-	var Aplus2C, C4 ExtensionFieldElement
-	Aplus2C.Add(&curve.C, &curve.C) // = 2*C
-	C4.Add(&Aplus2C, &Aplus2C)      // = 4*C
-	Aplus2C.Add(&Aplus2C, &curve.A) // = 2*C + A
-
+	cachedParams := curve.cachedParams()
 	*xQ = *xP
 	for i := uint32(0); i < k; i++ {
-		xQ.Triple(xQ, &Aplus2C, &C4)
+		xQ.Triple(xQ, &cachedParams)
 	}
 
 	return xQ
 }
 
 func (xQ *ProjectivePoint) ScalarMult(curve *ProjectiveCurveParameters, xP *ProjectivePoint, scalar []uint8) *ProjectivePoint {
-	// XXX move this boilerplate to a function
-	var Aplus2C, C4 ExtensionFieldElement
-	Aplus2C.Add(&curve.C, &curve.C) // = 2*C
-	C4.Add(&Aplus2C, &Aplus2C)      // = 4*C
-	Aplus2C.Add(&Aplus2C, &curve.A) // = 2*C + A
-
+	cachedParams := curve.cachedParams()
 	var x0, x1, tmp ProjectivePoint
 	x0.x.One()
 	x0.z.Zero()
@@ -189,7 +190,7 @@ func (xQ *ProjectivePoint) ScalarMult(curve *ProjectiveCurveParameters, xP *Proj
 			bit := (scalarByte >> uint(j)) & 0x1
 			ProjectivePointConditionalSwap(&x0, &x1, (bit ^ prevBit))
 			// could avoid use of tmp by having unified double/add
-			tmp.Double(&x0, &Aplus2C, &C4)
+			tmp.Double(&x0, &cachedParams)
 			x1.Add(&x0, &x1, xP)
 			x0 = tmp
 			prevBit = bit
