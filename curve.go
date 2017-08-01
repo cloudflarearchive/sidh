@@ -176,20 +176,29 @@ func (xQ *ProjectivePoint) Pow3k(curve *ProjectiveCurveParameters, xP *Projectiv
 	return xQ
 }
 
+// Given x(P) and a scalar m in little-endian bytes, compute x([m]P) using the
+// Montgomery ladder.  This is described in Algorithm 8 of Costello-Smith.
+//
+// This function's execution time is dependent only on the byte-length of the
+// input scalar.  All scalars of the same input length execute in uniform time.
+// The scalar can be padded with zero bytes to ensure a uniform length.
+//
+// Safe to overlap the source with the destination.
 func (xQ *ProjectivePoint) ScalarMult(curve *ProjectiveCurveParameters, xP *ProjectivePoint, scalar []uint8) *ProjectivePoint {
 	cachedParams := curve.cachedParams()
 	var x0, x1, tmp ProjectivePoint
+
 	x0.x.One()
 	x0.z.Zero()
 	x1 = *xP
-	prevBit := uint8(0)
+
 	// Iterate over the bits of the scalar, top to bottom
+	prevBit := uint8(0)
 	for i := len(scalar) - 1; i >= 0; i-- {
 		scalarByte := scalar[i]
 		for j := 7; j >= 0; j-- {
 			bit := (scalarByte >> uint(j)) & 0x1
 			ProjectivePointConditionalSwap(&x0, &x1, (bit ^ prevBit))
-			// could avoid use of tmp by having unified double/add
 			tmp.Double(&x0, &cachedParams)
 			x1.Add(&x0, &x1, xP)
 			x0 = tmp
@@ -200,4 +209,79 @@ func (xQ *ProjectivePoint) ScalarMult(curve *ProjectiveCurveParameters, xP *Proj
 	ProjectivePointConditionalSwap(&x0, &x1, prevBit)
 	*xQ = x0
 	return xQ
+}
+
+// Given x(P), x(Q), x(P-Q), as well as a scalar m in little-endian bytes,
+// compute x(P + [m]Q) using the "three-point ladder" of de Feo, Jao, and Plut.
+//
+// Safe to overlap the source with the destination.
+//
+// This function's execution time is dependent only on the byte-length of the
+// input scalar.  All scalars of the same input length execute in uniform time.
+// The scalar can be padded with zero bytes to ensure a uniform length.
+//
+// The algorithm, as described in de Feo-Jao-Plut, is as follows:
+//
+// (x0, x1, x2) <--- (x(O), x(Q), x(P))
+//
+// for i = |m| down to 0, indexing the bits of m:
+//     Invariant: (x0, x1, x2) == (x( [t]Q ), x( [t+1]Q ), x( P + [t]Q ))
+//          where t = m//2^i is the high bits of m, starting at i
+//     if m_i == 0:
+//         (x0, x1, x2) <--- (xDBL(x0), xADD(x1, x0, x(Q)), xADD(x2, x0, x(P)))
+//         Invariant: (x0, x1, x2) == (x( [2t]Q ), x( [2t+1]Q ), x( P + [2t]Q ))
+//                                 == (x( [t']Q ), x( [t'+1]Q ), x( P + [t']Q ))
+//              where t' = m//2^{i-1} is the high bits of m, starting at i-1
+//     if m_i == 1:
+//         (x0, x1, x2) <--- (xADD(x1, x0, x(Q)), xDBL(x1), xADD(x2, x1, x(P-Q)))
+//         Invariant: (x0, x1, x2) == (x( [2t+1]Q ), x( [2t+2]Q ), x( P + [2t+1]Q ))
+//                                 == (x( [t']Q ),   x( [t'+1]Q ), x( P + [t']Q ))
+//              where t' = m//2^{i-1} is the high bits of m, starting at i-1
+// return x2
+//
+// Notice that the roles of (x0,x1) and (x(P), x(P-Q)) swap depending on the
+// current bit of the scalar.  Instead of swapping which operations we do, we
+// can swap variable names, producing the following uniform algorithm:
+//
+// (x0, x1, x2) <--- (x(O), x(Q), x(P))
+// (y0, y1) <--- (x(P), x(P-Q))
+//
+// for i = |m| down to 0, indexing the bits of m:
+//      (x0, x1) <--- SWAP( m_{i+1} xor m_i, (x0,x1) )
+//      (y0, y1) <--- SWAP( m_{i+1} xor m_i, (y0,y1) )
+//      (x0, x1, x2) <--- ( xDBL(x0), xADD(x1,x0,x(Q)), xADD(x2, x0, y0) )
+//
+// return x2
+//
+func (xR *ProjectivePoint) ThreePointLadder(curve *ProjectiveCurveParameters, xP, xQ, xPmQ *ProjectivePoint, scalar []uint8) *ProjectivePoint {
+	cachedParams := curve.cachedParams()
+	var x0, x1, x2, y0, y1, tmp ProjectivePoint
+
+	// (x0, x1, x2) <--- (x(O), x(Q), x(P))
+	x0.x.One()
+	x0.z.Zero()
+	x1 = *xQ
+	x2 = *xP
+	// (y0, y1) <--- (x(P), x(P-Q))
+	y0 = *xP
+	y1 = *xPmQ
+
+	// Iterate over the bits of the scalar, top to bottom
+	prevBit := uint8(0)
+	for i := len(scalar) - 1; i >= 0; i-- {
+		scalarByte := scalar[i]
+		for j := 7; j >= 0; j-- {
+			bit := (scalarByte >> uint(j)) & 0x1
+			ProjectivePointConditionalSwap(&x0, &x1, (bit ^ prevBit))
+			ProjectivePointConditionalSwap(&y0, &y1, (bit ^ prevBit))
+			x2.Add(&x2, &x0, &y0) // = xADD(x2, x0, y0)
+			tmp.Double(&x0, &cachedParams)
+			x1.Add(&x1, &x0, xQ) // = xADD(x1, x0, x(Q))
+			x0 = tmp             // = xDBL(x0)
+			prevBit = bit
+		}
+	}
+
+	*xR = x2
+	return xR
 }
