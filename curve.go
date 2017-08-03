@@ -285,3 +285,49 @@ func (xR *ProjectivePoint) ThreePointLadder(curve *ProjectiveCurveParameters, xP
 	*xR = x2
 	return xR
 }
+
+// Given a three-torsion point x3 = x(P_3) on the curve E_(A:C), compute the
+// coefficients of the codomain E_(A':C') of the three-isogeny phi : E_(A:C) ->
+// E_(A:C)/<P_3>.
+func (codomain *ProjectiveCurveParameters) CodomainOf3Isogeny(x3 *ProjectivePoint) {
+	// We want to compute
+	// (A':C') = (Z^4 + 18X^2Z^2 - 27X^4 : 4XZ^3)
+	// To do this, use the identity 18X^2Z^2 - 27X^4 = 9X^2(2Z^2 - 3X^2)
+	var v0, v1, v2, v3 ExtensionFieldElement
+	v1.Square(&x3.x)               // = X^2
+	v0.Add(&v1, &v1).Add(&v1, &v0) // = 3X^2
+	v1.Add(&v0, &v0).Add(&v1, &v0) // = 9X^2
+	v2.Square(&x3.z)               // = Z^2
+	v3.Square(&v2)                 // = Z^4
+	v2.Add(&v2, &v2)               // = 2Z^2
+	v0.Sub(&v2, &v0)               // = 2Z^2 - 3X^2
+	v1.Mul(&v1, &v0)               // = 9X^2(2Z^2 - 3X^2)
+	v0.Mul(&x3.x, &x3.z)           // = XZ
+	v0.Add(&v0, &v0)               // = 2XZ
+	codomain.A.Add(&v3, &v1)       // = Z^4 + 9X^2(2Z^2 - 3X^2)
+	codomain.C.Mul(&v0, &v2)       // = 4XZ^3
+}
+
+// Given a three-torsion point x3 = x(P_3) on the curve E_(A:C), together with
+// a point xP = x(P), compute x(Q), the x-coordinate of the image Q = phi(P) of
+// P under the three-isogeny phi : E_(A:C) -> E_(A:C)/<P_3> = E_(A':C').
+//
+// The output xQ = x(Q) is then a point on the curve E_(A':C'); the curve
+// parameters can be computed using the CodomainOf3Isogeny function.
+//
+// Returns xQ to allow chaining.  Safe to overlap x3, xP, xQ.
+func (xQ *ProjectivePoint) Eval3Isogeny(x3, xP *ProjectivePoint) *ProjectivePoint {
+	var t0, t1, t2 ExtensionFieldElement
+	t0.Mul(&x3.x, &xP.x) // = X3*XP
+	t1.Mul(&x3.z, &xP.z) // = Z3*XP
+	t2.Sub(&t0, &t1)     // = X3*XP - Z3*ZP
+	t0.Mul(&x3.z, &xP.x) // = Z3*XP
+	t1.Mul(&x3.x, &xP.z) // = X3*ZP
+	t0.Sub(&t0, &t1)     // = Z3*XP - X3*ZP
+	t2.Square(&t2)       // = (X3*XP - Z3*ZP)^2
+	t0.Square(&t0)       // = (Z3*XP - X3*ZP)^2
+	xQ.x.Mul(&t2, &xP.x) // = XP*(X3*XP - Z3*ZP)^2
+	xQ.z.Mul(&t0, &xP.z) // = XQ*(Z3*XP - X3*ZP)^2
+
+	return xQ
+}
