@@ -197,7 +197,7 @@ func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) *Extensi
 // If choice = 1u8, set (x,y) = (y,x). If choice = 0u8, set (x,y) = (x,y).
 //
 // Returns dest to allow chaining operations.
-func ExtensionFieldElementConditionalSwap(x, y *ExtensionFieldElement, choice uint8) {
+func ExtensionFieldConditionalSwap(x, y *ExtensionFieldElement, choice uint8) {
 	fp751ConditionalSwap(&x.a, &y.a, choice)
 	fp751ConditionalSwap(&x.b, &y.b, choice)
 }

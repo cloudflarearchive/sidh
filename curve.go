@@ -73,8 +73,8 @@ func (lhs *ProjectivePoint) VartimeEq(rhs *ProjectivePoint) bool {
 }
 
 func ProjectivePointConditionalSwap(xP, xQ *ProjectivePoint, choice uint8) {
-	ExtensionFieldElementConditionalSwap(&xP.x, &xQ.x, choice)
-	ExtensionFieldElementConditionalSwap(&xP.z, &xQ.z, choice)
+	ExtensionFieldConditionalSwap(&xP.x, &xQ.x, choice)
+	ExtensionFieldConditionalSwap(&xP.z, &xQ.z, choice)
 }
 
 // Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xR = x(P+Q).
