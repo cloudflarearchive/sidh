@@ -287,7 +287,7 @@ func (xR *ProjectivePoint) ThreePointLadder(curve *ProjectiveCurveParameters, xP
 }
 
 // Represents a 3-isogeny phi, holding the data necessary to evaluate phi.
-type Cached3Isogeny struct {
+type ThreeIsogeny struct {
 	x ExtensionFieldElement
 	z ExtensionFieldElement
 }
@@ -296,8 +296,8 @@ type Cached3Isogeny struct {
 // three-isogeny phi : E_(A:C) -> E_(A:C)/<P_3> = E_(A':C').
 //
 // Returns a tuple (codomain, isogeny) = (E_(A':C'), phi).
-func Compute3Isogeny(x3 *ProjectivePoint) (ProjectiveCurveParameters, Cached3Isogeny) {
-	var isogeny Cached3Isogeny
+func ComputeThreeIsogeny(x3 *ProjectivePoint) (ProjectiveCurveParameters, ThreeIsogeny) {
+	var isogeny ThreeIsogeny
 	isogeny.x = x3.x
 	isogeny.z = x3.z
 	// We want to compute
@@ -327,7 +327,7 @@ func Compute3Isogeny(x3 *ProjectivePoint) (ProjectiveCurveParameters, Cached3Iso
 // The output xQ = x(Q) is then a point on the curve E_(A':C'); the curve
 // parameters are returned by the Compute3Isogeny function used to construct
 // phi.
-func (phi *Cached3Isogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
+func (phi *ThreeIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	var xQ ProjectivePoint
 	var t0, t1, t2 ExtensionFieldElement
 	t0.Mul(&phi.x, &xP.x) // = X3*XP
@@ -345,7 +345,7 @@ func (phi *Cached3Isogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 }
 
 // Represents a 4-isogeny phi, holding the data necessary to evaluate phi.
-type Cached4Isogeny struct {
+type FourIsogeny struct {
 	Xsq_plus_Zsq  ExtensionFieldElement
 	Xsq_minus_Zsq ExtensionFieldElement
 	XZ2           ExtensionFieldElement
@@ -358,9 +358,9 @@ type Cached4Isogeny struct {
 // E_(A:C)/<P_4>.
 //
 // Returns a tuple (codomain, isogeny) = (E_(A':C') : phi).
-func Compute4Isogeny(x4 *ProjectivePoint) (ProjectiveCurveParameters, Cached4Isogeny) {
+func ComputeFourIsogeny(x4 *ProjectivePoint) (ProjectiveCurveParameters, FourIsogeny) {
 	var codomain ProjectiveCurveParameters
-	var isogeny Cached4Isogeny
+	var isogeny FourIsogeny
 	var v0, v1 ExtensionFieldElement
 	v0.Square(&x4.x)                                     // = X4^2
 	v1.Square(&x4.z)                                     // = Z4^2
@@ -383,9 +383,9 @@ func Compute4Isogeny(x4 *ProjectivePoint) (ProjectiveCurveParameters, Cached4Iso
 // of the image Q = phi(P) of P under phi : E_(A:C) -> E_(A':C').
 //
 // The output xQ = x(Q) is then a point on the curve E_(A':C'); the curve
-// parameters are returned by the Compute4Isogeny function used to construct
+// parameters are returned by the ComputeFourIsogeny function used to construct
 // phi.
-func (phi *Cached4Isogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
+func (phi *FourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	var xQ ProjectivePoint
 	var t0, t1, t2 ExtensionFieldElement
 	// We want to compute formula (7) of Costello-Longa-Naehrig, namely
