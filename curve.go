@@ -19,7 +19,8 @@ var const256 = ExtensionFieldElement{
 	b: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
-func (curveParams *ProjectiveCurveParameters) jInvariant() *ExtensionFieldElement {
+// Compute the j-invariant (not the J-invariant) of the given curve.
+func (curveParams *ProjectiveCurveParameters) JInvariant() *ExtensionFieldElement {
 	var v0, v1, v2, v3 ExtensionFieldElement
 	A := &curveParams.A
 	C := &curveParams.C
