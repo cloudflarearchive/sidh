@@ -59,8 +59,23 @@ type ProjectivePoint struct {
 	z ExtensionFieldElement // this is actually Z, but can't be named that
 }
 
+// A point on the projective line P^1(F_p).
+//
+// This represents a point on the (Kummer line) of the prime-field subgroup of
+// the base curve E_0(F_p), defined by E_0 : y^2 = x^3 + x.
+type ProjectivePrimeFieldPoint struct {
+	x PrimeFieldElement // this is actually X, but can't be named that
+	z PrimeFieldElement // this is actually Z, but can't be named that
+}
+
 func (point *ProjectivePoint) toAffine() *ExtensionFieldElement {
 	affine_x := new(ExtensionFieldElement)
+	affine_x.Inv(&point.z).Mul(affine_x, &point.x)
+	return affine_x
+}
+
+func (point *ProjectivePrimeFieldPoint) toAffine() *PrimeFieldElement {
+	affine_x := new(PrimeFieldElement)
 	affine_x.Inv(&point.z).Mul(affine_x, &point.x)
 	return affine_x
 }
@@ -72,9 +87,21 @@ func (lhs *ProjectivePoint) VartimeEq(rhs *ProjectivePoint) bool {
 	return t0.VartimeEq(&t1)
 }
 
+func (lhs *ProjectivePrimeFieldPoint) VartimeEq(rhs *ProjectivePrimeFieldPoint) bool {
+	var t0, t1 PrimeFieldElement
+	t0.Mul(&lhs.x, &rhs.z)
+	t1.Mul(&lhs.z, &rhs.x)
+	return t0.VartimeEq(&t1)
+}
+
 func ProjectivePointConditionalSwap(xP, xQ *ProjectivePoint, choice uint8) {
 	ExtensionFieldConditionalSwap(&xP.x, &xQ.x, choice)
 	ExtensionFieldConditionalSwap(&xP.z, &xQ.z, choice)
+}
+
+func ProjectivePrimeFieldPointConditionalSwap(xP, xQ *ProjectivePrimeFieldPoint, choice uint8) {
+	PrimeFieldConditionalSwap(&xP.x, &xQ.x, choice)
+	PrimeFieldConditionalSwap(&xP.z, &xQ.z, choice)
 }
 
 // Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xR = x(P+Q).
@@ -83,6 +110,24 @@ func ProjectivePointConditionalSwap(xP, xQ *ProjectivePoint, choice uint8) {
 func (xR *ProjectivePoint) Add(xP, xQ, xPmQ *ProjectivePoint) *ProjectivePoint {
 	// Algorithm 1 of Costello-Smith.
 	var v0, v1, v2, v3, v4 ExtensionFieldElement
+	v0.Add(&xP.x, &xP.z)               // X_P + Z_P
+	v1.Sub(&xQ.x, &xQ.z).Mul(&v1, &v0) // (X_Q - Z_Q)(X_P + Z_P)
+	v0.Sub(&xP.x, &xP.z)               // X_P - Z_P
+	v2.Add(&xQ.x, &xQ.z).Mul(&v2, &v0) // (X_Q + Z_Q)(X_P - Z_P)
+	v3.Add(&v1, &v2).Square(&v3)       // 4(X_Q X_P - Z_Q Z_P)^2
+	v4.Sub(&v1, &v2).Square(&v4)       // 4(X_Q Z_P - Z_Q X_P)^2
+	v0.Mul(&xPmQ.z, &v3)               // 4X_{P-Q}(X_Q X_P - Z_Q Z_P)^2
+	xR.z.Mul(&xPmQ.x, &v4)             // 4Z_{P-Q}(X_Q Z_P - Z_Q X_P)^2
+	xR.x = v0
+	return xR
+}
+
+// Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xR = x(P+Q).
+//
+// Returns xR to allow chaining.  Safe to overlap xP, xQ, xR.
+func (xR *ProjectivePrimeFieldPoint) Add(xP, xQ, xPmQ *ProjectivePrimeFieldPoint) *ProjectivePrimeFieldPoint {
+	// Algorithm 1 of Costello-Smith.
+	var v0, v1, v2, v3, v4 PrimeFieldElement
 	v0.Add(&xP.x, &xP.z)               // X_P + Z_P
 	v1.Sub(&xQ.x, &xQ.z).Mul(&v1, &v0) // (X_Q - Z_Q)(X_P + Z_P)
 	v0.Sub(&xP.x, &xP.z)               // X_P - Z_P
@@ -112,6 +157,27 @@ func (xQ *ProjectivePoint) Double(xP *ProjectivePoint, curve *CachedCurveParamet
 	// Now (xQ.x : xQ.z)
 	//   = (4C(X+Z)^2(X-Z)^2 : (4XZ(A + 2C) + 4C(X-Z)^2)4XZ )
 	//   = ((X+Z)^2(X-Z)^2 : (4XZ((A + 2C)/4C) + (X-Z)^2)4XZ )
+	//   = ((X+Z)^2(X-Z)^2 : (4XZ((a + 2)/4) + (X-Z)^2)4XZ )
+	return xQ
+}
+
+// Given xP = x(P) and cached curve parameter aPlus2Over4 = (a+2)/4, compute xQ = x([2]P).
+//
+// Note that we don't use projective curve coefficients here because we only
+// ever use a fixed curve (in our case, the base curve E_0).
+//
+// Returns xQ to allow chaining.  Safe to overlap xP, xQ.
+func (xQ *ProjectivePrimeFieldPoint) Double(xP *ProjectivePrimeFieldPoint, aPlus2Over4 *PrimeFieldElement) *ProjectivePrimeFieldPoint {
+	// Algorithm 2 of Costello-Smith
+	var v1, v2, v3, xz4 PrimeFieldElement
+	v1.Add(&xP.x, &xP.z).Square(&v1) // (X+Z)^2
+	v2.Sub(&xP.x, &xP.z).Square(&v2) // (X-Z)^2
+	xz4.Sub(&v1, &v2)                // 4XZ = (X+Z)^2 - (X-Z)^2
+	xQ.x.Mul(&v1, &v2)               // (X+Z)^2(X-Z)^2
+	v3.Mul(&xz4, aPlus2Over4)        // 4XZ((a+2)/4)
+	v3.Add(&v3, &v2)                 // 4XZ((a+2)/4) + (X-Z)^2
+	xQ.z.Mul(&v3, &xz4)              // (4XZ((a+2)/4) + (X-Z)^2)4XZ
+	// Now (xQ.x : xQ.z)
 	//   = ((X+Z)^2(X-Z)^2 : (4XZ((a + 2)/4) + (X-Z)^2)4XZ )
 	return xQ
 }
@@ -210,6 +276,40 @@ func (xQ *ProjectivePoint) ScalarMult(curve *ProjectiveCurveParameters, xP *Proj
 	ProjectivePointConditionalSwap(&x0, &x1, prevBit)
 	*xQ = x0
 	return xQ
+}
+
+// Given x(P) and a scalar m in little-endian bytes, compute x([m]P), x([m+1]P) using the
+// Montgomery ladder.  This is described in Algorithm 8 of Costello-Smith.
+//
+// The extra value x([m+1]P) is returned to allow y-coordinate recovery;
+// otherwise, it can be ignored.
+//
+// This function's execution time is dependent only on the byte-length of the
+// input scalar.  All scalars of the same input length execute in uniform time.
+// The scalar can be padded with zero bytes to ensure a uniform length.
+func ScalarMultPrimeField(aPlus2Over4 *PrimeFieldElement, xP *ProjectivePrimeFieldPoint, scalar []uint8) (ProjectivePrimeFieldPoint, ProjectivePrimeFieldPoint) {
+	var x0, x1, tmp ProjectivePrimeFieldPoint
+
+	x0.x.One()
+	x0.z.Zero()
+	x1 = *xP
+
+	// Iterate over the bits of the scalar, top to bottom
+	prevBit := uint8(0)
+	for i := len(scalar) - 1; i >= 0; i-- {
+		scalarByte := scalar[i]
+		for j := 7; j >= 0; j-- {
+			bit := (scalarByte >> uint(j)) & 0x1
+			ProjectivePrimeFieldPointConditionalSwap(&x0, &x1, (bit ^ prevBit))
+			tmp.Double(&x0, aPlus2Over4)
+			x1.Add(&x0, &x1, xP)
+			x0 = tmp
+			prevBit = bit
+		}
+	}
+	// now prevBit is the lowest bit of the scalar
+	ProjectivePrimeFieldPointConditionalSwap(&x0, &x1, prevBit)
+	return x0, x1
 }
 
 // Given x(P), x(Q), x(P-Q), as well as a scalar m in little-endian bytes,
