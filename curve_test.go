@@ -190,6 +190,34 @@ func TestPointTripleVersusAddDouble(t *testing.T) {
 	}
 }
 
+func TestScalarMultPrimeFieldVersusSageGeneratedTorsionPoints(t *testing.T) {
+	// x((11,...)) = 11
+	var x11 = ProjectivePrimeFieldPoint{x: PrimeFieldElement{a:fp751Element{0x192a73, 0x0, 0x0, 0x0, 0x0, 0xe6f0000000000000, 0x19024ab93916c5c3, 0x1dcd18cf68876318, 0x7d8c830e0c47ba23, 0x3588ea6a9388299a, 0x8259082aa8e3256c, 0x33533f160446}}, z: onePrimeField}
+	// x((6,...)) = 6
+	var x6 = ProjectivePrimeFieldPoint{x: PrimeFieldElement{a:fp751Element{0xdba10, 0x0, 0x0, 0x0, 0x0, 0x3500000000000000, 0x3714fe4eb8399915, 0xc3a2584753eb43f4, 0xa3151d605c520428, 0xc116cf5232c7c978, 0x49a84d4b8efaf6aa, 0x305731e97514}}, z: onePrimeField}
+
+	// Little-endian bytes of 3^239
+	var three239Bytes = [...]byte{235, 142, 138, 135, 159, 84, 104, 201, 62, 110, 199, 124, 63, 161, 177, 89, 169, 109, 135, 190, 110, 125, 134, 233, 132, 128, 116, 37, 203, 69, 80, 43, 86, 104, 198, 173, 123, 249, 9, 41, 225, 192, 113, 31, 84, 93, 254, 6}
+	// Little-endian bytes of 2^372
+	var two372Bytes = [...]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
+
+	// E_0 : y^2 = x^3 + x has a = 0, so (a+2)/4 = 1/2
+	var aPlus2Over4 = PrimeFieldElement{a:fp751Element{0x124d6, 0x0, 0x0, 0x0, 0x0, 0xb8e0000000000000, 0x9c8a2434c0aa7287, 0xa206996ca9a378a3, 0x6876280d41a41b52, 0xe903b49f175ce04f, 0xf8511860666d227, 0x4ea07cff6e7f}}
+
+	var xPA, _ = ScalarMultPrimeField(&aPlus2Over4, &x11, three239Bytes[:])
+	var xPB, _ = ScalarMultPrimeField(&aPlus2Over4, &x6, two372Bytes[:])
+
+	var affine_xPA = xPA.toAffine()
+	var affine_xPB = xPB.toAffine()
+
+	if !torsionPointPAx.VartimeEq(affine_xPA) {
+		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPA, "\nexpected\n", torsionPointPAx)
+	}
+	if !torsionPointPBx.VartimeEq(affine_xPB) {
+		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPB, "\nexpected\n", torsionPointPBx)
+	}
+}
+
 func BenchmarkPointAddition(b *testing.B) {
 	var xP = ProjectivePoint{x: curve_A, z: curve_C}
 	var xP2, xP3 ProjectivePoint
