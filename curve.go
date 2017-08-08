@@ -312,6 +312,35 @@ func ScalarMultPrimeField(aPlus2Over4 *PrimeFieldElement, xP *ProjectivePrimeFie
 	return x0, x1
 }
 
+// Given P = (x_P, y_P) in affine coordinates, as well as projective points
+// x(Q), x(R) = x(P+Q), all in the prime-field subgroup of the starting curve
+// E_0(F_p), use the Okeya-Sakurai coordinate recovery strategy to recover Q =
+// (X_Q : Y_Q : Z_Q).
+//
+// This is Algorithm 5 of Costello-Smith, with the constants a = 0, b = 1 hardcoded.
+func OkeyaSakuraiCoordinateRecovery(affine_xP, affine_yP *PrimeFieldElement, xQ, xR *ProjectivePrimeFieldPoint) (X_Q, Y_Q, Z_Q PrimeFieldElement) {
+	var v1, v2, v3, v4 PrimeFieldElement
+	v1.Mul(affine_xP, &xQ.z)       // = x_P*Z_Q
+	v2.Add(&xQ.x, &v1)             // = X_Q + x_P*Z_Q
+	v3.Sub(&xQ.x, &v1).Square(&v3) // = (X_Q - x_P*Z_Q)^2
+	v3.Mul(&v3, &xR.x)             // = X_R*(X_Q - x_P*Z_Q)^2
+	// Skip setting v1 = 2a*Z_Q (step 6) since we hardcode a = 0
+	// Skip adding v1 to v2 (step 7) since v1 is zero
+	v4.Mul(affine_xP, &xQ.x) // = x_P*X_Q
+	v4.Add(&v4, &xQ.z)       // = x_P*X_Q + Z_Q
+	v2.Mul(&v2, &v4)         // = (x_P*X_Q + Z_Q)*(X_Q + x_P*Z_Q)
+	// Skip multiplication by v1 (step 11) since v1 is zero
+	// Skip subtracting v1 from v2 (step 12) since v1 is zero
+	v2.Mul(&v2, &xR.z)                 // = (x_P*X_Q + Z_Q)*(X_Q + x_P*Z_Q)*Z_R
+	Y_Q.Sub(&v2, &v3)                  // = (x_P*X_Q + Z_Q)*(X_Q + x_P*Z_Q)*Z_R - X_R*(X_Q - x_P*Z_Q)^2
+	v1.Add(affine_yP, affine_yP)       // = 2b*y_P
+	v1.Mul(&v1, &xQ.z).Mul(&v1, &xR.z) // = 2b*y_P*Z_Q*Z_R
+	X_Q.Mul(&v1, &xQ.x)                // = 2b*y_P*Z_Q*Z_R*X_Q
+	Z_Q.Mul(&v1, &xQ.z)                // = 2b*y_P*Z_Q^2*Z_R
+
+	return
+}
+
 // Given x(P), x(Q), x(P-Q), as well as a scalar m in little-endian bytes,
 // compute x(P + [m]Q) using the "three-point ladder" of de Feo, Jao, and Plut.
 //

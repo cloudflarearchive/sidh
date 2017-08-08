@@ -190,11 +190,16 @@ func TestPointTripleVersusAddDouble(t *testing.T) {
 	}
 }
 
-func TestScalarMultPrimeFieldVersusSageGeneratedTorsionPoints(t *testing.T) {
+func TestScalarMultPrimeFieldAndCoordinateRecoveryVersusSageGeneratedTorsionPoints(t *testing.T) {
 	// x((11,...)) = 11
-	var x11 = ProjectivePrimeFieldPoint{x: PrimeFieldElement{a:fp751Element{0x192a73, 0x0, 0x0, 0x0, 0x0, 0xe6f0000000000000, 0x19024ab93916c5c3, 0x1dcd18cf68876318, 0x7d8c830e0c47ba23, 0x3588ea6a9388299a, 0x8259082aa8e3256c, 0x33533f160446}}, z: onePrimeField}
+	var x11 = ProjectivePrimeFieldPoint{x: PrimeFieldElement{a: fp751Element{0x192a73, 0x0, 0x0, 0x0, 0x0, 0xe6f0000000000000, 0x19024ab93916c5c3, 0x1dcd18cf68876318, 0x7d8c830e0c47ba23, 0x3588ea6a9388299a, 0x8259082aa8e3256c, 0x33533f160446}}, z: onePrimeField}
+	// y((11,...)) = oddsqrt(11^3 + 11)
+	var y11 = PrimeFieldElement{a: fp751Element{0xd38a264df57f3c8a, 0x9c0450d25042dcdf, 0xaf1ab7be7bbed0b6, 0xa307981c42b29630, 0x845a7e79e0fa2ecb, 0x7ef77ef732108f55, 0x97b5836751081f0d, 0x59e3d115f5275ff4, 0x9a02736282284916, 0xec39f71196540e99, 0xf8b521b28dcc965a, 0x6af0b9d7f54c}}
+
 	// x((6,...)) = 6
-	var x6 = ProjectivePrimeFieldPoint{x: PrimeFieldElement{a:fp751Element{0xdba10, 0x0, 0x0, 0x0, 0x0, 0x3500000000000000, 0x3714fe4eb8399915, 0xc3a2584753eb43f4, 0xa3151d605c520428, 0xc116cf5232c7c978, 0x49a84d4b8efaf6aa, 0x305731e97514}}, z: onePrimeField}
+	var x6 = ProjectivePrimeFieldPoint{x: PrimeFieldElement{a: fp751Element{0xdba10, 0x0, 0x0, 0x0, 0x0, 0x3500000000000000, 0x3714fe4eb8399915, 0xc3a2584753eb43f4, 0xa3151d605c520428, 0xc116cf5232c7c978, 0x49a84d4b8efaf6aa, 0x305731e97514}}, z: onePrimeField}
+	// y((6,...)) = oddsqrt(6^3 + 6)
+	var y6 = PrimeFieldElement{a: fp751Element{0xe4786c67ba55ff3c, 0x6ffa02bcc2a148e0, 0xe1c5d019df326e2a, 0x232148910f712e87, 0x6ade324bee99c196, 0x4372f82c6bb821f3, 0x91a374a15d391ec4, 0x6e98998b110b7c75, 0x2e093f44d4eeb574, 0x33cdd14668840958, 0xb017cea89e353067, 0x6f907085d4b7}}
 
 	// Little-endian bytes of 3^239
 	var three239Bytes = [...]byte{235, 142, 138, 135, 159, 84, 104, 201, 62, 110, 199, 124, 63, 161, 177, 89, 169, 109, 135, 190, 110, 125, 134, 233, 132, 128, 116, 37, 203, 69, 80, 43, 86, 104, 198, 173, 123, 249, 9, 41, 225, 192, 113, 31, 84, 93, 254, 6}
@@ -202,19 +207,49 @@ func TestScalarMultPrimeFieldVersusSageGeneratedTorsionPoints(t *testing.T) {
 	var two372Bytes = [...]byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16}
 
 	// E_0 : y^2 = x^3 + x has a = 0, so (a+2)/4 = 1/2
-	var aPlus2Over4 = PrimeFieldElement{a:fp751Element{0x124d6, 0x0, 0x0, 0x0, 0x0, 0xb8e0000000000000, 0x9c8a2434c0aa7287, 0xa206996ca9a378a3, 0x6876280d41a41b52, 0xe903b49f175ce04f, 0xf8511860666d227, 0x4ea07cff6e7f}}
+	var aPlus2Over4 = PrimeFieldElement{a: fp751Element{0x124d6, 0x0, 0x0, 0x0, 0x0, 0xb8e0000000000000, 0x9c8a2434c0aa7287, 0xa206996ca9a378a3, 0x6876280d41a41b52, 0xe903b49f175ce04f, 0xf8511860666d227, 0x4ea07cff6e7f}}
 
-	var xPA, _ = ScalarMultPrimeField(&aPlus2Over4, &x11, three239Bytes[:])
-	var xPB, _ = ScalarMultPrimeField(&aPlus2Over4, &x6, two372Bytes[:])
+	// Compute x(P_A) = x([3^239](11,...)) and x([3^239 + 1](11,...))
+	var xPA, xPAplus11 = ScalarMultPrimeField(&aPlus2Over4, &x11, three239Bytes[:])
+
+	// Compute x(P_B) = x([2^372](6,...)) and x([2^372 + 1](6,...))
+	var xPB, xPBplus6 = ScalarMultPrimeField(&aPlus2Over4, &x6, two372Bytes[:])
+
+	// Check that the computed x-coordinates are correct:
 
 	var affine_xPA = xPA.toAffine()
-	var affine_xPB = xPB.toAffine()
-
 	if !torsionPointPAx.VartimeEq(affine_xPA) {
 		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPA, "\nexpected\n", torsionPointPAx)
 	}
+
+	var affine_xPB = xPB.toAffine()
 	if !torsionPointPBx.VartimeEq(affine_xPB) {
 		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPB, "\nexpected\n", torsionPointPBx)
+	}
+
+	// Recover y-coordinates and check that those are correct:
+	var invZ_A, invZ_B PrimeFieldElement
+
+	var X_A, Y_A, Z_A = OkeyaSakuraiCoordinateRecovery(&x11.x, &y11, &xPA, &xPAplus11)
+	invZ_A.Inv(&Z_A)
+	Y_A.Mul(&Y_A, &invZ_A) // = Y_A / Z_A
+	X_A.Mul(&X_A, &invZ_A) // = X_A / Z_A
+	if !torsionPointPAy.VartimeEq(&Y_A) {
+		t.Error("Recovered y(P_A) incorrectly: found\n", Y_A, "\nexpected\n", torsionPointPAy)
+	}
+	if !torsionPointPAx.VartimeEq(&X_A) {
+		t.Error("Recovered x(P_A) incorrectly: found\n", X_A, "\nexpected\n", torsionPointPAx)
+	}
+
+	var X_B, Y_B, Z_B = OkeyaSakuraiCoordinateRecovery(&x6.x, &y6, &xPB, &xPBplus6)
+	invZ_B.Inv(&Z_B)
+	Y_B.Mul(&Y_B, &invZ_B) // = Y_B / Z_B
+	X_B.Mul(&X_B, &invZ_B) // = X_B / Z_B
+	if !torsionPointPBy.VartimeEq(&Y_B) {
+		t.Error("Recovered y(P_B) incorrectly: found\n", Y_B, "\nexpected\n", torsionPointPBy)
+	}
+	if !torsionPointPBx.VartimeEq(&X_B) {
+		t.Error("Recovered x(P_B) incorrectly: found\n", X_B, "\nexpected\n", torsionPointPBx)
 	}
 }
 
