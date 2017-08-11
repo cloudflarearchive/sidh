@@ -68,6 +68,16 @@ type ProjectivePrimeFieldPoint struct {
 	z PrimeFieldElement // this is actually Z, but can't be named that
 }
 
+func (point *ProjectivePoint) fromAffine(x *ExtensionFieldElement) {
+	point.x = *x
+	point.z = oneExtensionField
+}
+
+func (point *ProjectivePrimeFieldPoint) fromAffine(x *PrimeFieldElement) {
+	point.x = *x
+	point.z = onePrimeField
+}
+
 func (point *ProjectivePoint) toAffine() *ExtensionFieldElement {
 	affine_x := new(ExtensionFieldElement)
 	affine_x.Inv(&point.z).Mul(affine_x, &point.x)
