@@ -84,6 +84,16 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) *Extensi
 	return dest
 }
 
+// Set dest = -x
+//
+// Allowed to overlap dest with x.
+//
+// Returns dest to allow chaining operations.
+func (dest *ExtensionFieldElement) Neg(x *ExtensionFieldElement) *ExtensionFieldElement {
+	dest.Sub(&zeroExtensionField, x)
+	return dest
+}
+
 // Set dest = 1/x
 //
 // Allowed to overlap dest with x.
@@ -310,6 +320,16 @@ func (dest *PrimeFieldElement) Square(x *PrimeFieldElement) *PrimeFieldElement {
 	fp751Mul(&ab, a, b)                 // = a*b*R*R
 	fp751MontgomeryReduce(&dest.a, &ab) // = a*b*R mod p
 
+	return dest
+}
+
+// Set dest = -x
+//
+// Allowed to overlap x with dest.
+//
+// Returns dest to allow chaining operations.
+func (dest *PrimeFieldElement) Neg(x *PrimeFieldElement) *PrimeFieldElement {
+	dest.Sub(&zeroPrimeField, x)
 	return dest
 }
 
