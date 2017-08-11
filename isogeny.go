@@ -130,3 +130,43 @@ func (phi *FourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 
 	return xQ
 }
+
+// XXX document/explain how this is different from FourIsogeny and why it's needed
+type FirstFourIsogeny struct {
+	a ExtensionFieldElement
+}
+
+func ComputeFirstFourIsogeny(a *ExtensionFieldElement) (ProjectiveCurveParameters, FirstFourIsogeny) {
+	var codomain ProjectiveCurveParameters
+	var isogeny FirstFourIsogeny
+	var t0, t1 ExtensionFieldElement
+
+	t0.One()                 // = 1
+	t0.Add(&t0, &t0)         // = 2
+	codomain.C.Sub(a, &t0)   // = a - 2
+	t1.Add(&t0, &t0)         // = 4
+	t1.Add(&t0, &t1)         // = 6
+	t0.Add(&t1, a)           // = a+6
+	codomain.A.Add(&t0, &t0) // = 2(a+6)
+
+	isogeny.a = *a
+
+	return codomain, isogeny
+}
+
+func (phi *FirstFourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
+	var xQ ProjectivePoint
+	var t0, t1, t2 ExtensionFieldElement
+
+	t0.Add(&xP.x, &xP.z).Square(&t0)   // = (X+Z)^2
+	t1.One().Add(&t1, &t1)             // = 2
+	t1.Sub(&t1, &phi.a)                // = 2 - a
+	t2.Mul(&xP.x, &xP.z).Mul(&t2, &t1) // = (2-a)*X*Z
+	t1.Sub(&t0, &t2)                   // = X^2 + Z^2 + a*X*Z
+	xQ.x.Mul(&t0, &t1)                 // = (X+Z)^2*(X^2 + Z^2 + a*X*Z)
+
+	t0.Sub(&xP.x, &xP.z).Square(&t0) // = (X-Z)^2
+	xQ.z.Mul(&t0, &t2)               // = (2-a)*X*Z*(X-Z)^2
+
+	return xQ
+}
