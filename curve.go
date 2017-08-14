@@ -68,6 +68,12 @@ type ProjectivePrimeFieldPoint struct {
 	z PrimeFieldElement // this is actually Z, but can't be named that
 }
 
+func (point *ProjectivePoint) fromAffinePrimeField(x *PrimeFieldElement) {
+	point.x.a = x.a
+	point.x.b = zeroExtensionField.b
+	point.z = oneExtensionField
+}
+
 func (point *ProjectivePoint) fromAffine(x *ExtensionFieldElement) {
 	point.x = *x
 	point.z = oneExtensionField
@@ -192,14 +198,10 @@ func (xQ *ProjectivePrimeFieldPoint) Double(xP *ProjectivePrimeFieldPoint, aPlus
 	return xQ
 }
 
-// Given the curve parameters, xP = x(P), and k >= 1, compute xQ = x([2^k]P).
+// Given the curve parameters, xP = x(P), and k >= 0, compute xQ = x([2^k]P).
 //
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
 func (xQ *ProjectivePoint) Pow2k(curve *ProjectiveCurveParameters, xP *ProjectivePoint, k uint32) *ProjectivePoint {
-	if k == 0 {
-		panic("Called Pow2k with k == 0")
-	}
-
 	cachedParams := curve.cachedParams()
 	*xQ = *xP
 	for i := uint32(0); i < k; i++ {
@@ -236,14 +238,10 @@ func (xQ *ProjectivePoint) Triple(xP *ProjectivePoint, curve *CachedCurveParamet
 	return xQ
 }
 
-// Given the curve parameters, xP = x(P), and k >= 1, compute xQ = x([2^k]P).
+// Given the curve parameters, xP = x(P), and k >= 0, compute xQ = x([2^k]P).
 //
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
 func (xQ *ProjectivePoint) Pow3k(curve *ProjectiveCurveParameters, xP *ProjectivePoint, k uint32) *ProjectivePoint {
-	if k == 0 {
-		panic("Called Pow3k with k == 0")
-	}
-
 	cachedParams := curve.cachedParams()
 	*xQ = *xP
 	for i := uint32(0); i < k; i++ {
