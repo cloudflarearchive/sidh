@@ -72,3 +72,28 @@ func TestSecretPoint(t *testing.T) {
 		t.Error("Expected \n", sageAffine_xR_B, "\nfound\n", affine_xR_B)
 	}
 }
+
+var keygenBenchPubKey SIDHPublicKey
+
+func BenchmarkBobKeyGenFast(b *testing.B) {
+	// m_B = 3*randint(0,3^238)
+	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+
+	var bobSecretKey = SIDHSecretKey{scalar: m_B[:]}
+
+	for n := 0; n < b.N; n++ {
+		keygenBenchPubKey = BobKeyGenFast(&torsionPointPAx, &torsionPointPBx, &torsionPointPBy, &bobSecretKey)
+	}
+}
+
+func BenchmarkBobKeyGenSlow(b *testing.B) {
+	// m_B = 3*randint(0,3^238)
+	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+
+	var bobSecretKey = SIDHSecretKey{scalar: m_B[:]}
+
+
+	for n := 0; n < b.N; n++ {
+		keygenBenchPubKey = BobKeyGenSlow(&torsionPointPAx, &torsionPointPBx, &torsionPointPBy, &bobSecretKey)
+	}
+}
