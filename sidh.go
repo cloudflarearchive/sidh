@@ -15,9 +15,34 @@ var torsionPointPBy = PrimeFieldElement{a: fp751Element{0xd1e1471273e3736b, 0xf9
 // The value of (a+2)/4 for the starting curve E_0 with a=0: this is 1/2
 var aPlus2Over4_E0 = PrimeFieldElement{a: fp751Element{0x124d6, 0x0, 0x0, 0x0, 0x0, 0xb8e0000000000000, 0x9c8a2434c0aa7287, 0xa206996ca9a378a3, 0x6876280d41a41b52, 0xe903b49f175ce04f, 0xf8511860666d227, 0x4ea07cff6e7f}}
 
-var aliceIsogenyStrategy = [185]uint8{0, 1, 1, 2, 2, 2, 3, 4, 4, 4, 4, 5, 5, 6, 7, 8, 8, 9, 9, 9, 9, 9, 9, 9, 12, 11, 12, 12, 13, 14, 15, 16, 16, 16, 16, 16, 16, 17, 17, 18, 18, 17, 21, 17, 18, 21, 20, 21, 21, 21, 21, 21, 22, 25, 25, 25, 26, 27, 28, 28, 29, 30, 31, 32, 32, 32, 32, 32, 32, 32, 33, 33, 33, 35, 36, 36, 33, 36, 35, 36, 36, 35, 36, 36, 37, 38, 38, 39, 40, 41, 42, 38, 39, 40, 41, 42, 40, 46, 42, 43, 46, 46, 46, 46, 48, 48, 48, 48, 49, 49, 48, 53, 54, 51, 52, 53, 54, 55, 56, 57, 58, 59, 59, 60, 62, 62, 63, 64, 64, 64, 64, 64, 64, 64, 64, 65, 65, 65, 65, 65, 66, 67, 65, 66, 67, 66, 69, 70, 66, 67, 66, 69, 70, 69, 70, 70, 71, 72, 71, 72, 72, 74, 74, 75, 72, 72, 74, 74, 75, 72, 72, 74, 75, 75, 72, 72, 74, 75, 75, 77, 77, 79, 80, 80, 82}
+const maxAlice = 185
 
-var bobIsogenyStrategy = [...]uint8{0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6, 7, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 12, 12, 12, 12, 12, 12, 13, 14, 14, 15, 16, 16, 16, 16, 16, 17, 16, 16, 17, 19, 19, 20, 21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 24, 24, 25, 27, 27, 28, 28, 29, 28, 29, 28, 28, 28, 30, 28, 28, 28, 29, 30, 33, 33, 33, 33, 34, 35, 37, 37, 37, 37, 38, 38, 37, 38, 38, 38, 38, 38, 39, 43, 38, 38, 38, 38, 43, 40, 41, 42, 43, 48, 45, 46, 47, 47, 48, 49, 49, 49, 50, 51, 50, 49, 49, 49, 49, 51, 49, 53, 50, 51, 50, 51, 51, 51, 52, 55, 55, 55, 56, 56, 56, 56, 56, 58, 58, 61, 61, 61, 63, 63, 63, 64, 65, 65, 65, 65, 66, 66, 65, 65, 66, 66, 66, 66, 66, 66, 66, 71, 66, 73, 66, 66, 71, 66, 73, 66, 66, 71, 66, 73, 68, 68, 71, 71, 73, 73, 73, 75, 75, 78, 78, 78, 80, 80, 80, 81, 81, 82, 83, 84, 85, 86, 86, 86, 86, 86, 87, 86, 88, 86, 86, 86, 86, 88, 86, 88, 86, 86, 86, 88, 88, 86, 86, 86, 93, 90, 90, 92, 92, 92, 93, 93, 93, 93, 93, 97, 97, 97, 97, 97, 97}
+var aliceIsogenyStrategy = [maxAlice]int{0, 1, 1, 2, 2, 2, 3, 4, 4, 4, 4, 5, 5,
+	6, 7, 8, 8, 9, 9, 9, 9, 9, 9, 9, 12, 11, 12, 12, 13, 14, 15, 16, 16, 16, 16,
+	16, 16, 17, 17, 18, 18, 17, 21, 17, 18, 21, 20, 21, 21, 21, 21, 21, 22, 25, 25,
+	25, 26, 27, 28, 28, 29, 30, 31, 32, 32, 32, 32, 32, 32, 32, 33, 33, 33, 35, 36,
+	36, 33, 36, 35, 36, 36, 35, 36, 36, 37, 38, 38, 39, 40, 41, 42, 38, 39, 40, 41,
+	42, 40, 46, 42, 43, 46, 46, 46, 46, 48, 48, 48, 48, 49, 49, 48, 53, 54, 51, 52,
+	53, 54, 55, 56, 57, 58, 59, 59, 60, 62, 62, 63, 64, 64, 64, 64, 64, 64, 64, 64,
+	65, 65, 65, 65, 65, 66, 67, 65, 66, 67, 66, 69, 70, 66, 67, 66, 69, 70, 69, 70,
+	70, 71, 72, 71, 72, 72, 74, 74, 75, 72, 72, 74, 74, 75, 72, 72, 74, 75, 75, 72,
+	72, 74, 75, 75, 77, 77, 79, 80, 80, 82}
+
+const maxBob = 239
+
+var bobIsogenyStrategy = [maxBob]int{0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6,
+	7, 8, 8, 8, 8, 9, 9, 9, 9, 9, 10, 12, 12, 12, 12, 12, 12, 13, 14, 14, 15, 16,
+	16, 16, 16, 16, 17, 16, 16, 17, 19, 19, 20, 21, 22, 22, 22, 22, 22, 22, 22, 22,
+	22, 22, 24, 24, 25, 27, 27, 28, 28, 29, 28, 29, 28, 28, 28, 30, 28, 28, 28, 29,
+	30, 33, 33, 33, 33, 34, 35, 37, 37, 37, 37, 38, 38, 37, 38, 38, 38, 38, 38, 39,
+	43, 38, 38, 38, 38, 43, 40, 41, 42, 43, 48, 45, 46, 47, 47, 48, 49, 49, 49, 50,
+	51, 50, 49, 49, 49, 49, 51, 49, 53, 50, 51, 50, 51, 51, 51, 52, 55, 55, 55, 56,
+	56, 56, 56, 56, 58, 58, 61, 61, 61, 63, 63, 63, 64, 65, 65, 65, 65, 66, 66, 65,
+	65, 66, 66, 66, 66, 66, 66, 66, 71, 66, 73, 66, 66, 71, 66, 73, 66, 66, 71, 66,
+	73, 68, 68, 71, 71, 73, 73, 73, 75, 75, 78, 78, 78, 80, 80, 80, 81, 81, 82, 83,
+	84, 85, 86, 86, 86, 86, 86, 87, 86, 88, 86, 86, 86, 86, 88, 86, 88, 86, 86, 86,
+	88, 88, 86, 86, 86, 93, 90, 90, 92, 92, 92, 93, 93, 93, 93, 93, 97, 97, 97, 97,
+	97, 97}
 
 type SIDHPublicKey struct {
 	a           ExtensionFieldElement
@@ -26,6 +51,7 @@ type SIDHPublicKey struct {
 	affine_xQmP ExtensionFieldElement
 }
 
+// XXX this should be typed for alice/bob
 type SIDHSecretKey struct {
 	scalar []uint8
 }
@@ -156,6 +182,104 @@ func DistortAndDifference(affine_xP *PrimeFieldElement) ProjectivePoint {
 	xR.z.a = t0.a                // = 2*x_P + 0*i
 
 	return xR
+}
+
+func BobKeyGenSlow(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secretKey *SIDHSecretKey) SIDHPublicKey {
+	var xP, xQ, xQmP, xR, xS ProjectivePoint
+
+	xP.fromAffinePrimeField(affine_xPA)     // = ( x_P : 1) = x(P_A)
+	xQ.fromAffinePrimeField(affine_xPA)     //
+	xQ.x.Neg(&xQ.x)                         // = (-x_P : 1) = x(Q_A)
+	xQmP = DistortAndDifference(affine_xPA) // = x(Q_B - P_B)
+
+	xR = SecretPoint(affine_xPB, affine_yPB, secretKey.scalar)
+
+	var currentCurve ProjectiveCurveParameters
+	// Starting curve has a = 0, so (A:C) = (0,1)
+	currentCurve.A.Zero()
+	currentCurve.C.One()
+
+	var phi ThreeIsogeny
+	for e := 238; e >= 0; e-- {
+		xS.Pow3k(&currentCurve, &xR, uint32(e))
+		currentCurve, phi = ComputeThreeIsogeny(&xS)
+		xR = phi.Eval(&xR)
+		xP = phi.Eval(&xP)
+		xQ = phi.Eval(&xQ)
+		xQmP = phi.Eval(&xQmP)
+	}
+
+	var invC, invZP, invZQ, invZQmP ExtensionFieldElement
+	ExtensionFieldBatch4Inv(&currentCurve.C, &xP.z, &xQ.z, &xQmP.z, &invC, &invZP, &invZQ, &invZQmP)
+
+	var publicKey SIDHPublicKey
+	publicKey.a.Mul(&currentCurve.A, &invC)
+	publicKey.affine_xP.Mul(&xP.x, &invZP)
+	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
+	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
+
+	return publicKey
+}
+
+func BobKeyGenFast(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secretKey *SIDHSecretKey) SIDHPublicKey {
+	var xP, xQ, xQmP, xR ProjectivePoint
+
+	xP.fromAffinePrimeField(affine_xPA)     // = ( x_P : 1) = x(P_A)
+	xQ.fromAffinePrimeField(affine_xPA)     //
+	xQ.x.Neg(&xQ.x)                         // = (-x_P : 1) = x(Q_A)
+	xQmP = DistortAndDifference(affine_xPA) // = x(Q_B - P_B)
+
+	xR = SecretPoint(affine_xPB, affine_yPB, secretKey.scalar)
+
+	var currentCurve ProjectiveCurveParameters
+	// Starting curve has a = 0, so (A:C) = (0,1)
+	currentCurve.A.Zero()
+	currentCurve.C.One()
+
+	var points = make([]ProjectivePoint, 0, 8)
+	var indices = make([]int, 0, 8)
+	var phi ThreeIsogeny
+
+	var i = 0
+
+	for j := 1; j < 239; j++ {
+		for i < 239-j {
+			points = append(points, xR)
+			indices = append(indices, i)
+			k := int(bobIsogenyStrategy[239-i-j])
+			xR.Pow3k(&currentCurve, &xR, uint32(k))
+			i = i + k
+		}
+		currentCurve, phi = ComputeThreeIsogeny(&xR)
+
+		for k := 0; k < len(points); k++ {
+			points[k] = phi.Eval(&points[k])
+		}
+
+		xP = phi.Eval(&xP)
+		xQ = phi.Eval(&xQ)
+		xQmP = phi.Eval(&xQmP)
+
+		// pop xR from points
+		xR, points = points[len(points)-1], points[:len(points)-1]
+		i, indices = int(indices[len(indices)-1]), indices[:len(indices)-1]
+	}
+
+	currentCurve, phi = ComputeThreeIsogeny(&xR)
+	xP = phi.Eval(&xP)
+	xQ = phi.Eval(&xQ)
+	xQmP = phi.Eval(&xQmP)
+
+	var invC, invZP, invZQ, invZQmP ExtensionFieldElement
+	ExtensionFieldBatch4Inv(&currentCurve.C, &xP.z, &xQ.z, &xQmP.z, &invC, &invZP, &invZQ, &invZQmP)
+
+	var publicKey SIDHPublicKey
+	publicKey.a.Mul(&currentCurve.A, &invC)
+	publicKey.affine_xP.Mul(&xP.x, &invZP)
+	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
+	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
+
+	return publicKey
 }
 
 // Given an affine point P = (x_P, y_P) in the prime-field subgroup of the

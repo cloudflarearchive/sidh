@@ -4,11 +4,34 @@ import (
 	"testing"
 )
 
+func TestBobKeyGenFastVsSlow(t *testing.T) {
+	// m_B = 3*randint(0,3^238)
+	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+
+	var bobSecretKey = SIDHSecretKey{scalar: m_B[:]}
+
+	var fastPubKey = BobKeyGenFast(&torsionPointPAx, &torsionPointPBx, &torsionPointPBy, &bobSecretKey)
+	var slowPubKey = BobKeyGenSlow(&torsionPointPAx, &torsionPointPBx, &torsionPointPBy, &bobSecretKey)
+
+	if !fastPubKey.a.VartimeEq(&slowPubKey.a) {
+		t.Error("Expected a = ", fastPubKey.a, "found", slowPubKey.a)
+	}
+	if !fastPubKey.affine_xP.VartimeEq(&slowPubKey.affine_xP) {
+		t.Error("Expected affine_xP = ", fastPubKey.affine_xP, "found", slowPubKey.affine_xP)
+	}
+	if !fastPubKey.affine_xQ.VartimeEq(&slowPubKey.affine_xQ) {
+		t.Error("Expected affine_xQ = ", fastPubKey.affine_xQ, "found", slowPubKey.affine_xQ)
+	}
+	if !fastPubKey.affine_xQmP.VartimeEq(&slowPubKey.affine_xQmP) {
+		t.Error("Expected affine_xQmP = ", fastPubKey.affine_xQmP, "found", slowPubKey.affine_xQmP)
+	}
+}
+
 func TestAliceKeyGenFastVsSlow(t *testing.T) {
 	// m_A = 2*randint(0,2^371)
 	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
 
-	var aliceSecretKey = SIDHSecretKey{ scalar: m_A[:] }
+	var aliceSecretKey = SIDHSecretKey{scalar: m_A[:]}
 
 	var fastPubKey = AliceKeyGenFast(&torsionPointPBx, &torsionPointPAx, &torsionPointPAy, &aliceSecretKey)
 	var slowPubKey = AliceKeyGenSlow(&torsionPointPBx, &torsionPointPAx, &torsionPointPAy, &aliceSecretKey)
