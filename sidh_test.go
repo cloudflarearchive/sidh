@@ -75,6 +75,28 @@ func TestSecretPoint(t *testing.T) {
 
 var keygenBenchPubKey SIDHPublicKey
 
+func BenchmarkAliceKeyGenFast(b *testing.B) {
+	// m_A = 2*randint(0,2^371)
+	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+
+	var aliceSecretKey = SIDHSecretKey{scalar: m_A[:]}
+
+	for n := 0; n < b.N; n++ {
+		keygenBenchPubKey = AliceKeyGenFast(&torsionPointPBx, &torsionPointPAx, &torsionPointPAy, &aliceSecretKey)
+	}
+}
+
+func BenchmarkAliceKeyGenSlow(b *testing.B) {
+	// m_A = 2*randint(0,2^371)
+	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+
+	var aliceSecretKey = SIDHSecretKey{scalar: m_A[:]}
+
+	for n := 0; n < b.N; n++ {
+		keygenBenchPubKey = AliceKeyGenSlow(&torsionPointPBx, &torsionPointPAx, &torsionPointPAy, &aliceSecretKey)
+	}
+}
+
 func BenchmarkBobKeyGenFast(b *testing.B) {
 	// m_B = 3*randint(0,3^238)
 	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
