@@ -81,7 +81,7 @@ func ComputeFourIsogeny(x4 *ProjectivePoint) (ProjectiveCurveParameters, FourIso
 	v0.Square(&x4.x)                                     // = X4^2
 	v1.Square(&x4.z)                                     // = Z4^2
 	isogeny.Xsq_plus_Zsq.Add(&v0, &v1)                   // = X4^2 + Z4^2
-	isogeny.Xsq_minus_Zsq.Add(&v0, &v1)                  // = X4^2 - Z4^2
+	isogeny.Xsq_minus_Zsq.Sub(&v0, &v1)                  // = X4^2 - Z4^2
 	isogeny.XZ2.Add(&x4.x, &x4.z)                        // = X4 + Z4
 	isogeny.XZ2.Square(&isogeny.XZ2)                     // = X4^2 + Z4^2 + 2X4Z4
 	isogeny.XZ2.Sub(&isogeny.XZ2, &isogeny.Xsq_plus_Zsq) // = 2X4Z4

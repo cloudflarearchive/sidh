@@ -53,6 +53,62 @@ func TestFirstFourIsogenyVersusSage(t *testing.T) {
 	}
 }
 
+func TestFourIsogenyVersusSage(t *testing.T) {
+       var xP4, xR, isogenized_xR, sageIsogenized_xR ProjectivePoint
+       // sage: p = 2^372 * 3^239 - 1; Fp = GF(p)
+       //   ***   Warning: increasing stack size to 2000000.
+       //   ***   Warning: increasing stack size to 4000000.
+       // sage: R.<x> = Fp[]
+       // sage: Fp2 = Fp.extension(x^2 + 1, 'i')
+       // sage: i = Fp2.gen()
+       // sage: E0Fp = EllipticCurve(Fp, [0,0,0,1,0])
+       // sage: E0Fp2 = EllipticCurve(Fp2, [0,0,0,1,0])
+       // sage: x_PA = 11
+       // sage: y_PA = -Fp(11^3 + 11).sqrt()
+       // sage: x_PB = 6
+       // sage: y_PB = -Fp(6^3 + 6).sqrt()
+       // sage: P_A = 3^239 * E0Fp((x_PA,y_PA))
+       // sage: P_B = 2^372 * E0Fp((x_PB,y_PB))
+       // sage: def tau(P):
+       // ....:     return E0Fp2( (-P.xy()[0], i*P.xy()[1]))
+       // ....:
+       // sage: m_B = 3*randint(0,3^238)
+       // sage: m_A = 2*randint(0,2^371)
+       // sage: R_A = E0Fp2(P_A) + m_A*tau(P_A)
+       // sage: def y_recover(x, a):
+       // ....:     return (x**3 + a*x**2 + x).sqrt()
+       // ....:
+       // sage: first_4_torsion_point = E0Fp2(1, y_recover(Fp2(1),0))
+       // sage: sage_first_4_isogeny = E0Fp2.isogeny(first_4_torsion_point)
+       // sage: a = Fp2(0)
+       // sage: E1A = EllipticCurve(Fp2, [0,(2*(a+6))/(a-2),0,1,0])
+       // sage: sage_isomorphism = sage_first_4_isogeny.codomain().isomorphism_to(E1A)
+       // sage: isogenized_R_A = sage_isomorphism(sage_first_4_isogeny(R_A))
+       // sage: P_4 = (2**(372-4))*isogenized_R_A
+       // sage: P_4._order = 4 #otherwise falls back to generic group methods for order
+       // sage: X4, Z4 = P_4.xy()[0], 1
+       // sage: phi4 = EllipticCurveIsogeny(E1A, P_4, None, 4)
+       // sage: E2A_sage = phi4.codomain() # not in monty form
+       // sage: Aprime, Cprime = 2*(2*X4^4 - Z4^4), Z4^4
+       // sage: E2A = EllipticCurve(Fp2, [0,Aprime/Cprime,0,1,0])
+       // sage: sage_iso = E2A_sage.isomorphism_to(E2A)
+       // sage: isogenized2_R_A = sage_iso(phi4(isogenized_R_A))
+
+       xP4.fromAffine(&ExtensionFieldElement{a:fp751Element{0x2afd75a913f3d5e7, 0x2918fba06f88c9ab, 0xa4ac4dc7cb526f05, 0x2d19e9391a607300, 0x7a79e2b34091b54, 0x3ad809dcb42f1792, 0xd46179328bd6402a, 0x1afa73541e2c4f3f, 0xf602d73ace9bdbd8, 0xd77ac58f6bab7004, 0x4689d97f6793b3b3, 0x4f26b00e42b7},b:fp751Element{0x6cdf918dafdcb890, 0x666f273cc29cfae2, 0xad00fcd31ba618e2, 0x5fbcf62bef2f6a33, 0xf408bb88318e5098, 0x84ab97849453d175, 0x501bbfcdcfb8e1ac, 0xf2370098e6b5542c, 0xc7dc73f5f0f6bd32, 0xdd76dcd86729d1cf, 0xca22c905029996e4, 0x5cf4a9373de3}})
+
+       xR.fromAffine(&ExtensionFieldElement{a:fp751Element{0xff99e76f78da1e05, 0xdaa36bd2bb8d97c4, 0xb4328cee0a409daf, 0xc28b099980c5da3f, 0xf2d7cd15cfebb852, 0x1935103dded6cdef, 0xade81528de1429c3, 0x6775b0fa90a64319, 0x25f89817ee52485d, 0x706e2d00848e697, 0xc4958ec4216d65c0, 0xc519681417f},b:fp751Element{0x742fe7dde60e1fb9, 0x801a3c78466a456b, 0xa9f945b786f48c35, 0x20ce89e1b144348f, 0xf633970b7776217e, 0x4c6077a9b38976e5, 0x34a513fc766c7825, 0xacccba359b9cd65, 0xd0ca8383f0fd0125, 0x77350437196287a, 0x9fe1ad7706d4ea21, 0x4d26129ee42d}})
+
+       sageIsogenized_xR.fromAffine(&ExtensionFieldElement{a:fp751Element{0x111efd8bd0b7a01e, 0x6ab75a4f3789ca9b, 0x939dbe518564cac4, 0xf9eeaba1601d0434, 0x8d41f8ba6edac998, 0xfcd2557efe9aa170, 0xb3c3549c098b7844, 0x52874fef6f81127c, 0xb2b9ac82aa518bb3, 0xee70820230520a86, 0xd4012b7f5efb184a, 0x573e4536329b},b:fp751Element{0xa99952281e932902, 0x569a89a571f2c7b1, 0x6150143846ba3f6b, 0x11fd204441e91430, 0x7f469bd55c9b07b, 0xb72db8b9de35b161, 0x455a9a37a940512a, 0xb0cff7670abaf906, 0x18c785b7583375fe, 0x603ab9ca403c9148, 0xab54ba3a6e6c62c1, 0x2726d7d57c4f}})
+
+       _, phi := ComputeFourIsogeny(&xP4)
+
+       isogenized_xR = phi.Eval(&xR)
+
+       if !sageIsogenized_xR.VartimeEq(&isogenized_xR) {
+               t.Error("\nExpected\n", sageIsogenized_xR.toAffine(), "\nfound\n", isogenized_xR.toAffine())
+       }
+}
+
 func TestThreeIsogenyVersusSage(t *testing.T) {
 	var xR, xP3, isogenized_xR, sageIsogenized_xR ProjectivePoint
 
