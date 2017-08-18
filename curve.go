@@ -20,7 +20,7 @@ var const256 = ExtensionFieldElement{
 }
 
 // Compute the j-invariant (not the J-invariant) of the given curve.
-func (curveParams *ProjectiveCurveParameters) JInvariant() *ExtensionFieldElement {
+func (curveParams *ProjectiveCurveParameters) JInvariant() ExtensionFieldElement {
 	var v0, v1, v2, v3 ExtensionFieldElement
 	A := &curveParams.A
 	C := &curveParams.C
@@ -38,7 +38,7 @@ func (curveParams *ProjectiveCurveParameters) JInvariant() *ExtensionFieldElemen
 	v2.Mul(&v2, &v0)       // C^4(A^2 - 4C^2)
 	v2.Inv(&v2)            // 1/C^4(A^2 - 4C^2)
 	v0.Mul(&v3, &v2)       // 256(A^2 - 3C^2)^3 / C^4(A^2 - 4C^2)
-	return &v0
+	return v0
 }
 
 // Compute cached parameters A + 2C, 4C.

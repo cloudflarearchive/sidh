@@ -282,6 +282,155 @@ func BobKeyGenFast(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secret
 	return publicKey
 }
 
+func AliceSharedSecretSlow(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey) ExtensionFieldElement {
+	// newer version of the SIDH paper omits the Montgomery a value from the public key, recovering it from the points - XXX refactor to fix this, until then just pull it from the pubkey
+	var currentCurve ProjectiveCurveParameters
+	currentCurve.A = bobPublic.a
+	currentCurve.C.One()
+
+	var xR, xS, xP, xQ, xQmP ProjectivePoint
+
+	xP.fromAffine(&bobPublic.affine_xP)
+	xQ.fromAffine(&bobPublic.affine_xQ)
+	xQmP.fromAffine(&bobPublic.affine_xQmP)
+
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.scalar)
+
+	var firstPhi FirstFourIsogeny
+	// ComputeFirstFourIsogeny takes an affine parameter, but this is fine
+	// since we just set C = 1 above
+	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve.A)
+	xR = firstPhi.Eval(&xR)
+
+	var phi FourIsogeny
+	for e := (372 - 4); e >= 2; e -= 2 {
+		xS.Pow2k(&currentCurve, &xR, uint32(e))
+		currentCurve, phi = ComputeFourIsogeny(&xS)
+		xR = phi.Eval(&xR)
+	}
+
+	currentCurve, _ = ComputeFourIsogeny(&xR)
+
+	return currentCurve.JInvariant()
+}
+
+func BobSharedSecretSlow(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) ExtensionFieldElement {
+	var currentCurve ProjectiveCurveParameters
+	currentCurve.A = alicePublic.a
+	currentCurve.C.One()
+
+	var xR, xS, xP, xQ, xQmP ProjectivePoint
+
+	xP.fromAffine(&alicePublic.affine_xP)
+	xQ.fromAffine(&alicePublic.affine_xQ)
+	xQmP.fromAffine(&alicePublic.affine_xQmP)
+
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.scalar)
+
+	var phi ThreeIsogeny
+	for e := 238; e >= 1; e-- {
+		xS.Pow3k(&currentCurve, &xR, uint32(e))
+		currentCurve, phi = ComputeThreeIsogeny(&xS)
+		xR = phi.Eval(&xR)
+	}
+
+	currentCurve, _ = ComputeThreeIsogeny(&xR)
+
+	return currentCurve.JInvariant()
+}
+
+func AliceSharedSecretFast(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey) ExtensionFieldElement {
+	// newer version of the SIDH paper omits the Montgomery a value from the public key, recovering it from the points - XXX refactor to fix this, until then just pull it from the pubkey
+	var currentCurve ProjectiveCurveParameters
+	currentCurve.A = bobPublic.a
+	currentCurve.C.One()
+
+	var xR, xP, xQ, xQmP ProjectivePoint
+
+	xP.fromAffine(&bobPublic.affine_xP)
+	xQ.fromAffine(&bobPublic.affine_xQ)
+	xQmP.fromAffine(&bobPublic.affine_xQmP)
+
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.scalar)
+
+	var firstPhi FirstFourIsogeny
+	// ComputeFirstFourIsogeny takes an affine parameter, but this is fine
+	// since we just set C = 1 above
+	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve.A)
+	xR = firstPhi.Eval(&xR)
+
+	var points = make([]ProjectivePoint, 0, 8)
+	var indices = make([]int, 0, 8)
+	var phi FourIsogeny
+
+	var i = 0
+
+	for j := 1; j < 185; j++ {
+		for i < 185-j {
+			points = append(points, xR)
+			indices = append(indices, i)
+			k := int(aliceIsogenyStrategy[185-i-j])
+			xR.Pow2k(&currentCurve, &xR, uint32(2*k))
+			i = i + k
+		}
+		currentCurve, phi = ComputeFourIsogeny(&xR)
+
+		for k := 0; k < len(points); k++ {
+			points[k] = phi.Eval(&points[k])
+		}
+
+		// pop xR from points
+		xR, points = points[len(points)-1], points[:len(points)-1]
+		i, indices = int(indices[len(indices)-1]), indices[:len(indices)-1]
+	}
+
+	currentCurve, _ = ComputeFourIsogeny(&xR)
+
+	return currentCurve.JInvariant()
+}
+
+func BobSharedSecretFast(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) ExtensionFieldElement {
+	var currentCurve ProjectiveCurveParameters
+	currentCurve.A = alicePublic.a
+	currentCurve.C.One()
+
+	var xR, xP, xQ, xQmP ProjectivePoint
+
+	xP.fromAffine(&alicePublic.affine_xP)
+	xQ.fromAffine(&alicePublic.affine_xQ)
+	xQmP.fromAffine(&alicePublic.affine_xQmP)
+
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.scalar)
+
+	var points = make([]ProjectivePoint, 0, 8)
+	var indices = make([]int, 0, 8)
+	var phi ThreeIsogeny
+
+	var i = 0
+
+	for j := 1; j < 239; j++ {
+		for i < 239-j {
+			points = append(points, xR)
+			indices = append(indices, i)
+			k := int(bobIsogenyStrategy[239-i-j])
+			xR.Pow3k(&currentCurve, &xR, uint32(k))
+			i = i + k
+		}
+		currentCurve, phi = ComputeThreeIsogeny(&xR)
+
+		for k := 0; k < len(points); k++ {
+			points[k] = phi.Eval(&points[k])
+		}
+
+		// pop xR from points
+		xR, points = points[len(points)-1], points[:len(points)-1]
+		i, indices = int(indices[len(indices)-1]), indices[:len(indices)-1]
+	}
+	currentCurve, _ = ComputeThreeIsogeny(&xR)
+
+	return currentCurve.JInvariant()
+}
+
 // Given an affine point P = (x_P, y_P) in the prime-field subgroup of the
 // starting curve E_0(F_p), together with a secret scalar m, compute x(P+[m]Q),
 // where Q = \tau(P) is the image of P under the distortion map described
