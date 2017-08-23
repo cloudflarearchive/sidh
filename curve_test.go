@@ -142,6 +142,23 @@ func TestScalarMultVersusSage(t *testing.T) {
 	}
 }
 
+func TestRecoverCurveParameters(t *testing.T) {
+	// Created using old public key generation code that output the a value:
+	var a = ExtensionFieldElement{a: fp751Element{0x9331d9c5aaf59ea4, 0xb32b702be4046931, 0xcebb333912ed4d34, 0x5628ce37cd29c7a2, 0xbeac5ed48b7f58e, 0x1fb9d3e281d65b07, 0x9c0cfacc1e195662, 0xae4bce0f6b70f7d9, 0x59e4e63d43fe71a0, 0xef7ce57560cc8615, 0xe44a8fb7901e74e8, 0x69d13c8366d1}, b: fp751Element{0xf6da1070279ab966, 0xa78fb0ce7268c762, 0x19b40f044a57abfa, 0x7ac8ee6160c0c233, 0x93d4993442947072, 0x757d2b3fa4e44860, 0x73a920f8c4d5257, 0x2031f1b054734037, 0xdefaa1d2406555cd, 0x26f9c70e1496be3d, 0x5b3f335a0a4d0976, 0x13628b2e9c59}}
+	var affine_xP = ExtensionFieldElement{a: fp751Element{0xea6b2d1e2aebb250, 0x35d0b205dc4f6386, 0xb198e93cb1830b8d, 0x3b5b456b496ddcc6, 0x5be3f0d41132c260, 0xce5f188807516a00, 0x54f3e7469ea8866d, 0x33809ef47f36286, 0x6fa45f83eabe1edb, 0x1b3391ae5d19fd86, 0x1e66daf48584af3f, 0xb430c14aaa87}, b: fp751Element{0x97b41ebc61dcb2ad, 0x80ead31cb932f641, 0x40a940099948b642, 0x2a22fd16cdc7fe84, 0xaabf35b17579667f, 0x76c1d0139feb4032, 0x71467e1e7b1949be, 0x678ca8dadd0d6d81, 0x14445daea9064c66, 0x92d161eab4fa4691, 0x8dfbb01b6b238d36, 0x2e3718434e4e}}
+	var affine_xQ = ExtensionFieldElement{a: fp751Element{0xb055cf0ca1943439, 0xa9ff5de2fa6c69ed, 0x4f2761f934e5730a, 0x61a1dcaa1f94aa4b, 0xce3c8fadfd058543, 0xeac432aaa6701b8e, 0x8491d523093aea8b, 0xba273f9bd92b9b7f, 0xd8f59fd34439bb5a, 0xdc0350261c1fe600, 0x99375ab1eb151311, 0x14d175bbdbc5}, b: fp751Element{0xffb0ef8c2111a107, 0x55ceca3825991829, 0xdbf8a1ccc075d34b, 0xb8e9187bd85d8494, 0x670aa2d5c34a03b0, 0xef9fe2ed2b064953, 0xc911f5311d645aee, 0xf4411f409e410507, 0x934a0a852d03e1a8, 0xe6274e67ae1ad544, 0x9f4bc563c69a87bc, 0x6f316019681e}}
+	var affine_xQmP = ExtensionFieldElement{a: fp751Element{0x6ffb44306a153779, 0xc0ffef21f2f918f3, 0x196c46d35d77f778, 0x4a73f80452edcfe6, 0x9b00836bce61c67f, 0x387879418d84219e, 0x20700cf9fc1ec5d1, 0x1dfe2356ec64155e, 0xf8b9e33038256b1c, 0xd2aaf2e14bada0f0, 0xb33b226e79a4e313, 0x6be576fad4e5}, b: fp751Element{0x7db5dbc88e00de34, 0x75cc8cb9f8b6e11e, 0x8c8001c04ebc52ac, 0x67ef6c981a0b5a94, 0xc3654fbe73230738, 0xc6a46ee82983ceca, 0xed1aa61a27ef49f0, 0x17fe5a13b0858fe0, 0x9ae0ca945a4c6b3c, 0x234104a218ad8878, 0xa619627166104394, 0x556a01ff2e7e}}
+
+	var curveParams = RecoverCurveParameters(&affine_xP, &affine_xQ, &affine_xQmP)
+
+	var tmp ExtensionFieldElement
+	tmp.Inv(&curveParams.C).Mul(&tmp, &curveParams.A)
+
+	if !tmp.VartimeEq(&a) {
+		t.Error("\nExpected\n", a, "\nfound\n", tmp)
+	}
+}
+
 var threePointLadderInputs = [3]ProjectivePoint{
 	// x(P)
 	ProjectivePoint{

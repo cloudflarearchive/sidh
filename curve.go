@@ -19,6 +19,29 @@ var const256 = ExtensionFieldElement{
 	b: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
+// Recover the curve parameters from three points on the curve.
+func RecoverCurveParameters(affine_xP, affine_xQ, affine_xQmP *ExtensionFieldElement) ProjectiveCurveParameters {
+	var curveParams ProjectiveCurveParameters
+	var t0, t1 ExtensionFieldElement
+	t0.One()                               // = 1
+	t1.Mul(affine_xP, affine_xQ)           // = x_P * x_Q
+	t0.Sub(&t0, &t1)                       // = 1 - x_P * x_Q
+	t1.Mul(affine_xP, affine_xQmP)         // = x_P * x_{Q-P}
+	t0.Sub(&t0, &t1)                       // = 1 - x_P * x_Q - x_P * x_{Q-P}
+	t1.Mul(affine_xQ, affine_xQmP)         // = x_Q * x_{Q-P}
+	t0.Sub(&t0, &t1)                       // = 1 - x_P * x_Q - x_P * x_{Q-P} - x_Q * x_{Q-P}
+	curveParams.A.Square(&t0)              // = (1 - x_P * x_Q - x_P * x_{Q-P} - x_Q * x_{Q-P})^2
+	t1.Mul(&t1, affine_xP)                 // = x_P * x_Q * x_{Q-P}
+	t1.Add(&t1, &t1)                       // = 2 * x_P * x_Q * x_{Q-P}
+	curveParams.C.Add(&t1, &t1)            // = 4 * x_P * x_Q * x_{Q-P}
+	t0.Add(affine_xP, affine_xQ)           // = x_P + x_Q
+	t0.Add(&t0, affine_xQmP)               // = x_P + x_Q + x_{Q-P}
+	t1.Mul(&curveParams.C, &t0)            // = 4 * x_P * x_Q * x_{Q-P} * (x_P + x_Q + x_{Q-P})
+	curveParams.A.Sub(&curveParams.A, &t1) // = (1 - x_P * x_Q - x_P * x_{Q-P} - x_Q * x_{Q-P})^2 - 4 * x_P * x_Q * x_{Q-P} * (x_P + x_Q + x_{Q-P})
+
+	return curveParams
+}
+
 // Compute the j-invariant (not the J-invariant) of the given curve.
 func (curveParams *ProjectiveCurveParameters) JInvariant() ExtensionFieldElement {
 	var v0, v1, v2, v3 ExtensionFieldElement
