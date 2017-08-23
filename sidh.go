@@ -45,7 +45,6 @@ var bobIsogenyStrategy = [maxBob]int{0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6
 	97, 97}
 
 type SIDHPublicKey struct {
-	a           ExtensionFieldElement
 	affine_xP   ExtensionFieldElement
 	affine_xQ   ExtensionFieldElement
 	affine_xQmP ExtensionFieldElement
@@ -72,7 +71,7 @@ func AliceKeyGenSlow(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secr
 	currentCurve.C.One()
 
 	var firstPhi FirstFourIsogeny
-	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve.A)
+	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
 
 	xP = firstPhi.Eval(&xP)
 	xQ = firstPhi.Eval(&xQ)
@@ -89,11 +88,10 @@ func AliceKeyGenSlow(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secr
 		xQmP = phi.Eval(&xQmP)
 	}
 
-	var invC, invZP, invZQ, invZQmP ExtensionFieldElement
-	ExtensionFieldBatch4Inv(&currentCurve.C, &xP.z, &xQ.z, &xQmP.z, &invC, &invZP, &invZQ, &invZQmP)
+	var invZP, invZQ, invZQmP ExtensionFieldElement
+	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
 
 	var publicKey SIDHPublicKey
-	publicKey.a.Mul(&currentCurve.A, &invC)
 	publicKey.affine_xP.Mul(&xP.x, &invZP)
 	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
 	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
@@ -117,7 +115,7 @@ func AliceKeyGenFast(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secr
 	currentCurve.C.One()
 
 	var firstPhi FirstFourIsogeny
-	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve.A)
+	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
 
 	xP = firstPhi.Eval(&xP)
 	xQ = firstPhi.Eval(&xQ)
@@ -158,11 +156,10 @@ func AliceKeyGenFast(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secr
 	xQ = phi.Eval(&xQ)
 	xQmP = phi.Eval(&xQmP)
 
-	var invC, invZP, invZQ, invZQmP ExtensionFieldElement
-	ExtensionFieldBatch4Inv(&currentCurve.C, &xP.z, &xQ.z, &xQmP.z, &invC, &invZP, &invZQ, &invZQmP)
+	var invZP, invZQ, invZQmP ExtensionFieldElement
+	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
 
 	var publicKey SIDHPublicKey
-	publicKey.a.Mul(&currentCurve.A, &invC)
 	publicKey.affine_xP.Mul(&xP.x, &invZP)
 	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
 	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
@@ -209,11 +206,10 @@ func BobKeyGenSlow(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secret
 		xQmP = phi.Eval(&xQmP)
 	}
 
-	var invC, invZP, invZQ, invZQmP ExtensionFieldElement
-	ExtensionFieldBatch4Inv(&currentCurve.C, &xP.z, &xQ.z, &xQmP.z, &invC, &invZP, &invZQ, &invZQmP)
+	var invZP, invZQ, invZQmP ExtensionFieldElement
+	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
 
 	var publicKey SIDHPublicKey
-	publicKey.a.Mul(&currentCurve.A, &invC)
 	publicKey.affine_xP.Mul(&xP.x, &invZP)
 	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
 	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
@@ -270,11 +266,10 @@ func BobKeyGenFast(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secret
 	xQ = phi.Eval(&xQ)
 	xQmP = phi.Eval(&xQmP)
 
-	var invC, invZP, invZQ, invZQmP ExtensionFieldElement
-	ExtensionFieldBatch4Inv(&currentCurve.C, &xP.z, &xQ.z, &xQmP.z, &invC, &invZP, &invZQ, &invZQmP)
+	var invZP, invZQ, invZQmP ExtensionFieldElement
+	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
 
 	var publicKey SIDHPublicKey
-	publicKey.a.Mul(&currentCurve.A, &invC)
 	publicKey.affine_xP.Mul(&xP.x, &invZP)
 	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
 	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
@@ -283,10 +278,7 @@ func BobKeyGenFast(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secret
 }
 
 func AliceSharedSecretSlow(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey) ExtensionFieldElement {
-	// newer version of the SIDH paper omits the Montgomery a value from the public key, recovering it from the points - XXX refactor to fix this, until then just pull it from the pubkey
-	var currentCurve ProjectiveCurveParameters
-	currentCurve.A = bobPublic.a
-	currentCurve.C.One()
+	var currentCurve = RecoverCurveParameters(&bobPublic.affine_xP, &bobPublic.affine_xQ, &bobPublic.affine_xQmP)
 
 	var xR, xS, xP, xQ, xQmP ProjectivePoint
 
@@ -297,9 +289,7 @@ func AliceSharedSecretSlow(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey)
 	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.scalar)
 
 	var firstPhi FirstFourIsogeny
-	// ComputeFirstFourIsogeny takes an affine parameter, but this is fine
-	// since we just set C = 1 above
-	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve.A)
+	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
 	xR = firstPhi.Eval(&xR)
 
 	var phi FourIsogeny
@@ -315,9 +305,7 @@ func AliceSharedSecretSlow(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey)
 }
 
 func BobSharedSecretSlow(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) ExtensionFieldElement {
-	var currentCurve ProjectiveCurveParameters
-	currentCurve.A = alicePublic.a
-	currentCurve.C.One()
+	var currentCurve = RecoverCurveParameters(&alicePublic.affine_xP, &alicePublic.affine_xQ, &alicePublic.affine_xQmP)
 
 	var xR, xS, xP, xQ, xQmP ProjectivePoint
 
@@ -340,10 +328,7 @@ func BobSharedSecretSlow(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) E
 }
 
 func AliceSharedSecretFast(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey) ExtensionFieldElement {
-	// newer version of the SIDH paper omits the Montgomery a value from the public key, recovering it from the points - XXX refactor to fix this, until then just pull it from the pubkey
-	var currentCurve ProjectiveCurveParameters
-	currentCurve.A = bobPublic.a
-	currentCurve.C.One()
+	var currentCurve = RecoverCurveParameters(&bobPublic.affine_xP, &bobPublic.affine_xQ, &bobPublic.affine_xQmP)
 
 	var xR, xP, xQ, xQmP ProjectivePoint
 
@@ -354,9 +339,7 @@ func AliceSharedSecretFast(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey)
 	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.scalar)
 
 	var firstPhi FirstFourIsogeny
-	// ComputeFirstFourIsogeny takes an affine parameter, but this is fine
-	// since we just set C = 1 above
-	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve.A)
+	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
 	xR = firstPhi.Eval(&xR)
 
 	var points = make([]ProjectivePoint, 0, 8)
@@ -390,9 +373,7 @@ func AliceSharedSecretFast(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey)
 }
 
 func BobSharedSecretFast(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) ExtensionFieldElement {
-	var currentCurve ProjectiveCurveParameters
-	currentCurve.A = alicePublic.a
-	currentCurve.C.One()
+	var currentCurve = RecoverCurveParameters(&alicePublic.affine_xP, &alicePublic.affine_xQ, &alicePublic.affine_xQmP)
 
 	var xR, xP, xQ, xQmP ProjectivePoint
 

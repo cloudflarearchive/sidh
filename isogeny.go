@@ -133,40 +133,45 @@ func (phi *FourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 
 // XXX document/explain how this is different from FourIsogeny and why it's needed
 type FirstFourIsogeny struct {
-	a ExtensionFieldElement
+	A ExtensionFieldElement
+	C ExtensionFieldElement
 }
 
-func ComputeFirstFourIsogeny(a *ExtensionFieldElement) (ProjectiveCurveParameters, FirstFourIsogeny) {
+func ComputeFirstFourIsogeny(domain *ProjectiveCurveParameters) (ProjectiveCurveParameters, FirstFourIsogeny) {
 	var codomain ProjectiveCurveParameters
 	var isogeny FirstFourIsogeny
 	var t0, t1 ExtensionFieldElement
 
-	t0.One()                 // = 1
-	t0.Add(&t0, &t0)         // = 2
-	codomain.C.Sub(a, &t0)   // = a - 2
-	t1.Add(&t0, &t0)         // = 4
-	t1.Add(&t0, &t1)         // = 6
-	t0.Add(&t1, a)           // = a+6
-	codomain.A.Add(&t0, &t0) // = 2(a+6)
+	t0.Add(&domain.C, &domain.C)   // = 2*C
+	codomain.C.Sub(&domain.A, &t0) // = A - 2*C
+	t1.Add(&t0, &t0)               // = 4*C
+	t1.Add(&t1, &t0)               // = 6*C
+	t0.Add(&t1, &domain.A)         // = A + 6*C
+	codomain.A.Add(&t0, &t0)       // = 2*(A + 6*C)
 
-	isogeny.a = *a
+	isogeny.A = domain.A
+	isogeny.C = domain.C
 
 	return codomain, isogeny
 }
 
 func (phi *FirstFourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	var xQ ProjectivePoint
-	var t0, t1, t2 ExtensionFieldElement
+	var t0, t1, t2, t3 ExtensionFieldElement
 
-	t0.Add(&xP.x, &xP.z).Square(&t0)   // = (X+Z)^2
-	t1.One().Add(&t1, &t1)             // = 2
-	t1.Sub(&t1, &phi.a)                // = 2 - a
-	t2.Mul(&xP.x, &xP.z).Mul(&t2, &t1) // = (2-a)*X*Z
-	t1.Sub(&t0, &t2)                   // = X^2 + Z^2 + a*X*Z
-	xQ.x.Mul(&t0, &t1)                 // = (X+Z)^2*(X^2 + Z^2 + a*X*Z)
-
+	t0.Add(&xP.x, &xP.z).Square(&t0) // = (X+Z)^2
+	t2.Mul(&xP.x, &xP.z)             // = X*Z
+	t1.Add(&t2, &t2)                 // = 2*X*Z
+	t1.Sub(&t0, &t1)                 // = X^2 + Z^2
+	xQ.x.Mul(&phi.A, &t2)            // = A*X*Z
+	t3.Mul(&phi.C, &t1)              // = C*(X^2 + Z^2)
+	xQ.x.Add(&xQ.x, &t3)             // = A*X*Z + C*(X^2 + Z^2)
+	xQ.x.Mul(&xQ.x, &t0)             // = (X+Z)^2 * (A*X*Z + C*(X^2 + Z^2))
 	t0.Sub(&xP.x, &xP.z).Square(&t0) // = (X-Z)^2
-	xQ.z.Mul(&t0, &t2)               // = (2-a)*X*Z*(X-Z)^2
+	t0.Mul(&t0, &t2)                 // = X*Z*(X-Z)^2
+	t1.Add(&phi.C, &phi.C)           // = 2*C
+	t1.Sub(&t1, &phi.A)              // = 2*C - A
+	xQ.z.Mul(&t1, &t0)               // = (2*C - A)*X*Z*(X-Z)^2
 
 	return xQ
 }

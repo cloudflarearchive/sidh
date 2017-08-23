@@ -41,10 +41,11 @@ func TestFirstFourIsogenyVersusSage(t *testing.T) {
 
 	sageIsogenized_xR.fromAffine(&ExtensionFieldElement{a: fp751Element{0xff99e76f78da1e05, 0xdaa36bd2bb8d97c4, 0xb4328cee0a409daf, 0xc28b099980c5da3f, 0xf2d7cd15cfebb852, 0x1935103dded6cdef, 0xade81528de1429c3, 0x6775b0fa90a64319, 0x25f89817ee52485d, 0x706e2d00848e697, 0xc4958ec4216d65c0, 0xc519681417f}, b: fp751Element{0x742fe7dde60e1fb9, 0x801a3c78466a456b, 0xa9f945b786f48c35, 0x20ce89e1b144348f, 0xf633970b7776217e, 0x4c6077a9b38976e5, 0x34a513fc766c7825, 0xacccba359b9cd65, 0xd0ca8383f0fd0125, 0x77350437196287a, 0x9fe1ad7706d4ea21, 0x4d26129ee42d}})
 
-	var a ExtensionFieldElement
-	a.Zero()
+	var params ProjectiveCurveParameters
+	params.A.Zero()
+	params.C.One()
 
-	_, phi := ComputeFirstFourIsogeny(&a)
+	_, phi := ComputeFirstFourIsogeny(&params)
 
 	isogenized_xR = phi.Eval(&xR)
 

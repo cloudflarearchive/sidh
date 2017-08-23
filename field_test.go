@@ -194,19 +194,17 @@ func TestExtensionFieldElementInv(t *testing.T) {
 	}
 }
 
-func TestExtensionFieldElementBatch4Inv(t *testing.T) {
-	batchInverseIsCorrect := func(x1, x2, x3, x4 ExtensionFieldElement) bool {
-		var x1Inv, x2Inv, x3Inv, x4Inv ExtensionFieldElement
+func TestExtensionFieldElementBatch3Inv(t *testing.T) {
+	batchInverseIsCorrect := func(x1, x2, x3 ExtensionFieldElement) bool {
+		var x1Inv, x2Inv, x3Inv ExtensionFieldElement
 		x1Inv.Inv(&x1)
 		x2Inv.Inv(&x2)
 		x3Inv.Inv(&x3)
-		x4Inv.Inv(&x4)
 
-		var y1, y2, y3, y4 ExtensionFieldElement
-		ExtensionFieldBatch4Inv(&x1, &x2, &x3, &x4, &y1, &y2, &y3, &y4)
+		var y1, y2, y3 ExtensionFieldElement
+		ExtensionFieldBatch3Inv(&x1, &x2, &x3, &y1, &y2, &y3)
 
-		return (y1.VartimeEq(&x1Inv) && y2.VartimeEq(&x2Inv) &&
-			y3.VartimeEq(&x3Inv) && y4.VartimeEq(&x4Inv))
+		return (y1.VartimeEq(&x1Inv) && y2.VartimeEq(&x2Inv) && y3.VartimeEq(&x3Inv))
 	}
 
 	// This is more expensive; run fewer tests

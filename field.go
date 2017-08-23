@@ -138,18 +138,16 @@ func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) *ExtensionField
 	return dest
 }
 
-// Set (y1, y2, y3, y4) = (1/x1, 1/x2, 1/x3, 1/x4).
+// Set (y1, y2, y3)  = (1/x1, 1/x2, 1/x3).
 //
 // All xi, yi must be distinct.
-func ExtensionFieldBatch4Inv(x1, x2, x3, x4, y1, y2, y3, y4 *ExtensionFieldElement) {
-	var x1x2, x3x4, t ExtensionFieldElement
-	x1x2.Mul(x1, x2)              // x1*x2
-	x3x4.Mul(x3, x4)              // x3*x4
-	t.Mul(&x1x2, &x3x4).Inv(&t)   // 1/(x1*x2*x3*x4)
-	y1.Mul(&t, x2).Mul(y1, &x3x4) // 1/x1
-	y2.Mul(&t, x1).Mul(y2, &x3x4) // 1/x2
-	y3.Mul(&t, x4).Mul(y3, &x1x2) // 1/x3
-	y4.Mul(&t, x3).Mul(y4, &x1x2) // 1/x4
+func ExtensionFieldBatch3Inv(x1, x2, x3, y1, y2, y3 *ExtensionFieldElement) {
+	var x1x2, t ExtensionFieldElement
+	x1x2.Mul(x1, x2)           // x1*x2
+	t.Mul(&x1x2, x3).Inv(&t)   // 1/(x1*x2*x3)
+	y1.Mul(&t, x2).Mul(y1, x3) // 1/x1
+	y2.Mul(&t, x1).Mul(y2, x3) // 1/x2
+	y3.Mul(&t, &x1x2)          // 1/x3
 }
 
 // Set dest = x * x

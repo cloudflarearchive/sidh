@@ -8,6 +8,11 @@ type ProjectiveCurveParameters struct {
 	C ExtensionFieldElement
 }
 
+func (params *ProjectiveCurveParameters) fromAffine(a *ExtensionFieldElement) {
+	params.A = *a
+	params.C = oneExtensionField
+}
+
 type CachedCurveParameters struct {
 	Aplus2C ExtensionFieldElement
 	C4      ExtensionFieldElement
