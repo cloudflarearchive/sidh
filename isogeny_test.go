@@ -9,8 +9,6 @@ func TestFirstFourIsogenyVersusSage(t *testing.T) {
 	var xR, isogenized_xR, sageIsogenized_xR ProjectivePoint
 
 	// sage: p = 2^372 * 3^239 - 1; Fp = GF(p)
-	//   ***   Warning: increasing stack size to 2000000.
-	//   ***   Warning: increasing stack size to 4000000.
 	// sage: R.<x> = Fp[]
 	// sage: Fp2 = Fp.extension(x^2 + 1, 'i')
 	// sage: i = Fp2.gen()

@@ -1,16 +1,16 @@
 package cln16sidh
 
 // The x-coordinate of P_A = [3^239](11, oddsqrt(11^3 + 11)) on E_0(F_p)
-var torsionPointPAx = PrimeFieldElement{a: fp751Element{0xd56fe52627914862, 0x1fad60dc96b5baea, 0x1e137d0bf07ab91, 0x404d3e9252161964, 0x3c5385e4cd09a337, 0x4476426769e4af73, 0x9790c6db989dfe33, 0xe06e1c04d2aa8b5e, 0x38c08185edea73b9, 0xaa41f678a4396ca6, 0x92b9259b2229e9a0, 0x2f9326818be0}}
+var affine_xPA = PrimeFieldElement{a: fp751Element{0xd56fe52627914862, 0x1fad60dc96b5baea, 0x1e137d0bf07ab91, 0x404d3e9252161964, 0x3c5385e4cd09a337, 0x4476426769e4af73, 0x9790c6db989dfe33, 0xe06e1c04d2aa8b5e, 0x38c08185edea73b9, 0xaa41f678a4396ca6, 0x92b9259b2229e9a0, 0x2f9326818be0}}
 
 // The y-coordinate of P_A = [3^239](11, oddsqrt(11^3 + 11)) on E_0(F_p)
-var torsionPointPAy = PrimeFieldElement{a: fp751Element{0x332bd16fbe3d7739, 0x7e5e20ff2319e3db, 0xea856234aefbd81b, 0xe016df7d6d071283, 0x8ae42796f73cd34f, 0x6364b408a4774575, 0xa71c97f17ce99497, 0xda03cdd9aa0cbe71, 0xe52b4fda195bd56f, 0xdac41f811fce0a46, 0x9333720f0ee84a61, 0x1399f006e578}}
+var affine_yPA = PrimeFieldElement{a: fp751Element{0x332bd16fbe3d7739, 0x7e5e20ff2319e3db, 0xea856234aefbd81b, 0xe016df7d6d071283, 0x8ae42796f73cd34f, 0x6364b408a4774575, 0xa71c97f17ce99497, 0xda03cdd9aa0cbe71, 0xe52b4fda195bd56f, 0xdac41f811fce0a46, 0x9333720f0ee84a61, 0x1399f006e578}}
 
 // The x-coordinate of P_B = [2^372](6, oddsqrt(6^3 + 6)) on E_0(F_p)
-var torsionPointPBx = PrimeFieldElement{a: fp751Element{0xf1a8c9ed7b96c4ab, 0x299429da5178486e, 0xef4926f20cd5c2f4, 0x683b2e2858b4716a, 0xdda2fbcc3cac3eeb, 0xec055f9f3a600460, 0xd5a5a17a58c3848b, 0x4652d836f42eaed5, 0x2f2e71ed78b3a3b3, 0xa771c057180add1d, 0xc780a5d2d835f512, 0x114ea3b55ac1}}
+var affine_xPB = PrimeFieldElement{a: fp751Element{0xf1a8c9ed7b96c4ab, 0x299429da5178486e, 0xef4926f20cd5c2f4, 0x683b2e2858b4716a, 0xdda2fbcc3cac3eeb, 0xec055f9f3a600460, 0xd5a5a17a58c3848b, 0x4652d836f42eaed5, 0x2f2e71ed78b3a3b3, 0xa771c057180add1d, 0xc780a5d2d835f512, 0x114ea3b55ac1}}
 
 // The y-coordinate of P_B = [2^372](6, oddsqrt(6^3 + 6)) on E_0(F_p)
-var torsionPointPBy = PrimeFieldElement{a: fp751Element{0xd1e1471273e3736b, 0xf9301ba94da241fe, 0xe14ab3c17fef0a85, 0xb4ddd26a037e9e62, 0x66142dfb2afeb69, 0xe297cb70649d6c9e, 0x214dfc6e8b1a0912, 0x9f5ba818b01cf859, 0x87d15b4907c12828, 0xa4da70c53a880dbf, 0xac5df62a72c8f253, 0x2e26a42ec617}}
+var affine_yPB = PrimeFieldElement{a: fp751Element{0xd1e1471273e3736b, 0xf9301ba94da241fe, 0xe14ab3c17fef0a85, 0xb4ddd26a037e9e62, 0x66142dfb2afeb69, 0xe297cb70649d6c9e, 0x214dfc6e8b1a0912, 0x9f5ba818b01cf859, 0x87d15b4907c12828, 0xa4da70c53a880dbf, 0xac5df62a72c8f253, 0x2e26a42ec617}}
 
 // The value of (a+2)/4 for the starting curve E_0 with a=0: this is 1/2
 var aPlus2Over4_E0 = PrimeFieldElement{a: fp751Element{0x124d6, 0x0, 0x0, 0x0, 0x0, 0xb8e0000000000000, 0x9c8a2434c0aa7287, 0xa206996ca9a378a3, 0x6876280d41a41b52, 0xe903b49f175ce04f, 0xf8511860666d227, 0x4ea07cff6e7f}}
@@ -44,70 +44,37 @@ var bobIsogenyStrategy = [maxBob]int{0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6
 	88, 88, 86, 86, 86, 93, 90, 90, 92, 92, 92, 93, 93, 93, 93, 93, 97, 97, 97, 97,
 	97, 97}
 
-type SIDHPublicKey struct {
+type SIDHPublicKeyBob struct {
 	affine_xP   ExtensionFieldElement
 	affine_xQ   ExtensionFieldElement
 	affine_xQmP ExtensionFieldElement
 }
 
-// XXX this should be typed for alice/bob
-type SIDHSecretKey struct {
+type SIDHPublicKeyAlice struct {
+	affine_xP   ExtensionFieldElement
+	affine_xQ   ExtensionFieldElement
+	affine_xQmP ExtensionFieldElement
+}
+
+type SIDHSecretKeyBob struct {
 	scalar []uint8
 }
 
-func AliceKeyGenSlow(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secretKey *SIDHSecretKey) SIDHPublicKey {
-	var xP, xQ, xQmP, xR, xS ProjectivePoint
-
-	xP.fromAffinePrimeField(affine_xPB)     // = ( x_P : 1) = x(P_B)
-	xQ.fromAffinePrimeField(affine_xPB)     //
-	xQ.x.Neg(&xQ.x)                         // = (-x_P : 1) = x(Q_B)
-	xQmP = DistortAndDifference(affine_xPB) // = x(Q_B - P_B)
-
-	xR = SecretPoint(affine_xPA, affine_yPA, secretKey.scalar)
-
-	var currentCurve ProjectiveCurveParameters
-	// Starting curve has a = 0, so (A:C) = (0,1)
-	currentCurve.A.Zero()
-	currentCurve.C.One()
-
-	var firstPhi FirstFourIsogeny
-	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
-
-	xP = firstPhi.Eval(&xP)
-	xQ = firstPhi.Eval(&xQ)
-	xQmP = firstPhi.Eval(&xQmP)
-	xR = firstPhi.Eval(&xR)
-
-	var phi FourIsogeny
-	for e := (372 - 4); e >= 0; e -= 2 {
-		xS.Pow2k(&currentCurve, &xR, uint32(e))
-		currentCurve, phi = ComputeFourIsogeny(&xS)
-		xR = phi.Eval(&xR)
-		xP = phi.Eval(&xP)
-		xQ = phi.Eval(&xQ)
-		xQmP = phi.Eval(&xQmP)
-	}
-
-	var invZP, invZQ, invZQmP ExtensionFieldElement
-	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
-
-	var publicKey SIDHPublicKey
-	publicKey.affine_xP.Mul(&xP.x, &invZP)
-	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
-	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
-
-	return publicKey
+type SIDHSecretKeyAlice struct {
+	scalar []uint8
 }
 
-func AliceKeyGenFast(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secretKey *SIDHSecretKey) SIDHPublicKey {
+// Compute the corresponding public key for the given secret key, using the
+// fast isogeny-tree strategy.
+func (secretKey *SIDHSecretKeyAlice) PublicKey() SIDHPublicKeyAlice {
 	var xP, xQ, xQmP, xR ProjectivePoint
 
-	xP.fromAffinePrimeField(affine_xPB)     // = ( x_P : 1) = x(P_B)
-	xQ.fromAffinePrimeField(affine_xPB)     //
-	xQ.x.Neg(&xQ.x)                         // = (-x_P : 1) = x(Q_B)
-	xQmP = DistortAndDifference(affine_xPB) // = x(Q_B - P_B)
+	xP.fromAffinePrimeField(&affine_xPB)     // = ( x_P : 1) = x(P_B)
+	xQ.fromAffinePrimeField(&affine_xPB)     //
+	xQ.x.Neg(&xQ.x)                          // = (-x_P : 1) = x(Q_B)
+	xQmP = DistortAndDifference(&affine_xPB) // = x(Q_B - P_B)
 
-	xR = SecretPoint(affine_xPA, affine_yPA, secretKey.scalar)
+	xR = SecretPoint(&affine_xPA, &affine_yPA, secretKey.scalar)
 
 	var currentCurve ProjectiveCurveParameters
 	// Starting curve has a = 0, so (A:C) = (0,1)
@@ -159,7 +126,7 @@ func AliceKeyGenFast(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secr
 	var invZP, invZQ, invZQmP ExtensionFieldElement
 	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
 
-	var publicKey SIDHPublicKey
+	var publicKey SIDHPublicKeyAlice
 	publicKey.affine_xP.Mul(&xP.x, &invZP)
 	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
 	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
@@ -167,65 +134,15 @@ func AliceKeyGenFast(affine_xPB, affine_xPA, affine_yPA *PrimeFieldElement, secr
 	return publicKey
 }
 
-// Given the affine x-coordinate affine_xP of P, compute the x-coordinate
-// x(\tau(P)-P) of \tau(P)-P.
-func DistortAndDifference(affine_xP *PrimeFieldElement) ProjectivePoint {
-	var xR ProjectivePoint
-	var t0, t1 PrimeFieldElement
-	t0.Square(affine_xP)         // = x_P^2
-	t1.One().Add(&t1, &t0)       // = x_P^2 + 1
-	xR.x.b = t1.a                // = 0 + (x_P^2 + 1)*i
-	t0.Add(affine_xP, affine_xP) // = 2*x_P
-	xR.z.a = t0.a                // = 2*x_P + 0*i
-
-	return xR
-}
-
-func BobKeyGenSlow(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secretKey *SIDHSecretKey) SIDHPublicKey {
-	var xP, xQ, xQmP, xR, xS ProjectivePoint
-
-	xP.fromAffinePrimeField(affine_xPA)     // = ( x_P : 1) = x(P_A)
-	xQ.fromAffinePrimeField(affine_xPA)     //
-	xQ.x.Neg(&xQ.x)                         // = (-x_P : 1) = x(Q_A)
-	xQmP = DistortAndDifference(affine_xPA) // = x(Q_B - P_B)
-
-	xR = SecretPoint(affine_xPB, affine_yPB, secretKey.scalar)
-
-	var currentCurve ProjectiveCurveParameters
-	// Starting curve has a = 0, so (A:C) = (0,1)
-	currentCurve.A.Zero()
-	currentCurve.C.One()
-
-	var phi ThreeIsogeny
-	for e := 238; e >= 0; e-- {
-		xS.Pow3k(&currentCurve, &xR, uint32(e))
-		currentCurve, phi = ComputeThreeIsogeny(&xS)
-		xR = phi.Eval(&xR)
-		xP = phi.Eval(&xP)
-		xQ = phi.Eval(&xQ)
-		xQmP = phi.Eval(&xQmP)
-	}
-
-	var invZP, invZQ, invZQmP ExtensionFieldElement
-	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
-
-	var publicKey SIDHPublicKey
-	publicKey.affine_xP.Mul(&xP.x, &invZP)
-	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
-	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
-
-	return publicKey
-}
-
-func BobKeyGenFast(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secretKey *SIDHSecretKey) SIDHPublicKey {
+func (secretKey *SIDHSecretKeyBob) PublicKey() SIDHPublicKeyBob {
 	var xP, xQ, xQmP, xR ProjectivePoint
 
-	xP.fromAffinePrimeField(affine_xPA)     // = ( x_P : 1) = x(P_A)
-	xQ.fromAffinePrimeField(affine_xPA)     //
-	xQ.x.Neg(&xQ.x)                         // = (-x_P : 1) = x(Q_A)
-	xQmP = DistortAndDifference(affine_xPA) // = x(Q_B - P_B)
+	xP.fromAffinePrimeField(&affine_xPA)     // = ( x_P : 1) = x(P_A)
+	xQ.fromAffinePrimeField(&affine_xPA)     //
+	xQ.x.Neg(&xQ.x)                          // = (-x_P : 1) = x(Q_A)
+	xQmP = DistortAndDifference(&affine_xPA) // = x(Q_B - P_B)
 
-	xR = SecretPoint(affine_xPB, affine_yPB, secretKey.scalar)
+	xR = SecretPoint(&affine_xPB, &affine_yPB, secretKey.scalar)
 
 	var currentCurve ProjectiveCurveParameters
 	// Starting curve has a = 0, so (A:C) = (0,1)
@@ -269,7 +186,7 @@ func BobKeyGenFast(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secret
 	var invZP, invZQ, invZQmP ExtensionFieldElement
 	ExtensionFieldBatch3Inv(&xP.z, &xQ.z, &xQmP.z, &invZP, &invZQ, &invZQmP)
 
-	var publicKey SIDHPublicKey
+	var publicKey SIDHPublicKeyBob
 	publicKey.affine_xP.Mul(&xP.x, &invZP)
 	publicKey.affine_xQ.Mul(&xQ.x, &invZQ)
 	publicKey.affine_xQmP.Mul(&xQmP.x, &invZQmP)
@@ -277,57 +194,7 @@ func BobKeyGenFast(affine_xPA, affine_xPB, affine_yPB *PrimeFieldElement, secret
 	return publicKey
 }
 
-func AliceSharedSecretSlow(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey) ExtensionFieldElement {
-	var currentCurve = RecoverCurveParameters(&bobPublic.affine_xP, &bobPublic.affine_xQ, &bobPublic.affine_xQmP)
-
-	var xR, xS, xP, xQ, xQmP ProjectivePoint
-
-	xP.fromAffine(&bobPublic.affine_xP)
-	xQ.fromAffine(&bobPublic.affine_xQ)
-	xQmP.fromAffine(&bobPublic.affine_xQmP)
-
-	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.scalar)
-
-	var firstPhi FirstFourIsogeny
-	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
-	xR = firstPhi.Eval(&xR)
-
-	var phi FourIsogeny
-	for e := (372 - 4); e >= 2; e -= 2 {
-		xS.Pow2k(&currentCurve, &xR, uint32(e))
-		currentCurve, phi = ComputeFourIsogeny(&xS)
-		xR = phi.Eval(&xR)
-	}
-
-	currentCurve, _ = ComputeFourIsogeny(&xR)
-
-	return currentCurve.JInvariant()
-}
-
-func BobSharedSecretSlow(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) ExtensionFieldElement {
-	var currentCurve = RecoverCurveParameters(&alicePublic.affine_xP, &alicePublic.affine_xQ, &alicePublic.affine_xQmP)
-
-	var xR, xS, xP, xQ, xQmP ProjectivePoint
-
-	xP.fromAffine(&alicePublic.affine_xP)
-	xQ.fromAffine(&alicePublic.affine_xQ)
-	xQmP.fromAffine(&alicePublic.affine_xQmP)
-
-	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.scalar)
-
-	var phi ThreeIsogeny
-	for e := 238; e >= 1; e-- {
-		xS.Pow3k(&currentCurve, &xR, uint32(e))
-		currentCurve, phi = ComputeThreeIsogeny(&xS)
-		xR = phi.Eval(&xR)
-	}
-
-	currentCurve, _ = ComputeThreeIsogeny(&xR)
-
-	return currentCurve.JInvariant()
-}
-
-func AliceSharedSecretFast(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey) ExtensionFieldElement {
+func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob) ExtensionFieldElement {
 	var currentCurve = RecoverCurveParameters(&bobPublic.affine_xP, &bobPublic.affine_xQ, &bobPublic.affine_xQmP)
 
 	var xR, xP, xQ, xQmP ProjectivePoint
@@ -372,7 +239,7 @@ func AliceSharedSecretFast(bobPublic *SIDHPublicKey, aliceSecret *SIDHSecretKey)
 	return currentCurve.JInvariant()
 }
 
-func BobSharedSecretFast(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) ExtensionFieldElement {
+func (bobSecret *SIDHSecretKeyBob) SharedSecret(alicePublic *SIDHPublicKeyAlice) ExtensionFieldElement {
 	var currentCurve = RecoverCurveParameters(&alicePublic.affine_xP, &alicePublic.affine_xQ, &alicePublic.affine_xQmP)
 
 	var xR, xP, xQ, xQmP ProjectivePoint
@@ -410,6 +277,20 @@ func BobSharedSecretFast(alicePublic *SIDHPublicKey, bobSecret *SIDHSecretKey) E
 	currentCurve, _ = ComputeThreeIsogeny(&xR)
 
 	return currentCurve.JInvariant()
+}
+
+// Given the affine x-coordinate affine_xP of P, compute the x-coordinate
+// x(\tau(P)-P) of \tau(P)-P.
+func DistortAndDifference(affine_xP *PrimeFieldElement) ProjectivePoint {
+	var xR ProjectivePoint
+	var t0, t1 PrimeFieldElement
+	t0.Square(affine_xP)         // = x_P^2
+	t1.One().Add(&t1, &t0)       // = x_P^2 + 1
+	xR.x.b = t1.a                // = 0 + (x_P^2 + 1)*i
+	t0.Add(affine_xP, affine_xP) // = 2*x_P
+	xR.z.a = t0.a                // = 2*x_P + 0*i
+
+	return xR
 }
 
 // Given an affine point P = (x_P, y_P) in the prime-field subgroup of the

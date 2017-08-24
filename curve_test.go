@@ -234,14 +234,14 @@ func TestScalarMultPrimeFieldAndCoordinateRecoveryVersusSageGeneratedTorsionPoin
 
 	// Check that the computed x-coordinates are correct:
 
-	var affine_xPA = xPA.toAffine()
-	if !torsionPointPAx.VartimeEq(affine_xPA) {
-		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPA, "\nexpected\n", torsionPointPAx)
+	var testAffine_xPA = xPA.toAffine()
+	if !testAffine_xPA.VartimeEq(&affine_xPA) {
+		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPA, "\nexpected\n", testAffine_xPA)
 	}
 
-	var affine_xPB = xPB.toAffine()
-	if !torsionPointPBx.VartimeEq(affine_xPB) {
-		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPB, "\nexpected\n", torsionPointPBx)
+	var testAffine_xPB = xPB.toAffine()
+	if !testAffine_xPB.VartimeEq(&affine_xPB) {
+		t.Error("Recomputed x(P_A) incorrectly: found\n", affine_xPB, "\nexpected\n", testAffine_xPB)
 	}
 
 	// Recover y-coordinates and check that those are correct:
@@ -251,22 +251,22 @@ func TestScalarMultPrimeFieldAndCoordinateRecoveryVersusSageGeneratedTorsionPoin
 	invZ_A.Inv(&Z_A)
 	Y_A.Mul(&Y_A, &invZ_A) // = Y_A / Z_A
 	X_A.Mul(&X_A, &invZ_A) // = X_A / Z_A
-	if !torsionPointPAy.VartimeEq(&Y_A) {
-		t.Error("Recovered y(P_A) incorrectly: found\n", Y_A, "\nexpected\n", torsionPointPAy)
+	if !affine_yPA.VartimeEq(&Y_A) {
+		t.Error("Recovered y(P_A) incorrectly: found\n", Y_A, "\nexpected\n", affine_yPA)
 	}
-	if !torsionPointPAx.VartimeEq(&X_A) {
-		t.Error("Recovered x(P_A) incorrectly: found\n", X_A, "\nexpected\n", torsionPointPAx)
+	if !affine_xPA.VartimeEq(&X_A) {
+		t.Error("Recovered x(P_A) incorrectly: found\n", X_A, "\nexpected\n", affine_xPA)
 	}
 
 	var X_B, Y_B, Z_B = OkeyaSakuraiCoordinateRecovery(&x6.x, &y6, &xPB, &xPBplus6)
 	invZ_B.Inv(&Z_B)
 	Y_B.Mul(&Y_B, &invZ_B) // = Y_B / Z_B
 	X_B.Mul(&X_B, &invZ_B) // = X_B / Z_B
-	if !torsionPointPBy.VartimeEq(&Y_B) {
-		t.Error("Recovered y(P_B) incorrectly: found\n", Y_B, "\nexpected\n", torsionPointPBy)
+	if !affine_yPB.VartimeEq(&Y_B) {
+		t.Error("Recovered y(P_B) incorrectly: found\n", Y_B, "\nexpected\n", affine_yPB)
 	}
-	if !torsionPointPBx.VartimeEq(&X_B) {
-		t.Error("Recovered x(P_B) incorrectly: found\n", X_B, "\nexpected\n", torsionPointPBx)
+	if !affine_xPB.VartimeEq(&X_B) {
+		t.Error("Recovered x(P_B) incorrectly: found\n", X_B, "\nexpected\n", affine_xPB)
 	}
 }
 
