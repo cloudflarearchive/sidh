@@ -115,6 +115,38 @@ func (x ExtensionFieldElement) Generate(rand *rand.Rand, size int) reflect.Value
 // Extension Field
 //------------------------------------------------------------------------------
 
+func TestOneExtensionFieldToBytes(t *testing.T) {
+	var x ExtensionFieldElement
+	var xBytes [188]byte
+
+	x.One()
+	x.ToBytes(xBytes[:])
+
+	if xBytes[0] != 1 {
+		t.Error("Expected 1, got", xBytes[0])
+	}
+	for i := 1; i < 188; i++ {
+		if xBytes[i] != 0 {
+			t.Error("Expected 0, got", xBytes[0])
+		}
+	}
+}
+
+func TestExtensionFieldElementToBytesRoundTrip(t *testing.T) {
+	roundTrips := func(x ExtensionFieldElement) bool {
+		var xBytes [188]byte
+		var xPrime ExtensionFieldElement
+		x.ToBytes(xBytes[:])
+		xPrime.FromBytes(xBytes[:])
+
+		return x.VartimeEq(&xPrime)
+	}
+
+	if err := quick.Check(roundTrips, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestExtensionFieldElementMulDistributesOverAdd(t *testing.T) {
 	mulDistributesOverAdd := func(x, y, z ExtensionFieldElement) bool {
 		// Compute t1 = (x+y)*z

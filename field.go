@@ -227,6 +227,28 @@ func (lhs *ExtensionFieldElement) VartimeEq(rhs *ExtensionFieldElement) bool {
 	return lhs.a.vartimeEq(rhs.a) && lhs.b.vartimeEq(rhs.b)
 }
 
+// Convert the input to wire format.
+//
+// The output byte slice must be at least 188 bytes long.
+func (x *ExtensionFieldElement) ToBytes(output []byte) {
+	if len(output) < 188 {
+		panic("output byte slice too short, need 188 bytes")
+	}
+	x.a.toBytesFromMontgomeryForm(output[0:94])
+	x.b.toBytesFromMontgomeryForm(output[94:188])
+}
+
+// Read 188 bytes into the given ExtensionFieldElement.
+//
+// It is an error to call this function if the input byte slice is less than 188 bytes long.
+func (x *ExtensionFieldElement) FromBytes(input []byte) {
+	if len(input) < 188 {
+		panic("input byte slice too short, need 188 bytes")
+	}
+	x.a.montgomeryFormFromBytes(input[:94])
+	x.b.montgomeryFormFromBytes(input[94:188])
+}
+
 //------------------------------------------------------------------------------
 // Prime Field
 //------------------------------------------------------------------------------
@@ -527,4 +549,50 @@ func (x fp751Element) vartimeEq(y fp751Element) bool {
 	}
 
 	return eq
+}
+
+// Read an fp751Element from little-endian bytes and convert to Montgomery form.
+//
+// The input byte slice must be at least 94 bytes long.
+func (x *fp751Element) montgomeryFormFromBytes(input []byte) {
+	if len(input) < 94 {
+		panic("input byte slice too short")
+	}
+
+	var a fp751Element
+	for i := 0; i < 94; i++ {
+		// set i = j*8 + k
+		j := i / 8
+		k := uint64(i % 8)
+		a[j] |= uint64(input[i]) << (8 * k)
+	}
+
+	var aRR fp751X2
+	fp751Mul(&aRR, &a, &montgomeryRsq) // = a*R*R
+	fp751MontgomeryReduce(x, &aRR)     // = a*R mod p
+}
+
+// Given an fp751Element in Montgomery form, convert to little-endian bytes.
+//
+// The output byte slice must be at least 94 bytes long.
+func (x *fp751Element) toBytesFromMontgomeryForm(output []byte) {
+	if len(output) < 94 {
+		panic("output byte slice too short")
+	}
+
+	var a fp751Element
+	var aR fp751X2
+	copy(aR[:], x[:])              // = a*R
+	fp751MontgomeryReduce(&a, &aR) // = a mod p in [0, 2p)
+	fp751StrongReduce(&a)          // = a mod p in [0, p)
+
+	// 8*12 = 96, but we drop the last two bytes since p is 751 < 752=94*8 bits.
+	for i := 0; i < 94; i++ {
+		// set i = j*8 + k
+		j := i / 8
+		k := uint64(i % 8)
+		// Need parens because Go's operator precedence would interpret
+		// a[j] >> 8*k as (a[j] >> 8) * k
+		output[i] = byte(a[j] >> (8 * k))
+	}
 }

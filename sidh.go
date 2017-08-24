@@ -50,10 +50,50 @@ type SIDHPublicKeyBob struct {
 	affine_xQmP ExtensionFieldElement
 }
 
+// Read a public key from a byte slice.  The input must be at least 564 bytes long.
+func (pubKey *SIDHPublicKeyBob) FromBytes(input []byte) {
+	if len(input) < 564 {
+		panic("Too short input to SIDH pubkey FromBytes, expected 564 bytes")
+	}
+	pubKey.affine_xP.FromBytes(input[0:188])
+	pubKey.affine_xQ.FromBytes(input[188:376])
+	pubKey.affine_xQmP.FromBytes(input[376:564])
+}
+
+// Write a public key to a byte slice.  The output must be at least 564 bytes long.
+func (pubKey *SIDHPublicKeyBob) ToBytes(output []byte) {
+	if len(output) < 564 {
+		panic("Too short output for SIDH pubkey FromBytes, expected 564 bytes")
+	}
+	pubKey.affine_xP.ToBytes(output[0:188])
+	pubKey.affine_xQ.ToBytes(output[188:376])
+	pubKey.affine_xQmP.ToBytes(output[376:564])
+}
+
 type SIDHPublicKeyAlice struct {
 	affine_xP   ExtensionFieldElement
 	affine_xQ   ExtensionFieldElement
 	affine_xQmP ExtensionFieldElement
+}
+
+// Read a public key from a byte slice.  The input must be at least 564 bytes long.
+func (pubKey *SIDHPublicKeyAlice) FromBytes(input []byte) {
+	if len(input) < 564 {
+		panic("Too short input to SIDH pubkey FromBytes, expected 564 bytes")
+	}
+	pubKey.affine_xP.FromBytes(input[0:188])
+	pubKey.affine_xQ.FromBytes(input[188:376])
+	pubKey.affine_xQmP.FromBytes(input[376:564])
+}
+
+// Write a public key to a byte slice.  The output must be at least 564 bytes long.
+func (pubKey *SIDHPublicKeyAlice) ToBytes(output []byte) {
+	if len(output) < 564 {
+		panic("Too short output for SIDH pubkey FromBytes, expected 564 bytes")
+	}
+	pubKey.affine_xP.ToBytes(output[0:188])
+	pubKey.affine_xQ.ToBytes(output[188:376])
+	pubKey.affine_xQmP.ToBytes(output[376:564])
 }
 
 type SIDHSecretKeyBob struct {
