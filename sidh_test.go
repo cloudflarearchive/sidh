@@ -1,8 +1,63 @@
 package cln16sidh
 
 import (
+	"crypto/rand"
 	"testing"
 )
+
+func TestMultiplyByThree(t *testing.T) {
+	// sage: repr((3^238 -1).digits(256))
+	var three238minus1 = [48]byte{248, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66, 212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12, 153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198, 201, 84, 2}
+	// sage: repr((3*(3^238 -1)).digits(256))
+	var threeTimesThree238minus1 = [48]byte{232, 142, 138, 135, 159, 84, 104, 201, 62, 110, 199, 124, 63, 161, 177, 89, 169, 109, 135, 190, 110, 125, 134, 233, 132, 128, 116, 37, 203, 69, 80, 43, 86, 104, 198, 173, 123, 249, 9, 41, 225, 192, 113, 31, 84, 93, 254, 6}
+
+	multiplyByThree(&three238minus1)
+
+	for i := 0; i < 48; i++ {
+		if three238minus1[i] != threeTimesThree238minus1[i] {
+			t.Error("Digit", i, "error: found", three238minus1[i], "expected", threeTimesThree238minus1[i])
+		}
+	}
+}
+
+func TestCheckLessThanThree238(t *testing.T) {
+	var three238minus1 = [48]byte{248, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66, 212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12, 153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198, 201, 84, 2}
+	var three238 = [48]byte{249, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66, 212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12, 153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198, 201, 84, 2}
+	var three238plus1 = [48]byte{250, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66, 212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12, 153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198, 201, 84, 2}
+
+	var result = uint32(57)
+
+	checkLessThanThree238(&three238minus1, &result)
+	if result != 0 {
+		t.Error("Expected 0, got", result)
+	}
+	checkLessThanThree238(&three238, &result)
+	if result == 0 {
+		t.Error("Expected nonzero, got", result)
+	}
+	checkLessThanThree238(&three238plus1, &result)
+	if result == 0 {
+		t.Error("Expected nonzero, got", result)
+	}
+}
+
+func TestEphemeralSharedSecret(t *testing.T) {
+	alicePublic, aliceSecret, err := GenerateAliceKeypair(rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+	bobPublic, bobSecret, err := GenerateBobKeypair(rand.Reader)
+	if err != nil {
+		t.Error(err)
+	}
+
+	aliceSharedSecret := aliceSecret.SharedSecret(bobPublic)
+	bobSharedSecret := bobSecret.SharedSecret(alicePublic)
+
+	if !aliceSharedSecret.VartimeEq(&bobSharedSecret) {
+		t.Error("Shared secrets don't agree")
+	}
+}
 
 // Perform Alice's (2-isogeny) key generation, using the slow but simple multiplication-based strategy.
 //

@@ -1,5 +1,10 @@
 package cln16sidh
 
+import (
+	"errors"
+	"io"
+)
+
 // The x-coordinate of P_A = [3^239](11, oddsqrt(11^3 + 11)) on E_0(F_p)
 var affine_xPA = PrimeFieldElement{a: fp751Element{0xd56fe52627914862, 0x1fad60dc96b5baea, 0x1e137d0bf07ab91, 0x404d3e9252161964, 0x3c5385e4cd09a337, 0x4476426769e4af73, 0x9790c6db989dfe33, 0xe06e1c04d2aa8b5e, 0x38c08185edea73b9, 0xaa41f678a4396ca6, 0x92b9259b2229e9a0, 0x2f9326818be0}}
 
@@ -102,6 +107,80 @@ type SIDHSecretKeyBob struct {
 
 type SIDHSecretKeyAlice struct {
 	scalar []uint8
+}
+
+func GenerateAliceKeypair(rand io.Reader) (publicKey *SIDHPublicKeyAlice, secretKey *SIDHSecretKeyAlice, err error) {
+	publicKey = new(SIDHPublicKeyAlice)
+	secretKey = new(SIDHSecretKeyAlice)
+
+	scalar := new([47]byte)
+
+	_, err = io.ReadFull(rand, scalar[:])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Bit-twiddle to ensure scalar is in 2*[0,2^371):
+	scalar[46] &= 15 // clear high bits, so scalar < 2^372
+	scalar[0] &= 254 // clear low bit, so scalar is even
+
+	// We actually want scalar in 2*(0,2^371), but the above procedure
+	// generates 0 with probability 2^(-371), which isn't worth checking
+	// for.
+
+	secretKey.scalar = scalar[:]
+
+	*publicKey = secretKey.PublicKey()
+
+	return
+}
+
+// Set result to zero if the input scalar is <= 3^238.
+//go:noescape
+func checkLessThanThree238(scalar *[48]byte, result *uint32)
+
+// Set scalar = 3*scalar
+//go:noescape
+func multiplyByThree(scalar *[48]byte)
+
+func GenerateBobKeypair(rand io.Reader) (publicKey *SIDHPublicKeyBob, secretKey *SIDHSecretKeyBob, err error) {
+	publicKey = new(SIDHPublicKeyBob)
+	secretKey = new(SIDHSecretKeyBob)
+
+	scalar := new([48]byte)
+
+	// Perform rejection sampling to obtain a random value in [0,3^238]:
+	var ok uint32
+	for i := 0; i < 102; i++ {
+		_, err = io.ReadFull(rand, scalar[:])
+		if err != nil {
+			return nil, nil, err
+		}
+		// Mask the high bits to obtain a uniform value in [0,2^378):
+		scalar[47] &= 3
+		// Accept if scalar < 3^238 (this happens w/ prob ~0.5828)
+		checkLessThanThree238(scalar, &ok)
+		if ok == 0 {
+			break
+		}
+	}
+	// ok is nonzero if all 102 trials failed.
+	// This happens with probability 0.41719...^102 < 2^(-128), i.e., never
+	if ok != 0 {
+		return nil, nil, errors.New("WOW! An event with probability < 2^(-128) occurred!!")
+	}
+
+	// Multiply by 3 to get a scalar in 3*[0,3^238):
+	multiplyByThree(scalar)
+	// We actually want scalar in 2*(0,2^371), but the above procedure
+	// generates 0 with probability 3^(-238), which isn't worth checking
+	// for.
+
+	secretKey.scalar = scalar[:]
+
+	*publicKey = secretKey.PublicKey()
+
+	return
 }
 
 // Compute the corresponding public key for the given secret key, using the
