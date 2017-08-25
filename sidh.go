@@ -5,6 +5,11 @@ import (
 	"io"
 )
 
+const (
+	PublicKeySize = 564
+	SharedSecretSize = 188
+)
+
 // The x-coordinate of P_A = [3^239](11, oddsqrt(11^3 + 11)) on E_0(F_p)
 var affine_xPA = PrimeFieldElement{a: fp751Element{0xd56fe52627914862, 0x1fad60dc96b5baea, 0x1e137d0bf07ab91, 0x404d3e9252161964, 0x3c5385e4cd09a337, 0x4476426769e4af73, 0x9790c6db989dfe33, 0xe06e1c04d2aa8b5e, 0x38c08185edea73b9, 0xaa41f678a4396ca6, 0x92b9259b2229e9a0, 0x2f9326818be0}}
 
@@ -313,7 +318,7 @@ func (secretKey *SIDHSecretKeyBob) PublicKey() SIDHPublicKeyBob {
 	return publicKey
 }
 
-func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob) ExtensionFieldElement {
+func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob) [SharedSecretSize]byte {
 	var currentCurve = RecoverCurveParameters(&bobPublic.affine_xP, &bobPublic.affine_xQ, &bobPublic.affine_xQmP)
 
 	var xR, xP, xQ, xQmP ProjectivePoint
@@ -355,10 +360,13 @@ func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob)
 
 	currentCurve, _ = ComputeFourIsogeny(&xR)
 
-	return currentCurve.JInvariant()
+	var sharedSecret [SharedSecretSize]byte
+	var jInv = currentCurve.JInvariant()
+	jInv.ToBytes(sharedSecret[:])
+	return sharedSecret
 }
 
-func (bobSecret *SIDHSecretKeyBob) SharedSecret(alicePublic *SIDHPublicKeyAlice) ExtensionFieldElement {
+func (bobSecret *SIDHSecretKeyBob) SharedSecret(alicePublic *SIDHPublicKeyAlice) [SharedSecretSize]byte {
 	var currentCurve = RecoverCurveParameters(&alicePublic.affine_xP, &alicePublic.affine_xQ, &alicePublic.affine_xQmP)
 
 	var xR, xP, xQ, xQmP ProjectivePoint
@@ -395,5 +403,8 @@ func (bobSecret *SIDHSecretKeyBob) SharedSecret(alicePublic *SIDHPublicKeyAlice)
 	}
 	currentCurve, _ = ComputeThreeIsogeny(&xR)
 
-	return currentCurve.JInvariant()
+	var sharedSecret [SharedSecretSize]byte
+	var jInv = currentCurve.JInvariant()
+	jInv.ToBytes(sharedSecret[:])
+	return sharedSecret
 }

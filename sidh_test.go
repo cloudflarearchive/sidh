@@ -3,6 +3,7 @@ package cln16sidh
 import (
 	"crypto/rand"
 	"testing"
+	"bytes"
 )
 
 func TestMultiplyByThree(t *testing.T) {
@@ -41,6 +42,7 @@ func TestCheckLessThanThree238(t *testing.T) {
 	}
 }
 
+// XXX this should be a quick.Check test
 func TestEphemeralSharedSecret(t *testing.T) {
 	alicePublic, aliceSecret, err := GenerateAliceKeypair(rand.Reader)
 	if err != nil {
@@ -54,7 +56,7 @@ func TestEphemeralSharedSecret(t *testing.T) {
 	aliceSharedSecret := aliceSecret.SharedSecret(bobPublic)
 	bobSharedSecret := bobSecret.SharedSecret(alicePublic)
 
-	if !aliceSharedSecret.VartimeEq(&bobSharedSecret) {
+	if !bytes.Equal(aliceSharedSecret[:], bobSharedSecret[:]) {
 		t.Error("Shared secrets don't agree")
 	}
 }
@@ -148,7 +150,7 @@ func bobKeyGenSlow(secretKey *SIDHSecretKeyBob) SIDHPublicKeyBob {
 // Perform Alice's key agreement, using the slow but simple multiplication-based strategy.
 //
 // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
-func aliceSharedSecretSlow(bobPublic *SIDHPublicKeyBob, aliceSecret *SIDHSecretKeyAlice) ExtensionFieldElement {
+func aliceSharedSecretSlow(bobPublic *SIDHPublicKeyBob, aliceSecret *SIDHSecretKeyAlice) [188]byte {
 	var currentCurve = RecoverCurveParameters(&bobPublic.affine_xP, &bobPublic.affine_xQ, &bobPublic.affine_xQmP)
 
 	var xR, xS, xP, xQ, xQmP ProjectivePoint
@@ -172,13 +174,16 @@ func aliceSharedSecretSlow(bobPublic *SIDHPublicKeyBob, aliceSecret *SIDHSecretK
 
 	currentCurve, _ = ComputeFourIsogeny(&xR)
 
-	return currentCurve.JInvariant()
+	var sharedSecret [SharedSecretSize]byte
+	var jInv = currentCurve.JInvariant()
+	jInv.ToBytes(sharedSecret[:])
+	return sharedSecret
 }
 
 // Perform Bob's key agreement, using the slow but simple multiplication-based strategy.
 //
 // This function just exists to ensure that the fast isogeny-tree strategy works correctly.
-func bobSharedSecretSlow(alicePublic *SIDHPublicKeyAlice, bobSecret *SIDHSecretKeyBob) ExtensionFieldElement {
+func bobSharedSecretSlow(alicePublic *SIDHPublicKeyAlice, bobSecret *SIDHSecretKeyBob) [188]byte {
 	var currentCurve = RecoverCurveParameters(&alicePublic.affine_xP, &alicePublic.affine_xQ, &alicePublic.affine_xQmP)
 
 	var xR, xS, xP, xQ, xQmP ProjectivePoint
@@ -198,7 +203,10 @@ func bobSharedSecretSlow(alicePublic *SIDHPublicKeyAlice, bobSecret *SIDHSecretK
 
 	currentCurve, _ = ComputeThreeIsogeny(&xR)
 
-	return currentCurve.JInvariant()
+	var sharedSecret [SharedSecretSize]byte
+	var jInv = currentCurve.JInvariant()
+	jInv.ToBytes(sharedSecret[:])
+	return sharedSecret
 }
 
 func TestBobKeyGenFastVsSlow(t *testing.T) {
@@ -256,13 +264,13 @@ func TestSharedSecret(t *testing.T) {
 	var bobSharedSecretSlow = bobSharedSecretSlow(&alicePublic, &bobSecret)
 	var bobSharedSecretFast = bobSecret.SharedSecret(&alicePublic)
 
-	if !aliceSharedSecretFast.VartimeEq(&bobSharedSecretFast) {
+	if !bytes.Equal(aliceSharedSecretFast[:], aliceSharedSecretSlow[:]) {
 		t.Error("Shared secret (fast) mismatch: Alice has ", aliceSharedSecretFast, " Bob has ", bobSharedSecretFast)
 	}
-	if !aliceSharedSecretSlow.VartimeEq(&bobSharedSecretSlow) {
+	if !bytes.Equal(aliceSharedSecretSlow[:], bobSharedSecretSlow[:]) {
 		t.Error("Shared secret (slow) mismatch: Alice has ", aliceSharedSecretSlow, " Bob has ", bobSharedSecretSlow)
 	}
-	if !aliceSharedSecretSlow.VartimeEq(&bobSharedSecretFast) {
+	if !bytes.Equal(aliceSharedSecretSlow[:], bobSharedSecretFast[:]) {
 		t.Error("Shared secret mismatch: Alice (slow) has ", aliceSharedSecretSlow, " Bob (fast) has ", bobSharedSecretFast)
 	}
 }
@@ -331,8 +339,6 @@ var benchSharedSecretAlicePublic = SIDHPublicKeyAlice{affine_xP: ExtensionFieldE
 
 var benchSharedSecretBobPublic = SIDHPublicKeyBob{affine_xP: ExtensionFieldElement{a: fp751Element{0x6e1b8b250595b5fb, 0x800787f5197d963b, 0x6f4a4e314162a8a4, 0xe75cba4d37c02128, 0x2212e7579817a216, 0xd8a5fdb0ab2f843c, 0x44230c9f998cfd6c, 0x311ff789b26aa292, 0x73d05c379ff53e40, 0xddd8f5a223bad56c, 0x94b611e6e931c8b5, 0x4d6b9bfe3555}, b: fp751Element{0x1a3686cfc8381294, 0x57f089b14f639cc4, 0xdb6a1565f2f5cabe, 0x83d67e8f6a02f215, 0x1946272593815e87, 0x2d839631785ca74c, 0xf149dcb2dee2bee, 0x705acd79efe405bf, 0xae3769b67687fbed, 0xacd5e29f2c203cb0, 0xdd91f08fa3153e08, 0x5a9ad8cb7400}}, affine_xQ: ExtensionFieldElement{a: fp751Element{0xd30ed48b8c0d0c4a, 0x949cad95959ec462, 0x188675581e9d1f2a, 0xf57ed3233d33031c, 0x564c6532f7283ce7, 0x80cbef8ee3b66ecb, 0x5c687359315f22ce, 0x1da950f8671fac50, 0x6fa6c045f513ef6, 0x25ffc65a8da12d4a, 0x8b0f4ac0f5244f23, 0xadcb0e07fd92}, b: fp751Element{0x37a43cd933ebfec4, 0x2a2806ef28dacf84, 0xd671fe718611b71e, 0xef7d73f01a676326, 0x99db1524e5799cf2, 0x860271dfbf67ff62, 0xedc2a0a14114bcf, 0x6c7b9b14b1264e5a, 0xf52de61707dc38b4, 0xccddb13fcc691f5a, 0x80f37a1220163920, 0x6a9175b9d5a1}}, affine_xQmP: ExtensionFieldElement{a: fp751Element{0xf08af9e695c626da, 0x7a4b4d52b54e1b38, 0x980272cd4c8b8c10, 0x1afcb6151d113176, 0xaef7dbd877c00f0c, 0xe8a5ea89078700c3, 0x520c1901aa8323fa, 0xfba049c947f3383a, 0x1c38abcab48be9af, 0x9f1212b923481ea, 0x1522da3457a7c293, 0xb746f78e3a61}, b: fp751Element{0x48010d0b48491128, 0x6d1c5c509f99f450, 0xaa3522330e3a8a62, 0x872aaf46193b2bb2, 0xc89260a2d8508973, 0x98bbbebf5524be83, 0x35711d01d895c217, 0x5e44e09ec506ed7, 0xac653a760ef6fd58, 0x5837954e30ad688d, 0xcbd3e9a1b5661da8, 0x15547f5d091a}}}
 
-var benchSharedSecretJInvariant ExtensionFieldElement
-
 func BenchmarkSharedSecretAlice(b *testing.B) {
 	// m_A = 2*randint(0,2^371)
 	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
@@ -340,7 +346,7 @@ func BenchmarkSharedSecretAlice(b *testing.B) {
 	var aliceSecret = SIDHSecretKeyAlice{scalar: m_A[:]}
 
 	for n := 0; n < b.N; n++ {
-		benchSharedSecretJInvariant = aliceSecret.SharedSecret(&benchSharedSecretBobPublic)
+		aliceSecret.SharedSecret(&benchSharedSecretBobPublic)
 	}
 }
 
@@ -351,7 +357,7 @@ func BenchmarkSharedSecretAliceSlow(b *testing.B) {
 	var aliceSecret = SIDHSecretKeyAlice{scalar: m_A[:]}
 
 	for n := 0; n < b.N; n++ {
-		benchSharedSecretJInvariant = aliceSharedSecretSlow(&benchSharedSecretBobPublic, &aliceSecret)
+		aliceSharedSecretSlow(&benchSharedSecretBobPublic, &aliceSecret)
 	}
 }
 
@@ -362,7 +368,7 @@ func BenchmarkSharedSecretBob(b *testing.B) {
 	var bobSecret = SIDHSecretKeyBob{scalar: m_B[:]}
 
 	for n := 0; n < b.N; n++ {
-		benchSharedSecretJInvariant = bobSecret.SharedSecret(&benchSharedSecretAlicePublic)
+		bobSecret.SharedSecret(&benchSharedSecretAlicePublic)
 	}
 }
 
@@ -373,6 +379,6 @@ func BenchmarkSharedSecretBobSlow(b *testing.B) {
 	var bobSecret = SIDHSecretKeyBob{scalar: m_B[:]}
 
 	for n := 0; n < b.N; n++ {
-		benchSharedSecretJInvariant = bobSharedSecretSlow(&benchSharedSecretAlicePublic, &bobSecret)
+		bobSharedSecretSlow(&benchSharedSecretAlicePublic, &bobSecret)
 	}
 }
