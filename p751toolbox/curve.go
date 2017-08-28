@@ -1,4 +1,4 @@
-package cln16sidh
+package p751toolbox
 
 // A point on the projective line P^1(F_{p^2}).
 //
@@ -8,7 +8,7 @@ type ProjectiveCurveParameters struct {
 	C ExtensionFieldElement
 }
 
-func (params *ProjectiveCurveParameters) fromAffine(a *ExtensionFieldElement) {
+func (params *ProjectiveCurveParameters) FromAffine(a *ExtensionFieldElement) {
 	params.A = *a
 	params.C = oneExtensionField
 }
@@ -20,8 +20,8 @@ type CachedCurveParameters struct {
 
 // = 256
 var const256 = ExtensionFieldElement{
-	A: fp751Element{0x249ad67, 0x0, 0x0, 0x0, 0x0, 0x730000000000000, 0x738154969973da8b, 0x856657c146718c7f, 0x461860e4e363a697, 0xf9fd6510bba838cd, 0x4e1a3c3f06993c0c, 0x55abef5b75c7},
-	B: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	A: Fp751Element{0x249ad67, 0x0, 0x0, 0x0, 0x0, 0x730000000000000, 0x738154969973da8b, 0x856657c146718c7f, 0x461860e4e363a697, 0xf9fd6510bba838cd, 0x4e1a3c3f06993c0c, 0x55abef5b75c7},
+	B: Fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
 // Recover the curve parameters from three points on the curve.
@@ -96,29 +96,29 @@ type ProjectivePrimeFieldPoint struct {
 	Z PrimeFieldElement
 }
 
-func (point *ProjectivePoint) fromAffinePrimeField(x *PrimeFieldElement) {
+func (point *ProjectivePoint) FromAffinePrimeField(x *PrimeFieldElement) {
 	point.X.A = x.A
 	point.X.B = zeroExtensionField.B
 	point.Z = oneExtensionField
 }
 
-func (point *ProjectivePoint) fromAffine(x *ExtensionFieldElement) {
+func (point *ProjectivePoint) FromAffine(x *ExtensionFieldElement) {
 	point.X = *x
 	point.Z = oneExtensionField
 }
 
-func (point *ProjectivePrimeFieldPoint) fromAffine(x *PrimeFieldElement) {
+func (point *ProjectivePrimeFieldPoint) FromAffine(x *PrimeFieldElement) {
 	point.X = *x
 	point.Z = onePrimeField
 }
 
-func (point *ProjectivePoint) toAffine() *ExtensionFieldElement {
+func (point *ProjectivePoint) ToAffine() *ExtensionFieldElement {
 	affine_x := new(ExtensionFieldElement)
 	affine_x.Inv(&point.Z).Mul(affine_x, &point.X)
 	return affine_x
 }
 
-func (point *ProjectivePrimeFieldPoint) toAffine() *PrimeFieldElement {
+func (point *ProjectivePrimeFieldPoint) ToAffine() *PrimeFieldElement {
 	affine_x := new(PrimeFieldElement)
 	affine_x.Inv(&point.Z).Mul(affine_x, &point.X)
 	return affine_x
@@ -562,11 +562,11 @@ func DistortAndDifference(affine_xP *PrimeFieldElement) ProjectivePoint {
 // here, since the bulk of the cost is already in the ladder.
 func SecretPoint(affine_xP, affine_yP *PrimeFieldElement, scalar []uint8) ProjectivePoint {
 	var xQ ProjectivePrimeFieldPoint
-	xQ.fromAffine(affine_xP)
+	xQ.FromAffine(affine_xP)
 	xQ.X.Neg(&xQ.X)
 
 	// Compute x([m]Q) = (X_{mQ} : Z_{mQ}), x([m+1]Q) = (X_{m1Q} : Z_{m1Q})
-	var xmQ, xm1Q = ScalarMultPrimeField(&aPlus2Over4_E0, &xQ, scalar)
+	var xmQ, xm1Q = ScalarMultPrimeField(&E0_aPlus2Over4, &xQ, scalar)
 
 	// Now perform coordinate recovery:
 	// [m]Q = (X_{mQ} : Y_{mQ}*i : Z_{mQ})

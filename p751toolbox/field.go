@@ -1,4 +1,4 @@
-package cln16sidh
+package p751toolbox
 
 //------------------------------------------------------------------------------
 // Extension Field
@@ -8,20 +8,20 @@ package cln16sidh
 type ExtensionFieldElement struct {
 	// This field element is in Montgomery form, so that the value `A` is
 	// represented by `aR mod p`.
-	A fp751Element
+	A Fp751Element
 	// This field element is in Montgomery form, so that the value `B` is
 	// represented by `bR mod p`.
-	B fp751Element
+	B Fp751Element
 }
 
 var zeroExtensionField = ExtensionFieldElement{
-	A: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-	B: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	A: Fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	B: Fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
 var oneExtensionField = ExtensionFieldElement{
-	A: fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
-	B: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	A: Fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
+	B: Fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
 // Set dest = 0.
@@ -66,7 +66,7 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) *Extensi
 	fp751Mul(&ac, a, c) // = a*c*R*R
 	fp751Mul(&bd, b, d) // = b*d*R*R
 
-	var b_minus_a, c_minus_d fp751Element
+	var b_minus_a, c_minus_d Fp751Element
 	fp751SubReduced(&b_minus_a, b, a) // = (b-a)*R
 	fp751SubReduced(&c_minus_d, c, d) // = (c-d)*R
 
@@ -129,7 +129,7 @@ func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) *ExtensionField
 	fp751Mul(&ac, a, c)
 	fp751MontgomeryReduce(&dest.A, &ac)
 
-	var minus_b fp751Element
+	var minus_b Fp751Element
 	fp751SubReduced(&minus_b, &minus_b, b)
 	var minus_bc fp751X2
 	fp751Mul(&minus_bc, &minus_b, c)
@@ -163,7 +163,7 @@ func (dest *ExtensionFieldElement) Square(x *ExtensionFieldElement) *ExtensionFi
 	//
 	// (a + bi)*(a + bi) = (a^2 - b^2) + 2abi.
 
-	var a2, a_plus_b, a_minus_b fp751Element
+	var a2, a_plus_b, a_minus_b Fp751Element
 	fp751AddReduced(&a2, a, a)        // = a*R + a*R = 2*a*R
 	fp751AddReduced(&a_plus_b, a, b)  // = a*R + b*R = (a+b)*R
 	fp751SubReduced(&a_minus_b, a, b) // = a*R - b*R = (a-b)*R
@@ -257,15 +257,15 @@ func (x *ExtensionFieldElement) FromBytes(input []byte) {
 type PrimeFieldElement struct {
 	// This field element is in Montgomery form, so that the value `A` is
 	// represented by `aR mod p`.
-	A fp751Element
+	A Fp751Element
 }
 
 var zeroPrimeField = PrimeFieldElement{
-	A: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	A: Fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
 var onePrimeField = PrimeFieldElement{
-	A: fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
+	A: Fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
 }
 
 // Set dest = 0.
@@ -289,7 +289,7 @@ func (dest *PrimeFieldElement) One() *PrimeFieldElement {
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) SetUint64(x uint64) *PrimeFieldElement {
 	var xRR fp751X2
-	dest.A = fp751Element{}                 // = 0
+	dest.A = Fp751Element{}                 // = 0
 	dest.A[0] = x                           // = x
 	fp751Mul(&xRR, &dest.A, &montgomeryRsq) // = x*R*R
 	fp751MontgomeryReduce(&dest.A, &xRR)    // = x*R mod p
@@ -477,12 +477,12 @@ const fp751NumWords = 12
 // (2^768) mod p.
 // This can't be a constant because Go doesn't allow array constants, so try
 // not to modify it.
-var montgomeryR = fp751Element{149933, 0, 0, 0, 0, 9444048418595930112, 6136068611055053926, 7599709743867700432, 14455912356952952366, 5522737203492907350, 1222606818372667369, 49869481633250}
+var montgomeryR = Fp751Element{149933, 0, 0, 0, 0, 9444048418595930112, 6136068611055053926, 7599709743867700432, 14455912356952952366, 5522737203492907350, 1222606818372667369, 49869481633250}
 
 // (2^768)^2 mod p
 // This can't be a constant because Go doesn't allow array constants, so try
 // not to modify it.
-var montgomeryRsq = fp751Element{2535603850726686808, 15780896088201250090, 6788776303855402382, 17585428585582356230, 5274503137951975249, 2266259624764636289, 11695651972693921304, 13072885652150159301, 4908312795585420432, 6229583484603254826, 488927695601805643, 72213483953973}
+var montgomeryRsq = Fp751Element{2535603850726686808, 15780896088201250090, 6788776303855402382, 17585428585582356230, 5274503137951975249, 2266259624764636289, 11695651972693921304, 13072885652150159301, 4908312795585420432, 6229583484603254826, 488927695601805643, 72213483953973}
 
 // Internal representation of an element of the base field F_p.
 //
@@ -490,7 +490,7 @@ var montgomeryRsq = fp751Element{2535603850726686808, 15780896088201250090, 6788
 // is assigned to the representation -- it could represent an element in
 // Montgomery form, or not.  Tracking the meaning of the field element is left
 // to higher types.
-type fp751Element [fp751NumWords]uint64
+type Fp751Element [fp751NumWords]uint64
 
 // Represents an intermediate product of two elements of the base field F_p.
 type fp751X2 [2 * fp751NumWords]uint64
@@ -498,26 +498,26 @@ type fp751X2 [2 * fp751NumWords]uint64
 // If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
 // This function executes in constant time.
 //go:noescape
-func fp751ConditionalSwap(x, y *fp751Element, choice uint8)
+func fp751ConditionalSwap(x, y *Fp751Element, choice uint8)
 
 // If choice = 0, set z = x. If choice = 1, set z = y.
 // This function executes in constant time.
 //
 // Can overlap z with x or y or both.
 //go:noescape
-func fp751ConditionalAssign(z, x, y *fp751Element, choice uint8)
+func fp751ConditionalAssign(z, x, y *Fp751Element, choice uint8)
 
 // Compute z = x + y (mod p).
 //go:noescape
-func fp751AddReduced(z, x, y *fp751Element)
+func fp751AddReduced(z, x, y *Fp751Element)
 
 // Compute z = x - y (mod p).
 //go:noescape
-func fp751SubReduced(z, x, y *fp751Element)
+func fp751SubReduced(z, x, y *Fp751Element)
 
 // Compute z = x + y, without reducing mod p.
 //go:noescape
-func fp751AddLazy(z, x, y *fp751Element)
+func fp751AddLazy(z, x, y *Fp751Element)
 
 // Compute z = x + y, without reducing mod p.
 //go:noescape
@@ -529,18 +529,18 @@ func fp751X2SubLazy(z, x, y *fp751X2)
 
 // Compute z = x * y.
 //go:noescape
-func fp751Mul(z *fp751X2, x, y *fp751Element)
+func fp751Mul(z *fp751X2, x, y *Fp751Element)
 
 // Perform Montgomery reduction: set z = x R^{-1} (mod p).
 // Destroys the input value.
 //go:noescape
-func fp751MontgomeryReduce(z *fp751Element, x *fp751X2)
+func fp751MontgomeryReduce(z *Fp751Element, x *fp751X2)
 
 // Reduce a field element in [0, 2*p) to one in [0,p).
 //go:noescape
-func fp751StrongReduce(x *fp751Element)
+func fp751StrongReduce(x *Fp751Element)
 
-func (x fp751Element) vartimeEq(y fp751Element) bool {
+func (x Fp751Element) vartimeEq(y Fp751Element) bool {
 	fp751StrongReduce(&x)
 	fp751StrongReduce(&y)
 	eq := true
@@ -551,15 +551,15 @@ func (x fp751Element) vartimeEq(y fp751Element) bool {
 	return eq
 }
 
-// Read an fp751Element from little-endian bytes and convert to Montgomery form.
+// Read an Fp751Element from little-endian bytes and convert to Montgomery form.
 //
 // The input byte slice must be at least 94 bytes long.
-func (x *fp751Element) montgomeryFormFromBytes(input []byte) {
+func (x *Fp751Element) montgomeryFormFromBytes(input []byte) {
 	if len(input) < 94 {
 		panic("input byte slice too short")
 	}
 
-	var a fp751Element
+	var a Fp751Element
 	for i := 0; i < 94; i++ {
 		// set i = j*8 + k
 		j := i / 8
@@ -572,15 +572,15 @@ func (x *fp751Element) montgomeryFormFromBytes(input []byte) {
 	fp751MontgomeryReduce(x, &aRR)     // = a*R mod p
 }
 
-// Given an fp751Element in Montgomery form, convert to little-endian bytes.
+// Given an Fp751Element in Montgomery form, convert to little-endian bytes.
 //
 // The output byte slice must be at least 94 bytes long.
-func (x *fp751Element) toBytesFromMontgomeryForm(output []byte) {
+func (x *Fp751Element) toBytesFromMontgomeryForm(output []byte) {
 	if len(output) < 94 {
 		panic("output byte slice too short")
 	}
 
-	var a fp751Element
+	var a Fp751Element
 	var aR fp751X2
 	copy(aR[:], x[:])              // = a*R
 	fp751MontgomeryReduce(&a, &aR) // = a mod p in [0, 2p)

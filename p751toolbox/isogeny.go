@@ -1,4 +1,4 @@
-package cln16sidh
+package p751toolbox
 
 // Represents a 3-isogeny phi, holding the data necessary to evaluate phi.
 type ThreeIsogeny struct {

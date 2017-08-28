@@ -1,4 +1,4 @@
-package cln16sidh
+package p751toolbox
 
 import (
 	"math/big"
@@ -13,8 +13,8 @@ var quickCheckConfig = &quick.Config{MaxCount: (1 << (12 + quickCheckScaleFactor
 
 var cln16prime, _ = new(big.Int).SetString("10354717741769305252977768237866805321427389645549071170116189679054678940682478846502882896561066713624553211618840202385203911976522554393044160468771151816976706840078913334358399730952774926980235086850991501872665651576831", 10)
 
-// Convert an fp751Element to a big.Int for testing.  Because this is only
-// for testing, no big.Int to fp751Element conversion is provided.
+// Convert an Fp751Element to a big.Int for testing.  Because this is only
+// for testing, no big.Int to Fp751Element conversion is provided.
 
 func radix64ToBigInt(x []uint64) *big.Int {
 	radix := new(big.Int)
@@ -40,9 +40,9 @@ func (x *PrimeFieldElement) toBigInt() *big.Int {
 	return x.A.toBigIntFromMontgomeryForm()
 }
 
-func (x *fp751Element) toBigIntFromMontgomeryForm() *big.Int {
+func (x *Fp751Element) toBigIntFromMontgomeryForm() *big.Int {
 	// Convert from Montgomery form
-	a := fp751Element{}
+	a := Fp751Element{}
 	aR := fp751X2{}
 	copy(aR[:], x[:])              // = a*R
 	fp751MontgomeryReduce(&a, &aR) // = a mod p  in [0,2p)
@@ -52,7 +52,7 @@ func (x *fp751Element) toBigIntFromMontgomeryForm() *big.Int {
 
 func TestPrimeFieldElementToBigInt(t *testing.T) {
 	// Chosen so that p < xR < 2p
-	x := PrimeFieldElement{A: fp751Element{
+	x := PrimeFieldElement{A: Fp751Element{
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 140737488355328,
 	}}
 	// Computed using Sage:
@@ -69,7 +69,7 @@ func TestPrimeFieldElementToBigInt(t *testing.T) {
 	}
 }
 
-func generateFp751(rand *rand.Rand) fp751Element {
+func generateFp751(rand *rand.Rand) Fp751Element {
 	// Generation strategy: low limbs taken from [0,2^64); high limb
 	// taken from smaller range
 	//
@@ -87,7 +87,7 @@ func generateFp751(rand *rand.Rand) fp751Element {
 	//
 	highLimb := rand.Uint64() % 246065832128056
 
-	return fp751Element{
+	return Fp751Element{
 		rand.Uint64(),
 		rand.Uint64(),
 		rand.Uint64(),
@@ -371,8 +371,8 @@ func TestPrimeFieldElementP34VersusBigInt(t *testing.T) {
 }
 
 func TestFp751ElementConditionalSwap(t *testing.T) {
-	var one = fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-	var two = fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+	var one = Fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	var two = Fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
 
 	var x = one
 	var y = two
@@ -391,9 +391,9 @@ func TestFp751ElementConditionalSwap(t *testing.T) {
 }
 
 func TestFp751ElementConditionalAssign(t *testing.T) {
-	var one = fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-	var two = fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
-	var three = fp751Element{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}
+	var one = Fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
+	var two = Fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
+	var three = Fp751Element{3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3}
 
 	fp751ConditionalAssign(&one, &two, &three, 0)
 
@@ -410,10 +410,10 @@ func TestFp751ElementConditionalAssign(t *testing.T) {
 
 // Package-level storage for this field element is intended to deter
 // compiler optimizations.
-var benchmarkFp751Element fp751Element
+var benchmarkFp751Element Fp751Element
 var benchmarkFp751X2 fp751X2
-var bench_x = fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
-var bench_y = fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
+var bench_x = Fp751Element{17026702066521327207, 5108203422050077993, 10225396685796065916, 11153620995215874678, 6531160855165088358, 15302925148404145445, 1248821577836769963, 9789766903037985294, 7493111552032041328, 10838999828319306046, 18103257655515297935, 27403304611634}
+var bench_y = Fp751Element{4227467157325093378, 10699492810770426363, 13500940151395637365, 12966403950118934952, 16517692605450415877, 13647111148905630666, 14223628886152717087, 7167843152346903316, 15855377759596736571, 4300673881383687338, 6635288001920617779, 30486099554235}
 var bench_z = fp751X2{1595347748594595712, 10854920567160033970, 16877102267020034574, 12435724995376660096, 3757940912203224231, 8251999420280413600, 3648859773438820227, 17622716832674727914, 11029567000887241528, 11216190007549447055, 17606662790980286987, 4720707159513626555, 12887743598335030915, 14954645239176589309, 14178817688915225254, 1191346797768989683, 12629157932334713723, 6348851952904485603, 16444232588597434895, 7809979927681678066, 14642637672942531613, 3092657597757640067, 10160361564485285723, 240071237}
 
 func BenchmarkExtensionFieldElementMul(b *testing.B) {
