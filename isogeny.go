@@ -12,22 +12,22 @@ type ThreeIsogeny struct {
 // Returns a tuple (codomain, isogeny) = (E_(A':C'), phi).
 func ComputeThreeIsogeny(x3 *ProjectivePoint) (ProjectiveCurveParameters, ThreeIsogeny) {
 	var isogeny ThreeIsogeny
-	isogeny.x = x3.x
-	isogeny.z = x3.z
+	isogeny.x = x3.X
+	isogeny.z = x3.Z
 	// We want to compute
 	// (A':C') = (Z^4 + 18X^2Z^2 - 27X^4 : 4XZ^3)
 	// To do this, use the identity 18X^2Z^2 - 27X^4 = 9X^2(2Z^2 - 3X^2)
 	var codomain ProjectiveCurveParameters
 	var v0, v1, v2, v3 ExtensionFieldElement
-	v1.Square(&x3.x)               // = X^2
+	v1.Square(&x3.X)               // = X^2
 	v0.Add(&v1, &v1).Add(&v1, &v0) // = 3X^2
 	v1.Add(&v0, &v0).Add(&v1, &v0) // = 9X^2
-	v2.Square(&x3.z)               // = Z^2
+	v2.Square(&x3.Z)               // = Z^2
 	v3.Square(&v2)                 // = Z^4
 	v2.Add(&v2, &v2)               // = 2Z^2
 	v0.Sub(&v2, &v0)               // = 2Z^2 - 3X^2
 	v1.Mul(&v1, &v0)               // = 9X^2(2Z^2 - 3X^2)
-	v0.Mul(&x3.x, &x3.z)           // = XZ
+	v0.Mul(&x3.X, &x3.Z)           // = XZ
 	v0.Add(&v0, &v0)               // = 2XZ
 	codomain.A.Add(&v3, &v1)       // = Z^4 + 9X^2(2Z^2 - 3X^2)
 	codomain.C.Mul(&v0, &v2)       // = 4XZ^3
@@ -44,16 +44,16 @@ func ComputeThreeIsogeny(x3 *ProjectivePoint) (ProjectiveCurveParameters, ThreeI
 func (phi *ThreeIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	var xQ ProjectivePoint
 	var t0, t1, t2 ExtensionFieldElement
-	t0.Mul(&phi.x, &xP.x) // = X3*XP
-	t1.Mul(&phi.z, &xP.z) // = Z3*XP
+	t0.Mul(&phi.x, &xP.X) // = X3*XP
+	t1.Mul(&phi.z, &xP.Z) // = Z3*XP
 	t2.Sub(&t0, &t1)      // = X3*XP - Z3*ZP
-	t0.Mul(&phi.z, &xP.x) // = Z3*XP
-	t1.Mul(&phi.x, &xP.z) // = X3*ZP
+	t0.Mul(&phi.z, &xP.X) // = Z3*XP
+	t1.Mul(&phi.x, &xP.Z) // = X3*ZP
 	t0.Sub(&t0, &t1)      // = Z3*XP - X3*ZP
 	t2.Square(&t2)        // = (X3*XP - Z3*ZP)^2
 	t0.Square(&t0)        // = (Z3*XP - X3*ZP)^2
-	xQ.x.Mul(&t2, &xP.x)  // = XP*(X3*XP - Z3*ZP)^2
-	xQ.z.Mul(&t0, &xP.z)  // = ZP*(Z3*XP - X3*ZP)^2
+	xQ.X.Mul(&t2, &xP.X)  // = XP*(X3*XP - Z3*ZP)^2
+	xQ.Z.Mul(&t0, &xP.Z)  // = ZP*(Z3*XP - X3*ZP)^2
 
 	return xQ
 }
@@ -78,11 +78,11 @@ func ComputeFourIsogeny(x4 *ProjectivePoint) (ProjectiveCurveParameters, FourIso
 	var codomain ProjectiveCurveParameters
 	var isogeny FourIsogeny
 	var v0, v1 ExtensionFieldElement
-	v0.Square(&x4.x)                                     // = X4^2
-	v1.Square(&x4.z)                                     // = Z4^2
+	v0.Square(&x4.X)                                     // = X4^2
+	v1.Square(&x4.Z)                                     // = Z4^2
 	isogeny.Xsq_plus_Zsq.Add(&v0, &v1)                   // = X4^2 + Z4^2
 	isogeny.Xsq_minus_Zsq.Sub(&v0, &v1)                  // = X4^2 - Z4^2
-	isogeny.XZ2.Add(&x4.x, &x4.z)                        // = X4 + Z4
+	isogeny.XZ2.Add(&x4.X, &x4.Z)                        // = X4 + Z4
 	isogeny.XZ2.Square(&isogeny.XZ2)                     // = X4^2 + Z4^2 + 2X4Z4
 	isogeny.XZ2.Sub(&isogeny.XZ2, &isogeny.Xsq_plus_Zsq) // = 2X4Z4
 	isogeny.Xpow4.Square(&v0)                            // = X4^4
@@ -114,19 +114,19 @@ func (phi *FourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	// X_Q = Xprime*( 16*(X_4 + Z_4)*(X_4 - Z_4)*X_4^2*Z_4^4 )
 	// Z_Q = Zprime*( 16*(X_4 + Z_4)*(X_4 - Z_4)*X_4^2*Z_4^4 )
 	//
-	t0.Mul(&xP.x, &phi.XZ2)                      // = 2*X*X_4*Z_4
-	t1.Mul(&xP.z, &phi.Xsq_plus_Zsq)             // = (X_4^2 + Z_4^2)*Z
+	t0.Mul(&xP.X, &phi.XZ2)                      // = 2*X*X_4*Z_4
+	t1.Mul(&xP.Z, &phi.Xsq_plus_Zsq)             // = (X_4^2 + Z_4^2)*Z
 	t0.Sub(&t0, &t1)                             // = -X_4^2*Z + 2*X*X_4*Z_4 - Z*Z_4^2
-	t1.Mul(&xP.z, &phi.Xsq_minus_Zsq)            // = (X_4^2 - Z_4^2)*Z
+	t1.Mul(&xP.Z, &phi.Xsq_minus_Zsq)            // = (X_4^2 - Z_4^2)*Z
 	t2.Sub(&t0, &t1).Square(&t2)                 // = 4*(X_4*Z - X*Z_4)^2*X_4^2
 	t0.Mul(&t0, &t1).Add(&t0, &t0).Add(&t0, &t0) // = 4*(2*X*X_4*Z_4 - (X_4^2 + Z_4^2)*Z)*(X_4^2 - Z_4^2)*Z
 	t1.Add(&t0, &t2)                             // = 4*(X*X_4 - Z*Z_4)^2*Z_4^2
 	t0.Mul(&t0, &t2)                             // = Zprime * 16*(X_4 + Z_4)*(X_4 - Z_4)*X_4^2
-	xQ.z.Mul(&t0, &phi.Zpow4)                    // = Zprime * 16*(X_4 + Z_4)*(X_4 - Z_4)*X_4^2*Z_4^4
+	xQ.Z.Mul(&t0, &phi.Zpow4)                    // = Zprime * 16*(X_4 + Z_4)*(X_4 - Z_4)*X_4^2*Z_4^4
 	t2.Mul(&t2, &phi.Zpow4)                      // = 4*(X_4*Z - X*Z_4)^2*X_4^2*Z_4^4
 	t0.Mul(&t1, &phi.Xpow4)                      // = 4*(X*X_4 - Z*Z_4)^2*X_4^4*Z_4^2
 	t0.Sub(&t2, &t0)                             // = -4*(X*X_4^2 - 2*X_4*Z*Z_4 + X*Z_4^2)*X*(X_4^2 - Z_4^2)*X_4^2*Z_4^2
-	xQ.x.Mul(&t1, &t0)                           // = Xprime * 16*(X_4 + Z_4)*(X_4 - Z_4)*X_4^2*Z_4^4
+	xQ.X.Mul(&t1, &t0)                           // = Xprime * 16*(X_4 + Z_4)*(X_4 - Z_4)*X_4^2*Z_4^4
 
 	return xQ
 }
@@ -159,19 +159,19 @@ func (phi *FirstFourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	var xQ ProjectivePoint
 	var t0, t1, t2, t3 ExtensionFieldElement
 
-	t0.Add(&xP.x, &xP.z).Square(&t0) // = (X+Z)^2
-	t2.Mul(&xP.x, &xP.z)             // = X*Z
+	t0.Add(&xP.X, &xP.Z).Square(&t0) // = (X+Z)^2
+	t2.Mul(&xP.X, &xP.Z)             // = X*Z
 	t1.Add(&t2, &t2)                 // = 2*X*Z
 	t1.Sub(&t0, &t1)                 // = X^2 + Z^2
-	xQ.x.Mul(&phi.A, &t2)            // = A*X*Z
+	xQ.X.Mul(&phi.A, &t2)            // = A*X*Z
 	t3.Mul(&phi.C, &t1)              // = C*(X^2 + Z^2)
-	xQ.x.Add(&xQ.x, &t3)             // = A*X*Z + C*(X^2 + Z^2)
-	xQ.x.Mul(&xQ.x, &t0)             // = (X+Z)^2 * (A*X*Z + C*(X^2 + Z^2))
-	t0.Sub(&xP.x, &xP.z).Square(&t0) // = (X-Z)^2
+	xQ.X.Add(&xQ.X, &t3)             // = A*X*Z + C*(X^2 + Z^2)
+	xQ.X.Mul(&xQ.X, &t0)             // = (X+Z)^2 * (A*X*Z + C*(X^2 + Z^2))
+	t0.Sub(&xP.X, &xP.Z).Square(&t0) // = (X-Z)^2
 	t0.Mul(&t0, &t2)                 // = X*Z*(X-Z)^2
 	t1.Add(&phi.C, &phi.C)           // = 2*C
 	t1.Sub(&t1, &phi.A)              // = 2*C - A
-	xQ.z.Mul(&t1, &t0)               // = (2*C - A)*X*Z*(X-Z)^2
+	xQ.Z.Mul(&t1, &t0)               // = (2*C - A)*X*Z*(X-Z)^2
 
 	return xQ
 }

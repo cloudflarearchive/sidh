@@ -37,7 +37,7 @@ func radix64ToBigInt(x []uint64) *big.Int {
 
 func (x *PrimeFieldElement) toBigInt() *big.Int {
 	// Convert from Montgomery form
-	return x.a.toBigIntFromMontgomeryForm()
+	return x.A.toBigIntFromMontgomeryForm()
 }
 
 func (x *fp751Element) toBigIntFromMontgomeryForm() *big.Int {
@@ -52,7 +52,7 @@ func (x *fp751Element) toBigIntFromMontgomeryForm() *big.Int {
 
 func TestPrimeFieldElementToBigInt(t *testing.T) {
 	// Chosen so that p < xR < 2p
-	x := PrimeFieldElement{a: fp751Element{
+	x := PrimeFieldElement{A: fp751Element{
 		1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 140737488355328,
 	}}
 	// Computed using Sage:
@@ -104,11 +104,11 @@ func generateFp751(rand *rand.Rand) fp751Element {
 }
 
 func (x PrimeFieldElement) Generate(rand *rand.Rand, size int) reflect.Value {
-	return reflect.ValueOf(PrimeFieldElement{a: generateFp751(rand)})
+	return reflect.ValueOf(PrimeFieldElement{A: generateFp751(rand)})
 }
 
 func (x ExtensionFieldElement) Generate(rand *rand.Rand, size int) reflect.Value {
-	return reflect.ValueOf(ExtensionFieldElement{a: generateFp751(rand), b: generateFp751(rand)})
+	return reflect.ValueOf(ExtensionFieldElement{A: generateFp751(rand), B: generateFp751(rand)})
 }
 
 //------------------------------------------------------------------------------
@@ -417,7 +417,7 @@ var bench_y = fp751Element{4227467157325093378, 10699492810770426363, 1350094015
 var bench_z = fp751X2{1595347748594595712, 10854920567160033970, 16877102267020034574, 12435724995376660096, 3757940912203224231, 8251999420280413600, 3648859773438820227, 17622716832674727914, 11029567000887241528, 11216190007549447055, 17606662790980286987, 4720707159513626555, 12887743598335030915, 14954645239176589309, 14178817688915225254, 1191346797768989683, 12629157932334713723, 6348851952904485603, 16444232588597434895, 7809979927681678066, 14642637672942531613, 3092657597757640067, 10160361564485285723, 240071237}
 
 func BenchmarkExtensionFieldElementMul(b *testing.B) {
-	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	z := &ExtensionFieldElement{A: bench_x, B: bench_y}
 	w := new(ExtensionFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -426,7 +426,7 @@ func BenchmarkExtensionFieldElementMul(b *testing.B) {
 }
 
 func BenchmarkExtensionFieldElementInv(b *testing.B) {
-	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	z := &ExtensionFieldElement{A: bench_x, B: bench_y}
 	w := new(ExtensionFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -435,7 +435,7 @@ func BenchmarkExtensionFieldElementInv(b *testing.B) {
 }
 
 func BenchmarkExtensionFieldElementSquare(b *testing.B) {
-	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	z := &ExtensionFieldElement{A: bench_x, B: bench_y}
 	w := new(ExtensionFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -444,7 +444,7 @@ func BenchmarkExtensionFieldElementSquare(b *testing.B) {
 }
 
 func BenchmarkExtensionFieldElementAdd(b *testing.B) {
-	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	z := &ExtensionFieldElement{A: bench_x, B: bench_y}
 	w := new(ExtensionFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -453,7 +453,7 @@ func BenchmarkExtensionFieldElementAdd(b *testing.B) {
 }
 
 func BenchmarkExtensionFieldElementSub(b *testing.B) {
-	z := &ExtensionFieldElement{a: bench_x, b: bench_y}
+	z := &ExtensionFieldElement{A: bench_x, B: bench_y}
 	w := new(ExtensionFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -462,7 +462,7 @@ func BenchmarkExtensionFieldElementSub(b *testing.B) {
 }
 
 func BenchmarkPrimeFieldElementMul(b *testing.B) {
-	z := &PrimeFieldElement{a: bench_x}
+	z := &PrimeFieldElement{A: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -471,7 +471,7 @@ func BenchmarkPrimeFieldElementMul(b *testing.B) {
 }
 
 func BenchmarkPrimeFieldElementInv(b *testing.B) {
-	z := &PrimeFieldElement{a: bench_x}
+	z := &PrimeFieldElement{A: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -480,7 +480,7 @@ func BenchmarkPrimeFieldElementInv(b *testing.B) {
 }
 
 func BenchmarkPrimeFieldElementSqrt(b *testing.B) {
-	z := &PrimeFieldElement{a: bench_x}
+	z := &PrimeFieldElement{A: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -489,7 +489,7 @@ func BenchmarkPrimeFieldElementSqrt(b *testing.B) {
 }
 
 func BenchmarkPrimeFieldElementSquare(b *testing.B) {
-	z := &PrimeFieldElement{a: bench_x}
+	z := &PrimeFieldElement{A: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -498,7 +498,7 @@ func BenchmarkPrimeFieldElementSquare(b *testing.B) {
 }
 
 func BenchmarkPrimeFieldElementAdd(b *testing.B) {
-	z := &PrimeFieldElement{a: bench_x}
+	z := &PrimeFieldElement{A: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
@@ -507,7 +507,7 @@ func BenchmarkPrimeFieldElementAdd(b *testing.B) {
 }
 
 func BenchmarkPrimeFieldElementSub(b *testing.B) {
-	z := &PrimeFieldElement{a: bench_x}
+	z := &PrimeFieldElement{A: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {

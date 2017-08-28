@@ -6,22 +6,22 @@ package cln16sidh
 
 // Represents an element of the extension field F_{p^2}.
 type ExtensionFieldElement struct {
-	// This field element is in Montgomery form, so that the value `a` is
+	// This field element is in Montgomery form, so that the value `A` is
 	// represented by `aR mod p`.
-	a fp751Element
-	// This field element is in Montgomery form, so that the value `b` is
+	A fp751Element
+	// This field element is in Montgomery form, so that the value `B` is
 	// represented by `bR mod p`.
-	b fp751Element
+	B fp751Element
 }
 
 var zeroExtensionField = ExtensionFieldElement{
-	a: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
-	b: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	A: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	B: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
 var oneExtensionField = ExtensionFieldElement{
-	a: fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
-	b: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	A: fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
+	B: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
 // Set dest = 0.
@@ -47,10 +47,10 @@ func (dest *ExtensionFieldElement) One() *ExtensionFieldElement {
 // Returns dest to allow chaining operations.
 func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) *ExtensionFieldElement {
 	// Let (a,b,c,d) = (lhs.a,lhs.b,rhs.a,rhs.b).
-	a := &lhs.a
-	b := &lhs.b
-	c := &rhs.a
-	d := &rhs.b
+	a := &lhs.A
+	b := &lhs.B
+	c := &rhs.A
+	d := &rhs.B
 
 	// We want to compute
 	//
@@ -75,11 +75,11 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) *Extensi
 	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &ac) // = ((b-a)*(c-d) + a*c)*R*R
 	fp751X2AddLazy(&ad_plus_bc, &ad_plus_bc, &bd) // = ((b-a)*(c-d) + a*c + b*d)*R*R
 
-	fp751MontgomeryReduce(&dest.b, &ad_plus_bc) // = (a*d + b*c)*R mod p
+	fp751MontgomeryReduce(&dest.B, &ad_plus_bc) // = (a*d + b*c)*R mod p
 
 	var ac_minus_bd fp751X2
 	fp751X2SubLazy(&ac_minus_bd, &ac, &bd)       // = (a*c - b*d)*R*R
-	fp751MontgomeryReduce(&dest.a, &ac_minus_bd) // = (a*c - b*d)*R mod p
+	fp751MontgomeryReduce(&dest.A, &ac_minus_bd) // = (a*c - b*d)*R mod p
 
 	return dest
 }
@@ -100,8 +100,8 @@ func (dest *ExtensionFieldElement) Neg(x *ExtensionFieldElement) *ExtensionField
 //
 // Returns dest to allow chaining operations.
 func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) *ExtensionFieldElement {
-	a := &x.a
-	b := &x.b
+	a := &x.A
+	b := &x.B
 
 	// We want to compute
 	//
@@ -118,22 +118,22 @@ func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) *ExtensionField
 	fp751Mul(&asq, a, a)                         // = a*a*R*R
 	fp751Mul(&bsq, b, b)                         // = b*b*R*R
 	fp751X2AddLazy(&asq, &asq, &bsq)             // = (a^2 + b^2)*R*R
-	fp751MontgomeryReduce(&asq_plus_bsq.a, &asq) // = (a^2 + b^2)*R mod p
+	fp751MontgomeryReduce(&asq_plus_bsq.A, &asq) // = (a^2 + b^2)*R mod p
 	// Now asq_plus_bsq = a^2 + b^2
 
 	var asq_plus_bsq_inv PrimeFieldElement
 	asq_plus_bsq_inv.Inv(&asq_plus_bsq)
-	c := &asq_plus_bsq_inv.a
+	c := &asq_plus_bsq_inv.A
 
 	var ac fp751X2
 	fp751Mul(&ac, a, c)
-	fp751MontgomeryReduce(&dest.a, &ac)
+	fp751MontgomeryReduce(&dest.A, &ac)
 
 	var minus_b fp751Element
 	fp751SubReduced(&minus_b, &minus_b, b)
 	var minus_bc fp751X2
 	fp751Mul(&minus_bc, &minus_b, c)
-	fp751MontgomeryReduce(&dest.b, &minus_bc)
+	fp751MontgomeryReduce(&dest.B, &minus_bc)
 
 	return dest
 }
@@ -156,8 +156,8 @@ func ExtensionFieldBatch3Inv(x1, x2, x3, y1, y2, y3 *ExtensionFieldElement) {
 //
 // Returns dest to allow chaining operations.
 func (dest *ExtensionFieldElement) Square(x *ExtensionFieldElement) *ExtensionFieldElement {
-	a := &x.a
-	b := &x.b
+	a := &x.A
+	b := &x.B
 
 	// We want to compute
 	//
@@ -172,8 +172,8 @@ func (dest *ExtensionFieldElement) Square(x *ExtensionFieldElement) *ExtensionFi
 	fp751Mul(&asq_minus_bsq, &a_plus_b, &a_minus_b) // = (a+b)*(a-b)*R*R = (a^2 - b^2)*R*R
 	fp751Mul(&ab2, &a2, b)                          // = 2*a*b*R*R
 
-	fp751MontgomeryReduce(&dest.a, &asq_minus_bsq) // = (a^2 - b^2)*R mod p
-	fp751MontgomeryReduce(&dest.b, &ab2)           // = 2*a*b*R mod p
+	fp751MontgomeryReduce(&dest.A, &asq_minus_bsq) // = (a^2 - b^2)*R mod p
+	fp751MontgomeryReduce(&dest.B, &ab2)           // = 2*a*b*R mod p
 
 	return dest
 }
@@ -184,8 +184,8 @@ func (dest *ExtensionFieldElement) Square(x *ExtensionFieldElement) *ExtensionFi
 //
 // Returns dest to allow chaining operations.
 func (dest *ExtensionFieldElement) Add(lhs, rhs *ExtensionFieldElement) *ExtensionFieldElement {
-	fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
-	fp751AddReduced(&dest.b, &lhs.b, &rhs.b)
+	fp751AddReduced(&dest.A, &lhs.A, &rhs.A)
+	fp751AddReduced(&dest.B, &lhs.B, &rhs.B)
 
 	return dest
 }
@@ -196,8 +196,8 @@ func (dest *ExtensionFieldElement) Add(lhs, rhs *ExtensionFieldElement) *Extensi
 //
 // Returns dest to allow chaining operations.
 func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) *ExtensionFieldElement {
-	fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
-	fp751SubReduced(&dest.b, &lhs.b, &rhs.b)
+	fp751SubReduced(&dest.A, &lhs.A, &rhs.A)
+	fp751SubReduced(&dest.B, &lhs.B, &rhs.B)
 
 	return dest
 }
@@ -206,8 +206,8 @@ func (dest *ExtensionFieldElement) Sub(lhs, rhs *ExtensionFieldElement) *Extensi
 //
 // Returns dest to allow chaining operations.
 func ExtensionFieldConditionalSwap(x, y *ExtensionFieldElement, choice uint8) {
-	fp751ConditionalSwap(&x.a, &y.a, choice)
-	fp751ConditionalSwap(&x.b, &y.b, choice)
+	fp751ConditionalSwap(&x.A, &y.A, choice)
+	fp751ConditionalSwap(&x.B, &y.B, choice)
 }
 
 // Set dest = if choice == 0 { x } else { y }, in constant time.
@@ -216,15 +216,15 @@ func ExtensionFieldConditionalSwap(x, y *ExtensionFieldElement, choice uint8) {
 //
 // Returns dest to allow chaining operations.
 func (dest *ExtensionFieldElement) ConditionalAssign(x, y *ExtensionFieldElement, choice uint8) *ExtensionFieldElement {
-	fp751ConditionalAssign(&dest.a, &x.a, &y.a, choice)
-	fp751ConditionalAssign(&dest.b, &x.b, &y.b, choice)
+	fp751ConditionalAssign(&dest.A, &x.A, &y.A, choice)
+	fp751ConditionalAssign(&dest.B, &x.B, &y.B, choice)
 
 	return dest
 }
 
 // Returns true if lhs = rhs.  Takes variable time.
 func (lhs *ExtensionFieldElement) VartimeEq(rhs *ExtensionFieldElement) bool {
-	return lhs.a.vartimeEq(rhs.a) && lhs.b.vartimeEq(rhs.b)
+	return lhs.A.vartimeEq(rhs.A) && lhs.B.vartimeEq(rhs.B)
 }
 
 // Convert the input to wire format.
@@ -234,8 +234,8 @@ func (x *ExtensionFieldElement) ToBytes(output []byte) {
 	if len(output) < 188 {
 		panic("output byte slice too short, need 188 bytes")
 	}
-	x.a.toBytesFromMontgomeryForm(output[0:94])
-	x.b.toBytesFromMontgomeryForm(output[94:188])
+	x.A.toBytesFromMontgomeryForm(output[0:94])
+	x.B.toBytesFromMontgomeryForm(output[94:188])
 }
 
 // Read 188 bytes into the given ExtensionFieldElement.
@@ -245,8 +245,8 @@ func (x *ExtensionFieldElement) FromBytes(input []byte) {
 	if len(input) < 188 {
 		panic("input byte slice too short, need 188 bytes")
 	}
-	x.a.montgomeryFormFromBytes(input[:94])
-	x.b.montgomeryFormFromBytes(input[94:188])
+	x.A.montgomeryFormFromBytes(input[:94])
+	x.B.montgomeryFormFromBytes(input[94:188])
 }
 
 //------------------------------------------------------------------------------
@@ -255,17 +255,17 @@ func (x *ExtensionFieldElement) FromBytes(input []byte) {
 
 // Represents an element of the prime field F_p.
 type PrimeFieldElement struct {
-	// This field element is in Montgomery form, so that the value `a` is
+	// This field element is in Montgomery form, so that the value `A` is
 	// represented by `aR mod p`.
-	a fp751Element
+	A fp751Element
 }
 
 var zeroPrimeField = PrimeFieldElement{
-	a: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	A: fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
 var onePrimeField = PrimeFieldElement{
-	a: fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
+	A: fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
 }
 
 // Set dest = 0.
@@ -289,10 +289,10 @@ func (dest *PrimeFieldElement) One() *PrimeFieldElement {
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) SetUint64(x uint64) *PrimeFieldElement {
 	var xRR fp751X2
-	dest.a = fp751Element{}                 // = 0
-	dest.a[0] = x                           // = x
-	fp751Mul(&xRR, &dest.a, &montgomeryRsq) // = x*R*R
-	fp751MontgomeryReduce(&dest.a, &xRR)    // = x*R mod p
+	dest.A = fp751Element{}                 // = 0
+	dest.A[0] = x                           // = x
+	fp751Mul(&xRR, &dest.A, &montgomeryRsq) // = x*R*R
+	fp751MontgomeryReduce(&dest.A, &xRR)    // = x*R mod p
 
 	return dest
 }
@@ -303,12 +303,12 @@ func (dest *PrimeFieldElement) SetUint64(x uint64) *PrimeFieldElement {
 //
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
-	a := &lhs.a // = a*R
-	b := &rhs.a // = b*R
+	a := &lhs.A // = a*R
+	b := &rhs.A // = b*R
 
 	var ab fp751X2
 	fp751Mul(&ab, a, b)                 // = a*b*R*R
-	fp751MontgomeryReduce(&dest.a, &ab) // = a*b*R mod p
+	fp751MontgomeryReduce(&dest.A, &ab) // = a*b*R mod p
 
 	return dest
 }
@@ -333,12 +333,12 @@ func (dest *PrimeFieldElement) Pow2k(x *PrimeFieldElement, k uint8) *PrimeFieldE
 //
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) Square(x *PrimeFieldElement) *PrimeFieldElement {
-	a := &x.a // = a*R
-	b := &x.a // = b*R
+	a := &x.A // = a*R
+	b := &x.A // = b*R
 
 	var ab fp751X2
 	fp751Mul(&ab, a, b)                 // = a*b*R*R
-	fp751MontgomeryReduce(&dest.a, &ab) // = a*b*R mod p
+	fp751MontgomeryReduce(&dest.A, &ab) // = a*b*R mod p
 
 	return dest
 }
@@ -359,7 +359,7 @@ func (dest *PrimeFieldElement) Neg(x *PrimeFieldElement) *PrimeFieldElement {
 //
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) Add(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
-	fp751AddReduced(&dest.a, &lhs.a, &rhs.a)
+	fp751AddReduced(&dest.A, &lhs.A, &rhs.A)
 
 	return dest
 }
@@ -370,21 +370,21 @@ func (dest *PrimeFieldElement) Add(lhs, rhs *PrimeFieldElement) *PrimeFieldEleme
 //
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) Sub(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
-	fp751SubReduced(&dest.a, &lhs.a, &rhs.a)
+	fp751SubReduced(&dest.A, &lhs.A, &rhs.A)
 
 	return dest
 }
 
 // Returns true if lhs = rhs.  Takes variable time.
 func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
-	return lhs.a.vartimeEq(rhs.a)
+	return lhs.A.vartimeEq(rhs.A)
 }
 
 // If choice = 1u8, set (x,y) = (y,x). If choice = 0u8, set (x,y) = (x,y).
 //
 // Returns dest to allow chaining operations.
 func PrimeFieldConditionalSwap(x, y *PrimeFieldElement, choice uint8) {
-	fp751ConditionalSwap(&x.a, &y.a, choice)
+	fp751ConditionalSwap(&x.A, &y.A, choice)
 }
 
 // Set dest = if choice == 0 { x } else { y }, in constant time.
@@ -393,7 +393,7 @@ func PrimeFieldConditionalSwap(x, y *PrimeFieldElement, choice uint8) {
 //
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) ConditionalAssign(x, y *PrimeFieldElement, choice uint8) *PrimeFieldElement {
-	fp751ConditionalAssign(&dest.a, &x.a, &y.a, choice)
+	fp751ConditionalAssign(&dest.A, &x.A, &y.A, choice)
 
 	return dest
 }
