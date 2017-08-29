@@ -3,7 +3,10 @@ package p751sidh
 import (
 	"bytes"
 	"crypto/rand"
+	mathRand "math/rand"
+	"reflect"
 	"testing"
+	"testing/quick"
 )
 
 import . "github.com/cloudflare/p751sidh/p751toolbox"
@@ -44,22 +47,39 @@ func TestCheckLessThanThree238(t *testing.T) {
 	}
 }
 
-// XXX this should be a quick.Check test
+// This throws away the generated public key, forcing us to recompute it in the test,
+// but generating the value *in* the quickcheck predicate breaks the testing.
+func (x SIDHSecretKeyAlice) Generate(quickCheckRand *mathRand.Rand, size int) reflect.Value {
+	// use crypto/rand instead of the quickCheck-provided RNG
+	_, aliceSecret, err := GenerateAliceKeypair(rand.Reader)
+	if err != nil {
+		panic("error generating secret key")
+	}
+	return reflect.ValueOf(*aliceSecret)
+}
+
+func (x SIDHSecretKeyBob) Generate(quickCheckRand *mathRand.Rand, size int) reflect.Value {
+	// use crypto/rand instead of the quickCheck-provided RNG
+	_, bobSecret, err := GenerateBobKeypair(rand.Reader)
+	if err != nil {
+		panic("error generating secret key")
+	}
+	return reflect.ValueOf(*bobSecret)
+}
+
 func TestEphemeralSharedSecret(t *testing.T) {
-	alicePublic, aliceSecret, err := GenerateAliceKeypair(rand.Reader)
-	if err != nil {
-		t.Error(err)
-	}
-	bobPublic, bobSecret, err := GenerateBobKeypair(rand.Reader)
-	if err != nil {
-		t.Error(err)
+	sharedSecretsMatch := func(aliceSecret SIDHSecretKeyAlice, bobSecret SIDHSecretKeyBob) bool {
+		alicePublic := aliceSecret.PublicKey()
+		bobPublic := bobSecret.PublicKey()
+
+		aliceSharedSecret := aliceSecret.SharedSecret(&bobPublic)
+		bobSharedSecret := bobSecret.SharedSecret(&alicePublic)
+
+		return bytes.Equal(aliceSharedSecret[:], bobSharedSecret[:])
 	}
 
-	aliceSharedSecret := aliceSecret.SharedSecret(bobPublic)
-	bobSharedSecret := bobSecret.SharedSecret(alicePublic)
-
-	if !bytes.Equal(aliceSharedSecret[:], bobSharedSecret[:]) {
-		t.Error("Shared secrets don't agree")
+	if err := quick.Check(sharedSecretsMatch, nil); err != nil {
+		t.Error(err)
 	}
 }
 
