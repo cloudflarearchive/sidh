@@ -1,3 +1,17 @@
+// Package p751sidh implements (ephemeral) supersingular isogeny
+// Diffie-Hellman, as described in Costello-Longa-Naehrig 2016.  Portions of
+// the field arithmetic implementation were based on their implementation.
+// Internal functions useful for the implementation are published in the
+// p751toolbox package.
+//
+// This package follows their naming convention, writing "Alice" for the party
+// using 2^e-isogenies and "Bob" for the party using 3^e-isogenies.
+//
+// This package does NOT implement SIDH key validation, so it should only be
+// used for ephemeral DH.  Each keypair should be used at most once.
+//
+// If you feel that SIDH may be appropriate for you, consult your
+// cryptographer.
 package p751sidh
 
 import (
@@ -45,6 +59,7 @@ var bobIsogenyStrategy = [maxBob]int{0, 1, 1, 2, 2, 2, 3, 3, 4, 4, 4, 5, 5, 5, 6
 	88, 88, 86, 86, 86, 93, 90, 90, 92, 92, 92, 93, 93, 93, 93, 93, 97, 97, 97, 97,
 	97, 97}
 
+// Bob's public key.
 type SIDHPublicKeyBob struct {
 	affine_xP   ExtensionFieldElement
 	affine_xQ   ExtensionFieldElement
@@ -71,6 +86,7 @@ func (pubKey *SIDHPublicKeyBob) ToBytes(output []byte) {
 	pubKey.affine_xQmP.ToBytes(output[376:564])
 }
 
+// Alice's public key.
 type SIDHPublicKeyAlice struct {
 	affine_xP   ExtensionFieldElement
 	affine_xQ   ExtensionFieldElement
@@ -97,14 +113,19 @@ func (pubKey *SIDHPublicKeyAlice) ToBytes(output []byte) {
 	pubKey.affine_xQmP.ToBytes(output[376:564])
 }
 
+// Bob's secret key.
 type SIDHSecretKeyBob struct {
 	Scalar [SecretKeySize]byte
 }
 
+// Alice's secret key.
 type SIDHSecretKeyAlice struct {
 	Scalar [SecretKeySize]byte
 }
 
+// Generate a keypair for "Alice".  Note that because this library does not
+// implement SIDH validation, each keypair should be used for at most one
+// shared secret computation.
 func GenerateAliceKeypair(rand io.Reader) (publicKey *SIDHPublicKeyAlice, secretKey *SIDHSecretKeyAlice, err error) {
 	publicKey = new(SIDHPublicKeyAlice)
 	secretKey = new(SIDHSecretKeyAlice)
@@ -136,6 +157,9 @@ func checkLessThanThree238(scalar *[48]byte, result *uint32)
 //go:noescape
 func multiplyByThree(scalar *[48]byte)
 
+// Generate a keypair for "Bob".  Note that because this library does not
+// implement SIDH validation, each keypair should be used for at most one
+// shared secret computation.
 func GenerateBobKeypair(rand io.Reader) (publicKey *SIDHPublicKeyBob, secretKey *SIDHSecretKeyBob, err error) {
 	publicKey = new(SIDHPublicKeyBob)
 	secretKey = new(SIDHSecretKeyBob)
@@ -173,8 +197,7 @@ func GenerateBobKeypair(rand io.Reader) (publicKey *SIDHPublicKeyBob, secretKey 
 	return
 }
 
-// Compute the corresponding public key for the given secret key, using the
-// fast isogeny-tree strategy.
+// Compute the corresponding public key for the given secret key.
 func (secretKey *SIDHSecretKeyAlice) PublicKey() SIDHPublicKeyAlice {
 	var xP, xQ, xQmP, xR ProjectivePoint
 
@@ -243,6 +266,7 @@ func (secretKey *SIDHSecretKeyAlice) PublicKey() SIDHPublicKeyAlice {
 	return publicKey
 }
 
+// Compute the public key corresponding to the secret key.
 func (secretKey *SIDHSecretKeyBob) PublicKey() SIDHPublicKeyBob {
 	var xP, xQ, xQmP, xR ProjectivePoint
 
@@ -303,6 +327,7 @@ func (secretKey *SIDHSecretKeyBob) PublicKey() SIDHPublicKeyBob {
 	return publicKey
 }
 
+// Compute (Alice's view of) a shared secret using Alice's secret key and Bob's public key.
 func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob) [SharedSecretSize]byte {
 	var currentCurve = RecoverCurveParameters(&bobPublic.affine_xP, &bobPublic.affine_xQ, &bobPublic.affine_xQmP)
 
@@ -351,6 +376,7 @@ func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob)
 	return sharedSecret
 }
 
+// Compute (Bob's view of) a shared secret using Bob's secret key and Alice's public key.
 func (bobSecret *SIDHSecretKeyBob) SharedSecret(alicePublic *SIDHPublicKeyAlice) [SharedSecretSize]byte {
 	var currentCurve = RecoverCurveParameters(&alicePublic.affine_xP, &alicePublic.affine_xQ, &alicePublic.affine_xQmP)
 

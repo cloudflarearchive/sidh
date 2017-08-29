@@ -72,8 +72,6 @@ type FourIsogeny struct {
 // E_(A:C)/<P_4>.
 //
 // Returns a tuple (codomain, isogeny) = (E_(A':C') : phi).
-//
-// XXX write up a better explanation of what's going on here
 func ComputeFourIsogeny(x4 *ProjectivePoint) (ProjectiveCurveParameters, FourIsogeny) {
 	var codomain ProjectiveCurveParameters
 	var isogeny FourIsogeny
