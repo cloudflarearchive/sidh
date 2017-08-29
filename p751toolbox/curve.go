@@ -2,7 +2,7 @@ package p751toolbox
 
 // A point on the projective line P^1(F_{p^2}).
 //
-// XXX understand and explain what's going on with this as a moduli space
+// This is used to work projectively with the curve coefficients.
 type ProjectiveCurveParameters struct {
 	A ExtensionFieldElement
 	C ExtensionFieldElement

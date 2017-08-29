@@ -59,6 +59,8 @@ func (phi *ThreeIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 }
 
 // Represents a 4-isogeny phi, holding the data necessary to evaluate phi.
+//
+// See ComputeFourIsogeny for more details.
 type FourIsogeny struct {
 	Xsq_plus_Zsq  ExtensionFieldElement
 	Xsq_minus_Zsq ExtensionFieldElement
@@ -72,6 +74,11 @@ type FourIsogeny struct {
 // E_(A:C)/<P_4>.
 //
 // Returns a tuple (codomain, isogeny) = (E_(A':C') : phi).
+//
+// There are two sets of formulas in Costello-Longa-Naehrig for computing
+// four-isogenies.  One set is for the case where (1,...) lies in the kernel of
+// the isogeny (this is the FirstFourIsogeny), and the other (this set) is for
+// the case that (1,...) is *not* in the kernel.
 func ComputeFourIsogeny(x4 *ProjectivePoint) (ProjectiveCurveParameters, FourIsogeny) {
 	var codomain ProjectiveCurveParameters
 	var isogeny FourIsogeny
@@ -129,12 +136,14 @@ func (phi *FourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	return xQ
 }
 
-// XXX document/explain how this is different from FourIsogeny and why it's needed
+// Represents a 4-isogeny phi.  See ComputeFourIsogeny for details.
 type FirstFourIsogeny struct {
 	A ExtensionFieldElement
 	C ExtensionFieldElement
 }
 
+// Compute the "first" four-isogeny from the given curve.  See also
+// ComputeFourIsogeny and Costello-Longa-Naehrig for more details.
 func ComputeFirstFourIsogeny(domain *ProjectiveCurveParameters) (ProjectiveCurveParameters, FirstFourIsogeny) {
 	var codomain ProjectiveCurveParameters
 	var isogeny FirstFourIsogeny
@@ -153,6 +162,12 @@ func ComputeFirstFourIsogeny(domain *ProjectiveCurveParameters) (ProjectiveCurve
 	return codomain, isogeny
 }
 
+// Given a 4-isogeny phi and a point xP = x(P), compute x(Q), the x-coordinate
+// of the image Q = phi(P) of P under phi : E_(A:C) -> E_(A':C').
+//
+// The output xQ = x(Q) is then a point on the curve E_(A':C'); the curve
+// parameters are returned by the ComputeFirstFourIsogeny function used to construct
+// phi.
 func (phi *FirstFourIsogeny) Eval(xP *ProjectivePoint) ProjectivePoint {
 	var xQ ProjectivePoint
 	var t0, t1, t2, t3 ExtensionFieldElement
