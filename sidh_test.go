@@ -74,7 +74,7 @@ func aliceKeyGenSlow(secretKey *SIDHSecretKeyAlice) SIDHPublicKeyAlice {
 	xQ.X.Neg(&xQ.X)                          // = (-x_P : 1) = x(Q_B)
 	xQmP = DistortAndDifference(&Affine_xPB) // = x(Q_B - P_B)
 
-	xR = SecretPoint(&Affine_xPA, &Affine_yPA, secretKey.scalar)
+	xR = SecretPoint(&Affine_xPA, &Affine_yPA, secretKey.Scalar[:])
 
 	var currentCurve ProjectiveCurveParameters
 	// Starting curve has a = 0, so (A:C) = (0,1)
@@ -121,7 +121,7 @@ func bobKeyGenSlow(secretKey *SIDHSecretKeyBob) SIDHPublicKeyBob {
 	xQ.X.Neg(&xQ.X)                          // = (-x_P : 1) = x(Q_A)
 	xQmP = DistortAndDifference(&Affine_xPA) // = x(Q_B - P_B)
 
-	xR = SecretPoint(&Affine_xPB, &Affine_yPB, secretKey.scalar)
+	xR = SecretPoint(&Affine_xPB, &Affine_yPB, secretKey.Scalar[:])
 
 	var currentCurve ProjectiveCurveParameters
 	// Starting curve has a = 0, so (A:C) = (0,1)
@@ -161,7 +161,7 @@ func aliceSharedSecretSlow(bobPublic *SIDHPublicKeyBob, aliceSecret *SIDHSecretK
 	xQ.FromAffine(&bobPublic.affine_xQ)
 	xQmP.FromAffine(&bobPublic.affine_xQmP)
 
-	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.scalar)
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.Scalar[:])
 
 	var firstPhi FirstFourIsogeny
 	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
@@ -194,7 +194,7 @@ func bobSharedSecretSlow(alicePublic *SIDHPublicKeyAlice, bobSecret *SIDHSecretK
 	xQ.FromAffine(&alicePublic.affine_xQ)
 	xQmP.FromAffine(&alicePublic.affine_xQmP)
 
-	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.scalar)
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.Scalar[:])
 
 	var phi ThreeIsogeny
 	for e := 238; e >= 1; e-- {
@@ -213,9 +213,9 @@ func bobSharedSecretSlow(alicePublic *SIDHPublicKeyAlice, bobSecret *SIDHSecretK
 
 func TestBobKeyGenFastVsSlow(t *testing.T) {
 	// m_B = 3*randint(0,3^238)
-	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+	var m_B = [48]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78, 0}
 
-	var bobSecretKey = SIDHSecretKeyBob{scalar: m_B[:]}
+	var bobSecretKey = SIDHSecretKeyBob{Scalar: m_B}
 	var fastPubKey = bobSecretKey.PublicKey()
 	var slowPubKey = bobKeyGenSlow(&bobSecretKey)
 
@@ -232,9 +232,9 @@ func TestBobKeyGenFastVsSlow(t *testing.T) {
 
 func TestAliceKeyGenFastVsSlow(t *testing.T) {
 	// m_A = 2*randint(0,2^371)
-	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+	var m_A = [48]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11, 0}
 
-	var aliceSecretKey = SIDHSecretKeyAlice{scalar: m_A[:]}
+	var aliceSecretKey = SIDHSecretKeyAlice{Scalar: m_A}
 	var fastPubKey = aliceSecretKey.PublicKey()
 	var slowPubKey = aliceKeyGenSlow(&aliceSecretKey)
 
@@ -251,12 +251,12 @@ func TestAliceKeyGenFastVsSlow(t *testing.T) {
 
 func TestSharedSecret(t *testing.T) {
 	// m_A = 2*randint(0,2^371)
-	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+	var m_A = [48]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11, 0}
 	// m_B = 3*randint(0,3^238)
-	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+	var m_B = [48]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78, 0}
 
-	var aliceSecret = SIDHSecretKeyAlice{scalar: m_A[:]}
-	var bobSecret = SIDHSecretKeyBob{scalar: m_B[:]}
+	var aliceSecret = SIDHSecretKeyAlice{Scalar: m_A}
+	var bobSecret = SIDHSecretKeyBob{Scalar: m_B}
 
 	var alicePublic = aliceSecret.PublicKey()
 	var bobPublic = bobSecret.PublicKey()
@@ -279,9 +279,9 @@ func TestSharedSecret(t *testing.T) {
 
 func TestSecretPoint(t *testing.T) {
 	// m_A = 2*randint(0,2^371)
-	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+	var m_A = [48]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11, 0}
 	// m_B = 3*randint(0,3^238)
-	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+	var m_B = [48]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78, 0}
 
 	var xR_A = SecretPoint(&Affine_xPA, &Affine_yPA, m_A[:])
 	var xR_B = SecretPoint(&Affine_xPB, &Affine_yPB, m_B[:])
@@ -311,9 +311,9 @@ func BenchmarkAliceKeyGen(b *testing.B) {
 
 func BenchmarkAliceKeyGenSlow(b *testing.B) {
 	// m_A = 2*randint(0,2^371)
-	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+	var m_A = [48]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11, 0}
 
-	var aliceSecretKey = SIDHSecretKeyAlice{scalar: m_A[:]}
+	var aliceSecretKey = SIDHSecretKeyAlice{Scalar: m_A}
 
 	for n := 0; n < b.N; n++ {
 		keygenBenchPubKeyAlice = aliceKeyGenSlow(&aliceSecretKey)
@@ -328,9 +328,9 @@ func BenchmarkBobKeyGen(b *testing.B) {
 
 func BenchmarkBobKeyGenSlow(b *testing.B) {
 	// m_B = 3*randint(0,3^238)
-	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+	var m_B = [48]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78, 0}
 
-	var bobSecretKey = SIDHSecretKeyBob{scalar: m_B[:]}
+	var bobSecretKey = SIDHSecretKeyBob{Scalar: m_B}
 
 	for n := 0; n < b.N; n++ {
 		keygenBenchPubKeyBob = bobKeyGenSlow(&bobSecretKey)
@@ -343,9 +343,9 @@ var benchSharedSecretBobPublic = SIDHPublicKeyBob{affine_xP: ExtensionFieldEleme
 
 func BenchmarkSharedSecretAlice(b *testing.B) {
 	// m_A = 2*randint(0,2^371)
-	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+	var m_A = [48]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11, 0}
 
-	var aliceSecret = SIDHSecretKeyAlice{scalar: m_A[:]}
+	var aliceSecret = SIDHSecretKeyAlice{Scalar: m_A}
 
 	for n := 0; n < b.N; n++ {
 		aliceSecret.SharedSecret(&benchSharedSecretBobPublic)
@@ -354,9 +354,9 @@ func BenchmarkSharedSecretAlice(b *testing.B) {
 
 func BenchmarkSharedSecretAliceSlow(b *testing.B) {
 	// m_A = 2*randint(0,2^371)
-	var m_A = [...]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11}
+	var m_A = [48]uint8{248, 31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 112, 25, 188, 197, 132, 151, 1, 0, 207, 178, 24, 72, 171, 22, 11, 0}
 
-	var aliceSecret = SIDHSecretKeyAlice{scalar: m_A[:]}
+	var aliceSecret = SIDHSecretKeyAlice{Scalar: m_A}
 
 	for n := 0; n < b.N; n++ {
 		aliceSharedSecretSlow(&benchSharedSecretBobPublic, &aliceSecret)
@@ -365,9 +365,9 @@ func BenchmarkSharedSecretAliceSlow(b *testing.B) {
 
 func BenchmarkSharedSecretBob(b *testing.B) {
 	// m_B = 3*randint(0,3^238)
-	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+	var m_B = [48]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78, 0}
 
-	var bobSecret = SIDHSecretKeyBob{scalar: m_B[:]}
+	var bobSecret = SIDHSecretKeyBob{Scalar: m_B}
 
 	for n := 0; n < b.N; n++ {
 		bobSecret.SharedSecret(&benchSharedSecretAlicePublic)
@@ -376,9 +376,9 @@ func BenchmarkSharedSecretBob(b *testing.B) {
 
 func BenchmarkSharedSecretBobSlow(b *testing.B) {
 	// m_B = 3*randint(0,3^238)
-	var m_B = [...]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78}
+	var m_B = [48]uint8{246, 217, 158, 190, 100, 227, 224, 181, 171, 32, 120, 72, 92, 115, 113, 62, 103, 57, 71, 252, 166, 121, 126, 201, 55, 99, 213, 234, 243, 228, 171, 68, 9, 239, 214, 37, 255, 242, 217, 180, 25, 54, 242, 61, 101, 245, 78, 0}
 
-	var bobSecret = SIDHSecretKeyBob{scalar: m_B[:]}
+	var bobSecret = SIDHSecretKeyBob{Scalar: m_B}
 
 	for n := 0; n < b.N; n++ {
 		bobSharedSecretSlow(&benchSharedSecretAlicePublic, &bobSecret)

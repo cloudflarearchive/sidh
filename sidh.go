@@ -8,7 +8,11 @@ import (
 import . "github.com/cloudflare/p751sidh/p751toolbox"
 
 const (
-	PublicKeySize    = 564
+	// The secret key size, in bytes.
+	SecretKeySize = 48
+	// The public key size, in bytes.
+	PublicKeySize = 564
+	// The shared secret size, in bytes.
 	SharedSecretSize = 188
 )
 
@@ -94,33 +98,30 @@ func (pubKey *SIDHPublicKeyAlice) ToBytes(output []byte) {
 }
 
 type SIDHSecretKeyBob struct {
-	scalar []uint8
+	Scalar [SecretKeySize]byte
 }
 
 type SIDHSecretKeyAlice struct {
-	scalar []uint8
+	Scalar [SecretKeySize]byte
 }
 
 func GenerateAliceKeypair(rand io.Reader) (publicKey *SIDHPublicKeyAlice, secretKey *SIDHSecretKeyAlice, err error) {
 	publicKey = new(SIDHPublicKeyAlice)
 	secretKey = new(SIDHSecretKeyAlice)
 
-	scalar := new([47]byte)
-
-	_, err = io.ReadFull(rand, scalar[:])
+	_, err = io.ReadFull(rand, secretKey.Scalar[:])
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// Bit-twiddle to ensure scalar is in 2*[0,2^371):
-	scalar[46] &= 15 // clear high bits, so scalar < 2^372
-	scalar[0] &= 254 // clear low bit, so scalar is even
+	secretKey.Scalar[47] = 0
+	secretKey.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
+	secretKey.Scalar[0] &= 254 // clear low bit, so scalar is even
 
 	// We actually want scalar in 2*(0,2^371), but the above procedure
 	// generates 0 with probability 2^(-371), which isn't worth checking
 	// for.
-
-	secretKey.scalar = scalar[:]
 
 	*publicKey = secretKey.PublicKey()
 
@@ -139,19 +140,17 @@ func GenerateBobKeypair(rand io.Reader) (publicKey *SIDHPublicKeyBob, secretKey 
 	publicKey = new(SIDHPublicKeyBob)
 	secretKey = new(SIDHSecretKeyBob)
 
-	scalar := new([48]byte)
-
 	// Perform rejection sampling to obtain a random value in [0,3^238]:
 	var ok uint32
 	for i := 0; i < 102; i++ {
-		_, err = io.ReadFull(rand, scalar[:])
+		_, err = io.ReadFull(rand, secretKey.Scalar[:])
 		if err != nil {
 			return nil, nil, err
 		}
 		// Mask the high bits to obtain a uniform value in [0,2^378):
-		scalar[47] &= 3
+		secretKey.Scalar[47] &= 3
 		// Accept if scalar < 3^238 (this happens w/ prob ~0.5828)
-		checkLessThanThree238(scalar, &ok)
+		checkLessThanThree238(&secretKey.Scalar, &ok)
 		if ok == 0 {
 			break
 		}
@@ -163,12 +162,11 @@ func GenerateBobKeypair(rand io.Reader) (publicKey *SIDHPublicKeyBob, secretKey 
 	}
 
 	// Multiply by 3 to get a scalar in 3*[0,3^238):
-	multiplyByThree(scalar)
+	multiplyByThree(&secretKey.Scalar)
+
 	// We actually want scalar in 2*(0,2^371), but the above procedure
 	// generates 0 with probability 3^(-238), which isn't worth checking
 	// for.
-
-	secretKey.scalar = scalar[:]
 
 	*publicKey = secretKey.PublicKey()
 
@@ -185,7 +183,7 @@ func (secretKey *SIDHSecretKeyAlice) PublicKey() SIDHPublicKeyAlice {
 	xQ.X.Neg(&xQ.X)                          // = (-x_P : 1) = x(Q_B)
 	xQmP = DistortAndDifference(&Affine_xPB) // = x(Q_B - P_B)
 
-	xR = SecretPoint(&Affine_xPA, &Affine_yPA, secretKey.scalar)
+	xR = SecretPoint(&Affine_xPA, &Affine_yPA, secretKey.Scalar[:])
 
 	var currentCurve ProjectiveCurveParameters
 	// Starting curve has a = 0, so (A:C) = (0,1)
@@ -253,7 +251,7 @@ func (secretKey *SIDHSecretKeyBob) PublicKey() SIDHPublicKeyBob {
 	xQ.X.Neg(&xQ.X)                          // = (-x_P : 1) = x(Q_A)
 	xQmP = DistortAndDifference(&Affine_xPA) // = x(Q_B - P_B)
 
-	xR = SecretPoint(&Affine_xPB, &Affine_yPB, secretKey.scalar)
+	xR = SecretPoint(&Affine_xPB, &Affine_yPB, secretKey.Scalar[:])
 
 	var currentCurve ProjectiveCurveParameters
 	// Starting curve has a = 0, so (A:C) = (0,1)
@@ -314,7 +312,7 @@ func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob)
 	xQ.FromAffine(&bobPublic.affine_xQ)
 	xQmP.FromAffine(&bobPublic.affine_xQmP)
 
-	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.scalar)
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.Scalar[:])
 
 	var firstPhi FirstFourIsogeny
 	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
@@ -362,7 +360,7 @@ func (bobSecret *SIDHSecretKeyBob) SharedSecret(alicePublic *SIDHPublicKeyAlice)
 	xQ.FromAffine(&alicePublic.affine_xQ)
 	xQmP.FromAffine(&alicePublic.affine_xQmP)
 
-	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.scalar)
+	xR.ThreePointLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.Scalar[:])
 
 	var points = make([]ProjectivePoint, 0, 8)
 	var indices = make([]int, 0, 8)
