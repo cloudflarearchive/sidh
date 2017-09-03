@@ -266,7 +266,7 @@ func (xQ *ProjectivePoint) Triple(xP *ProjectivePoint, curve *CachedCurveParamet
 	return xQ
 }
 
-// Given the curve parameters, xP = x(P), and k >= 0, compute xQ = x([2^k]P).
+// Given the curve parameters, xP = x(P), and k >= 0, compute xQ = x([3^k]P).
 //
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
 func (xQ *ProjectivePoint) Pow3k(curve *ProjectiveCurveParameters, xP *ProjectivePoint, k uint32) *ProjectivePoint {
