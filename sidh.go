@@ -19,8 +19,7 @@ import (
 	"io"
 )
 
-//import . "github.com/cloudflare/p751sidh/p751toolbox"
-import . "./p751toolbox"
+import . "github.com/cloudflare/p751sidh/p751toolbox"
 
 const (
 	// The secret key size, in bytes.
