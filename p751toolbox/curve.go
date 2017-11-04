@@ -18,6 +18,11 @@ type CachedCurveParameters struct {
 	C4      ExtensionFieldElement
 }
 
+type CachedTripleCurveParameters struct {
+	Aminus2C ExtensionFieldElement
+	C2       ExtensionFieldElement
+}
+
 // = 256
 var const256 = ExtensionFieldElement{
 	A: Fp751Element{0x249ad67, 0x0, 0x0, 0x0, 0x0, 0x730000000000000, 0x738154969973da8b, 0x856657c146718c7f, 0x461860e4e363a697, 0xf9fd6510bba838cd, 0x4e1a3c3f06993c0c, 0x55abef5b75c7},
@@ -75,6 +80,14 @@ func (curve *ProjectiveCurveParameters) cachedParams() CachedCurveParameters {
 	cached.Aplus2C.Add(&curve.C, &curve.C)          // = 2*C
 	cached.C4.Add(&cached.Aplus2C, &cached.Aplus2C) // = 4*C
 	cached.Aplus2C.Add(&cached.Aplus2C, &curve.A)   // = 2*C + A
+	return cached
+}
+
+// Compute cached parameters A - 2C, 2C.
+func (curve *ProjectiveCurveParameters) cachedTripleParams() CachedTripleCurveParameters {
+	var cached CachedTripleCurveParameters
+	cached.C2.Add(&curve.C, &curve.C)         // = 2*C
+	cached.Aminus2C.Sub(&curve.A, &cached.C2) // = A- 2*C
 	return cached
 }
 
@@ -226,6 +239,76 @@ func (xQ *ProjectivePrimeFieldPoint) Double(xP *ProjectivePrimeFieldPoint, aPlus
 	return xQ
 }
 
+// Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xPaddQ = x(P+Q) and  x2P = x(2P).
+func xDblAdd(curve *CachedCurveParameters, xP, xQ, xPmQ *ProjectivePoint) (x2P, xPaddQ ProjectivePoint) {
+	var A, AA, B, BB, C, D, E, DA, CB, t0, t1 ExtensionFieldElement
+	x1, z1 := &xPmQ.X, &xPmQ.Z
+	x2, z2 := &xP.X, &xP.Z
+	x3, z3 := &xQ.X, &xQ.Z
+
+	A.Add(x2, z2) // A = x2+z2
+	B.Sub(x2, z2) // B = x2-z2
+	C.Add(x3, z3) // C = x3+z3
+	D.Sub(x3, z3) // D = x3-z3
+
+	AA.Square(&A) // AA = A^2
+	BB.Square(&B) // BB = B^2
+
+	E.Sub(&AA, &BB)        // E = AA-BB
+	BB.Mul(&BB, &curve.C4) // BB = (4C)*BB
+	DA.Mul(&D, &A)         // DA = D*A
+	CB.Mul(&C, &B)         // CB = C*B
+
+	t1.Add(&DA, &CB) // t1 = DA+CB
+	t0.Sub(&DA, &CB) // t0 = DA-CB
+	t1.Square(&t1)   // t1 = t1^2
+	t0.Square(&t0)   // t0 = t0^2
+
+	xPaddQ.X.Mul(z1, &t1) // z5 = z1*t1
+	xPaddQ.Z.Mul(x1, &t0) // x5 = x1*t0
+
+	x2P.X.Mul(&AA, &BB)           // x4 = AA*(4C)*BB
+	x2P.Z.Mul(&curve.Aplus2C, &E) // z4 = (A+2C)*E
+	x2P.Z.Add(&x2P.Z, &BB)        // z4 = (4C)*BB+(A+2C)*E
+	x2P.Z.Mul(&x2P.Z, &E)         // z4 = E*((4C)*BB+(A+2C)*E)
+	return
+}
+
+// Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xPaddQ = x(P+Q) and  x2P = x(2P).
+// Assumes that the Z-xoordinate of PmQ is equal to 1.
+func xDblAdd_primefield(aPlus2Over4 *PrimeFieldElement, xP, xQ, xPmQ *ProjectivePrimeFieldPoint) (x2P, xPaddQ ProjectivePrimeFieldPoint) {
+	var A, AA, B, BB, C, D, E, DA, CB, t0, t1 PrimeFieldElement
+	x1 := &xPmQ.X
+	x2, z2 := &xP.X, &xP.Z
+	x3, z3 := &xQ.X, &xQ.Z
+
+	A.Add(x2, z2) // A = x2+z2
+	B.Sub(x2, z2) // B = x2-z2
+	C.Add(x3, z3) // C = x3+z3
+	D.Sub(x3, z3) // D = x3-z3
+
+	AA.Square(&A) // AA = A^2
+	BB.Square(&B) // BB = B^2
+
+	E.Sub(&AA, &BB) // E = AA-BB
+	DA.Mul(&D, &A)  // DA = D*A
+	CB.Mul(&C, &B)  // CB = C*B
+
+	t1.Add(&DA, &CB) // t1 = DA+CB
+	t0.Sub(&DA, &CB) // t0 = DA-CB
+	t1.Square(&t1)   // t1 = t1^2
+	t0.Square(&t0)   // t0 = t0^2
+
+	xPaddQ.X = t1         // z5 = z1*t1
+	xPaddQ.Z.Mul(x1, &t0) // x5 = x1*t0
+
+	x2P.X.Mul(&AA, &BB)        // x4 = AA*(4C)*BB
+	x2P.Z.Mul(aPlus2Over4, &E) // z4 = (A+2C)*E
+	x2P.Z.Add(&x2P.Z, &BB)     // z4 = (4C)*BB+(A+2C)*E
+	x2P.Z.Mul(&x2P.Z, &E)      // z4 = E*((4C)*BB+(A+2C)*E)
+	return
+}
+
 // Given the curve parameters, xP = x(P), and k >= 0, compute xQ = x([2^k]P).
 //
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
@@ -239,38 +322,42 @@ func (xQ *ProjectivePoint) Pow2k(curve *ProjectiveCurveParameters, xP *Projectiv
 	return xQ
 }
 
-// Given xP = x(P) and cached curve parameters Aplus2C = A + 2*C, C4 = 4*C, compute xQ = x([3]P).
-//
+// Uses the efficient Montgomery tripling formulas from FLOR-SIDH-x64
+// Given xP = x(P) and cached tripling curve parameters Aminus2C = A - 2*C, C2 = 2*C, compute xQ = x([3]P).
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
-func (xQ *ProjectivePoint) Triple(xP *ProjectivePoint, curve *CachedCurveParameters) *ProjectivePoint {
-	// Uses the efficient Montgomery tripling formulas from Costello-Longa-Naehrig.
-	var v0, v1, v2, v3, v4, v5 ExtensionFieldElement
-	// Compute (X_2 : Z_2) = x([2]P)
-	v2.Sub(&xP.X, &xP.Z)           // X - Z
-	v3.Add(&xP.X, &xP.Z)           // X + Z
-	v0.Square(&v2)                 // (X-Z)^2
-	v1.Square(&v3)                 // (X+Z)^2
-	v4.Mul(&v0, &curve.C4)         // 4C(X-Z)^2
-	v5.Mul(&v4, &v1)               // 4C(X-Z)^2(X+Z)^2 = X_2
-	v1.Sub(&v1, &v0)               // (X+Z)^2 - (X-Z)^2 = 4XZ
-	v0.Mul(&v1, &curve.Aplus2C)    // 4XZ(A+2C)
-	v4.Add(&v4, &v0).Mul(&v4, &v1) // (4C(X-Z)^2 + 4XZ(A+2C))4XZ = Z_2
-	// Compute (X_3 : Z_3) = x(P + [2]P)
-	v0.Add(&v5, &v4).Mul(&v0, &v2) // (X_2 + Z_2)(X-Z)
-	v1.Sub(&v5, &v4).Mul(&v1, &v3) // (X_2 - Z_2)(X+Z)
-	v4.Sub(&v0, &v1).Square(&v4)   // 4(XZ_2 - ZX_2)^2
-	v5.Add(&v0, &v1).Square(&v5)   // 4(XX_2 - ZZ_2)^2
-	v2.Mul(&xP.Z, &v5)             // 4Z(XX_2 - ZZ_2)^2
-	xQ.Z.Mul(&xP.X, &v4)           // 4X(XZ_2 - ZX_2)^2
-	xQ.X = v2
+// Reference: A faster SW implementation of SIDH (github.com/armfazh/flor-sidh-x64).
+func (xQ *ProjectivePoint) Triple(xP *ProjectivePoint, curve *CachedTripleCurveParameters) *ProjectivePoint {
+	var t0, t1, t2, t3, t4, t5 ExtensionFieldElement
+	x1, z1 := &xP.X, &xP.Z
+	t0.Square(x1)                // t0 = x1^2
+	t1.Square(z1)                // t1 = z1^2
+	t2.Add(x1, z1)               // t2 = x1+z1
+	t2.Square(&t2)               // t2 = t2^2
+	t3.Add(&t0, &t1)             // t3 = t0+t1
+	t4.Sub(&t2, &t3)             // t4 = t2-t3
+	t5.Mul(&curve.Aminus2C, &t4) // t5 = (A-2C)*t4
+	t2.Mul(&curve.C2, &t2)       // t2 = (2C)*t2
+	t5.Add(&t5, &t2)             // t5 = t2+t5
+	t5.Add(&t5, &t5)             // t5 = t5+t5
+	t5.Add(&t5, &t5)             // t5 = t5+t5
+	t0.Mul(&t0, &t5)             // t0 = t0*t5
+	t1.Mul(&t1, &t5)             // t1 = t1*t5
+	t4.Sub(&t3, &t4)             // t4 = t3-t4
+	t2.Mul(&t2, &t4)             // t2 = t2*t4
+	t0.Sub(&t2, &t0)             // t0 = t2-t0
+	t1.Sub(&t2, &t1)             // t1 = t2-t1
+	t0.Square(&t0)               // t0 = t0^2
+	t1.Square(&t1)               // t1 = t1^2
+	xQ.X.Mul(x1, &t1)            // x3 = x1*t1
+	xQ.Z.Mul(z1, &t0)            // z3 = z1*t0
 	return xQ
 }
 
-// Given the curve parameters, xP = x(P), and k >= 0, compute xQ = x([2^k]P).
+// Given the curve parameters, xP = x(P), and k >= 0, compute xQ = x([3^k]P).
 //
 // Returns xQ to allow chaining.  Safe to overlap xP, xQ.
 func (xQ *ProjectivePoint) Pow3k(curve *ProjectiveCurveParameters, xP *ProjectivePoint, k uint32) *ProjectivePoint {
-	cachedParams := curve.cachedParams()
+	cachedParams := curve.cachedTripleParams()
 	*xQ = *xP
 	for i := uint32(0); i < k; i++ {
 		xQ.Triple(xQ, &cachedParams)
@@ -324,7 +411,7 @@ func (xQ *ProjectivePoint) ScalarMult(curve *ProjectiveCurveParameters, xP *Proj
 // input scalar.  All scalars of the same input length execute in uniform time.
 // The scalar can be padded with zero bytes to ensure a uniform length.
 func ScalarMultPrimeField(aPlus2Over4 *PrimeFieldElement, xP *ProjectivePrimeFieldPoint, scalar []uint8) (ProjectivePrimeFieldPoint, ProjectivePrimeFieldPoint) {
-	var x0, x1, tmp ProjectivePrimeFieldPoint
+	var x0, x1 ProjectivePrimeFieldPoint
 
 	x0.X.One()
 	x0.Z.Zero()
@@ -337,9 +424,7 @@ func ScalarMultPrimeField(aPlus2Over4 *PrimeFieldElement, xP *ProjectivePrimeFie
 		for j := 7; j >= 0; j-- {
 			bit := (scalarByte >> uint(j)) & 0x1
 			ProjectivePrimeFieldPointConditionalSwap(&x0, &x1, (bit ^ prevBit))
-			tmp.Double(&x0, aPlus2Over4)
-			x1.Add(&x0, &x1, xP)
-			x0 = tmp
+			x0, x1 = xDblAdd_primefield(aPlus2Over4, &x0, &x1, xP)
 			prevBit = bit
 		}
 	}
@@ -440,15 +525,46 @@ func (xR *ProjectivePoint) ThreePointLadder(curve *ProjectiveCurveParameters, xP
 			bit := (scalarByte >> uint(j)) & 0x1
 			ProjectivePointConditionalSwap(&x0, &x1, (bit ^ prevBit))
 			ProjectivePointConditionalSwap(&y0, &y1, (bit ^ prevBit))
-			x2.Add(&x2, &x0, &y0) // = xADD(x2, x0, y0)
-			tmp.Double(&x0, &cachedParams)
+			tmp, x2 = xDblAdd(&cachedParams, &x0, &x2, &y0)
 			x1.Add(&x1, &x0, xQ) // = xADD(x1, x0, x(Q))
-			x0 = tmp             // = xDBL(x0)
+			x0 = tmp
 			prevBit = bit
 		}
 	}
 
 	*xR = x2
+	return xR
+}
+
+/**
+Update: This is the right-to-left method for computing the x-coordinate of P+[k]Q.
+
+Desc: This function replaces the ThreePointLadder function and improves the running
+      time by performing 1 Addition + 1 Doubling per bit of k.
+
+Reference: A faster SW implementation of SIDH (github.com/armfazh/flor-sidh-x64).
+*/
+func (xR *ProjectivePoint) R2L(curve *ProjectiveCurveParameters, xP, xQ, xPmQ *ProjectivePoint, scalar []uint8) *ProjectivePoint {
+	cachedParams := curve.cachedParams()
+	var R0, R2, R1 ProjectivePoint
+
+	R1 = *xP
+	R2 = *xPmQ
+	R0 = *xQ
+
+	// Iterate over the bits of the scalar, bottom to top
+	prevBit := uint8(0)
+	for i := 0; i < len(scalar); i++ {
+		scalarByte := scalar[i]
+		for j := 0; j < 8; j++ {
+			bit := (scalarByte >> uint(j)) & 0x1
+			ProjectivePointConditionalSwap(&R1, &R2, (bit ^ prevBit))
+			R0, R2 = xDblAdd(&cachedParams, &R0, &R2, &R1)
+			prevBit = bit
+		}
+	}
+	ProjectivePointConditionalSwap(&R1, &R2, prevBit)
+	*xR = R1
 	return xR
 }
 

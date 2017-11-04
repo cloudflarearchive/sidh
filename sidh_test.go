@@ -9,7 +9,8 @@ import (
 	"testing/quick"
 )
 
-import . "github.com/cloudflare/p751sidh/p751toolbox"
+//import . "github.com/cloudflare/p751sidh/p751toolbox"
+import . "./p751toolbox"
 
 func TestMultiplyByThree(t *testing.T) {
 	// sage: repr((3^238 -1).digits(256))
