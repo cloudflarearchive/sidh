@@ -24,7 +24,7 @@ For Shared Secret computation, the execution time was reduced by 9.5%.
 
 
 | benchmark                         |   old ns/op  |   new ns/op   |  delta |
-|---------------------------------------------------------------------------|
+|-----------------------------------|--------------|---------------|--------|
 | BenchmarkAliceKeyGen-4            |   33945573   |   32551477    | -4.11% |
 | BenchmarkAliceKeyGenSlow-4        |   289292459  |   286781846   | -0.87% |
 | BenchmarkBobKeyGen-4              |   37633036   |   37420870    | -0.56% |
