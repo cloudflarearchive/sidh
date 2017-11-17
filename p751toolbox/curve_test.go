@@ -192,7 +192,7 @@ func TestThreePointLadderVersusSage(t *testing.T) {
 
 func TestR2LVersusSage(t *testing.T) {
 	var xR ProjectivePoint
-	xR.R2L(&curve, &threePointLadderInputs[0], &threePointLadderInputs[1], &threePointLadderInputs[2], mScalarBytes[:])
+	xR.RightToLeftLadder(&curve, &threePointLadderInputs[0], &threePointLadderInputs[1], &threePointLadderInputs[2], mScalarBytes[:])
 
 	affine_xR := xR.ToAffine()
 
@@ -209,9 +209,9 @@ func TestPointTripleVersusAddDouble(t *testing.T) {
 		cachedParams := curve.cachedParams()
 		cachedTripleParams := curve.cachedTripleParams()
 		var P2, P3, P2plusP ProjectivePoint
-		P2.Double(&P, &cachedParams) // = x([2]P)
+		P2.Double(&P, &cachedParams)       // = x([2]P)
 		P3.Triple(&P, &cachedTripleParams) // = x([3]P)
-		P2plusP.Add(&P2, &P, &P)     // = x([2]P + P)
+		P2plusP.Add(&P2, &P, &P)           // = x([2]P + P)
 
 		return P3.VartimeEq(&P2plusP)
 	}
@@ -346,6 +346,6 @@ func BenchmarkR2L379BitScalar(b *testing.B) {
 	var mScalarBytes = [...]uint8{84, 222, 146, 63, 85, 18, 173, 162, 167, 38, 10, 8, 143, 176, 93, 228, 247, 128, 50, 128, 205, 42, 15, 137, 119, 67, 43, 3, 61, 91, 237, 24, 235, 12, 53, 96, 186, 164, 232, 223, 197, 224, 64, 109, 137, 63, 246, 4}
 
 	for n := 0; n < b.N; n++ {
-		xR.R2L(&curve, &threePointLadderInputs[0], &threePointLadderInputs[1], &threePointLadderInputs[2], mScalarBytes[:])
+		xR.RightToLeftLadder(&curve, &threePointLadderInputs[0], &threePointLadderInputs[1], &threePointLadderInputs[2], mScalarBytes[:])
 	}
 }

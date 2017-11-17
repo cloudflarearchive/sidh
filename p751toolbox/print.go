@@ -1,48 +1,35 @@
 package p751toolbox
 
 import (
-	"reflect"
-	"fmt"
 	"bytes"
+	"fmt"
 )
 
-func PrintHex(obj interface{}) (out string) {
+func printHex(vector []byte) (out string) {
 	var buffer bytes.Buffer
-	vector := reflect.ValueOf(obj)
-	switch vector.Kind() {
-		case reflect.Array, reflect.Slice:
-			buffer.WriteString("0x")
-			format := ""
-			switch vector.Index(0).Kind() {
-				case reflect.Uint8:
-					format = "%02x"
-				case reflect.Uint64:
-					format = "%016x"
-			}
-			len := vector.Len()
-			for i:=len-1; i>=0; i-- {
-				word := vector.Index(i)
-				buffer.WriteString(fmt.Sprintf(format,word))
-			}
-			buffer.WriteString("\n")
+	buffer.WriteString("0x")
+	len := len(vector)
+	for i := len - 1; i >= 0; i-- {
+		buffer.WriteString(fmt.Sprintf("%02x", vector[i]))
 	}
+	buffer.WriteString("\n")
 	return buffer.String()
 }
 
 func (element Fp751Element) String() string {
 	var out [94]byte
 	element.toBytesFromMontgomeryForm(out[:])
-	return fmt.Sprintf("%s",PrintHex(out[:]))
+	return fmt.Sprintf("%s", printHex(out[:]))
 }
 
-func (primeElement PrimeFieldElement) String()  string {
-	return fmt.Sprintf("%s",primeElement.A.String())
+func (primeElement PrimeFieldElement) String() string {
+	return fmt.Sprintf("%s", primeElement.A.String())
 }
 
 func (extElement ExtensionFieldElement) String() string {
 	var out [188]byte
 	extElement.ToBytes(out[:])
-	return fmt.Sprintf("A: %sB: %s", PrintHex(out[:94]), PrintHex(out[94:]))
+	return fmt.Sprintf("A: %sB: %s", printHex(out[:94]), printHex(out[94:]))
 }
 
 func (point ProjectivePoint) String() string {
@@ -52,4 +39,3 @@ func (point ProjectivePoint) String() string {
 func (point ProjectivePrimeFieldPoint) String() string {
 	return fmt.Sprintf("X:\n%sZ:\n%s", point.X.String(), point.Z.String())
 }
-

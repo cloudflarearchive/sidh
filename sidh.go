@@ -337,7 +337,7 @@ func (aliceSecret *SIDHSecretKeyAlice) SharedSecret(bobPublic *SIDHPublicKeyBob)
 	xQ.FromAffine(&bobPublic.affine_xQ)
 	xQmP.FromAffine(&bobPublic.affine_xQmP)
 
-	xR.R2L(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.Scalar[:])
+	xR.RightToLeftLadder(&currentCurve, &xP, &xQ, &xQmP, aliceSecret.Scalar[:])
 
 	var firstPhi FirstFourIsogeny
 	currentCurve, firstPhi = ComputeFirstFourIsogeny(&currentCurve)
@@ -386,7 +386,7 @@ func (bobSecret *SIDHSecretKeyBob) SharedSecret(alicePublic *SIDHPublicKeyAlice)
 	xQ.FromAffine(&alicePublic.affine_xQ)
 	xQmP.FromAffine(&alicePublic.affine_xQmP)
 
-	xR.R2L(&currentCurve, &xP, &xQ, &xQmP, bobSecret.Scalar[:])
+	xR.RightToLeftLadder(&currentCurve, &xP, &xQ, &xQmP, bobSecret.Scalar[:])
 
 	var points = make([]ProjectivePoint, 0, 8)
 	var indices = make([]int, 0, 8)

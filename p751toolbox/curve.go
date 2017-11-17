@@ -239,73 +239,73 @@ func (xQ *ProjectivePrimeFieldPoint) Double(xP *ProjectivePrimeFieldPoint, aPlus
 	return xQ
 }
 
-// Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xPaddQ = x(P+Q) and  x2P = x(2P).
-func xDblAdd(curve *CachedCurveParameters, xP, xQ, xPmQ *ProjectivePoint) (x2P, xPaddQ ProjectivePoint) {
-	var A, AA, B, BB, C, D, E, DA, CB, t0, t1 ExtensionFieldElement
+// DblAdd method calculates the x-coordinate of 2P and P+Q from the x-coordinate of P, Q and P-Q.
+// Params: C4 = 4*C and Aplus2C = (A+2C)
+// Cost: 8M+4S+8A in Fp2
+func (xP *ProjectivePoint) DblAdd(xQ, xPmQ *ProjectivePoint, params *CachedCurveParameters) (x2P, xPaddQ ProjectivePoint) {
+	var t0, t1, t2, t3 ExtensionFieldElement
 	x1, z1 := &xPmQ.X, &xPmQ.Z
 	x2, z2 := &xP.X, &xP.Z
 	x3, z3 := &xQ.X, &xQ.Z
 
-	A.Add(x2, z2) // A = x2+z2
-	B.Sub(x2, z2) // B = x2-z2
-	C.Add(x3, z3) // C = x3+z3
-	D.Sub(x3, z3) // D = x3-z3
+	t0.Add(x2, z2)   // A = x2+z2
+	t1.Sub(x2, z2)   // B = x2-z2
+	t3.Add(x3, z3)   // C = x3+z3
+	t2.Sub(x3, z3)   // D = x3-z3
+	t2.Mul(&t2, &t0) // DA = D*A
+	t3.Mul(&t3, &t1) // CB = C*B
 
-	AA.Square(&A) // AA = A^2
-	BB.Square(&B) // BB = B^2
+	xPaddQ.X.Add(&t2, &t3)      // x5 = DA+CB
+	xPaddQ.Z.Sub(&t2, &t3)      // z5 = DA-CB
+	xPaddQ.X.Square(&xPaddQ.X)  // x5 = (DA+CB)^2
+	xPaddQ.Z.Square(&xPaddQ.Z)  // z5 = (DA-CB)^2
+	xPaddQ.X.Mul(&xPaddQ.X, z1) // x5 = z1*(DA+CB)^2
+	xPaddQ.Z.Mul(&xPaddQ.Z, x1) // z5 = x1*(DA-CB)^2
 
-	E.Sub(&AA, &BB)        // E = AA-BB
-	BB.Mul(&BB, &curve.C4) // BB = (4C)*BB
-	DA.Mul(&D, &A)         // DA = D*A
-	CB.Mul(&C, &B)         // CB = C*B
+	t0.Square(&t0)                  // t0 = AA = A^2
+	t1.Square(&t1)                  // t1 = BB = B^2
+	t2.Sub(&t0, &t1)                // t2 = E = AA-BB
+	t3.Mul(&t1, &params.C4)         // t3 = (4C)*BB
+	x2P.Z.Mul(&t2, &params.Aplus2C) // z4 = (A+2C)*E
+	x2P.Z.Add(&x2P.Z, &t3)          // z4 = (4C)*BB+(A+2C)*E
+	x2P.X.Mul(&t0, &t3)             // x4 = AA*(4C)*BB
+	x2P.Z.Mul(&x2P.Z, &t2)          // z4 = E*((4C)*BB+(A+2C)*E)
 
-	t1.Add(&DA, &CB) // t1 = DA+CB
-	t0.Sub(&DA, &CB) // t0 = DA-CB
-	t1.Square(&t1)   // t1 = t1^2
-	t0.Square(&t0)   // t0 = t0^2
-
-	xPaddQ.X.Mul(z1, &t1) // z5 = z1*t1
-	xPaddQ.Z.Mul(x1, &t0) // x5 = x1*t0
-
-	x2P.X.Mul(&AA, &BB)           // x4 = AA*(4C)*BB
-	x2P.Z.Mul(&curve.Aplus2C, &E) // z4 = (A+2C)*E
-	x2P.Z.Add(&x2P.Z, &BB)        // z4 = (4C)*BB+(A+2C)*E
-	x2P.Z.Mul(&x2P.Z, &E)         // z4 = E*((4C)*BB+(A+2C)*E)
 	return
 }
 
-// Given xP = x(P), xQ = x(Q), and xPmQ = x(P-Q), compute xPaddQ = x(P+Q) and  x2P = x(2P).
-// Assumes that the Z-xoordinate of PmQ is equal to 1.
-func xDblAdd_primefield(aPlus2Over4 *PrimeFieldElement, xP, xQ, xPmQ *ProjectivePrimeFieldPoint) (x2P, xPaddQ ProjectivePrimeFieldPoint) {
-	var A, AA, B, BB, C, D, E, DA, CB, t0, t1 PrimeFieldElement
+// DblAdd method calculates the x-coordinate of 2P and P+Q from the x-coordinate of P, Q and P-Q.
+// Assumptions:
+// 	  aPlus2Over2 = (A+2)/4.
+//    z(P-Q) = 1,  the Z-coordinate of P-Q is equal to 1.
+// Cost: 6M+4S+8A in Fp
+func (xP *ProjectivePrimeFieldPoint) DblAdd(xQ, xPmQ *ProjectivePrimeFieldPoint, aPlus2Over4 *PrimeFieldElement) (x2P, xPaddQ ProjectivePrimeFieldPoint) {
+	var t0, t1, t2, t3 PrimeFieldElement
 	x1 := &xPmQ.X
 	x2, z2 := &xP.X, &xP.Z
 	x3, z3 := &xQ.X, &xQ.Z
 
-	A.Add(x2, z2) // A = x2+z2
-	B.Sub(x2, z2) // B = x2-z2
-	C.Add(x3, z3) // C = x3+z3
-	D.Sub(x3, z3) // D = x3-z3
+	t0.Add(x2, z2)   // A = x2+z2
+	t1.Sub(x2, z2)   // B = x2-z2
+	t3.Add(x3, z3)   // C = x3+z3
+	t2.Sub(x3, z3)   // D = x3-z3
+	t2.Mul(&t2, &t0) // DA = D*A
+	t3.Mul(&t3, &t1) // CB = C*B
 
-	AA.Square(&A) // AA = A^2
-	BB.Square(&B) // BB = B^2
+	xPaddQ.X.Add(&t2, &t3)      // x5 = DA+CB
+	xPaddQ.Z.Sub(&t2, &t3)      // z5 = DA-CB
+	xPaddQ.X.Square(&xPaddQ.X)  // x5 = (DA+CB)^2
+	xPaddQ.Z.Square(&xPaddQ.Z)  // z5 = (DA-CB)^2
+	xPaddQ.Z.Mul(&xPaddQ.Z, x1) // z5 = x1*(DA-CB)^2
 
-	E.Sub(&AA, &BB) // E = AA-BB
-	DA.Mul(&D, &A)  // DA = D*A
-	CB.Mul(&C, &B)  // CB = C*B
+	t0.Square(&t0)              // t0 = AA = A^2
+	t1.Square(&t1)              // t1 = BB = B^2
+	x2P.X.Mul(&t0, &t1)         // x4 = AA*BB
+	t0.Sub(&t0, &t1)            // t2 = E = AA-BB
+	x2P.Z.Mul(&t0, aPlus2Over4) // z4 = ((A+2C)/4)*E
+	x2P.Z.Add(&x2P.Z, &t1)      // z4 = BB+((A+2C)/4)*E
+	x2P.Z.Mul(&x2P.Z, &t0)      // z4 = E*(BB+((A+2C)/4)*E)
 
-	t1.Add(&DA, &CB) // t1 = DA+CB
-	t0.Sub(&DA, &CB) // t0 = DA-CB
-	t1.Square(&t1)   // t1 = t1^2
-	t0.Square(&t0)   // t0 = t0^2
-
-	xPaddQ.X = t1         // z5 = z1*t1
-	xPaddQ.Z.Mul(x1, &t0) // x5 = x1*t0
-
-	x2P.X.Mul(&AA, &BB)        // x4 = AA*(4C)*BB
-	x2P.Z.Mul(aPlus2Over4, &E) // z4 = (A+2C)*E
-	x2P.Z.Add(&x2P.Z, &BB)     // z4 = (4C)*BB+(A+2C)*E
-	x2P.Z.Mul(&x2P.Z, &E)      // z4 = E*((4C)*BB+(A+2C)*E)
 	return
 }
 
@@ -424,7 +424,7 @@ func ScalarMultPrimeField(aPlus2Over4 *PrimeFieldElement, xP *ProjectivePrimeFie
 		for j := 7; j >= 0; j-- {
 			bit := (scalarByte >> uint(j)) & 0x1
 			ProjectivePrimeFieldPointConditionalSwap(&x0, &x1, (bit ^ prevBit))
-			x0, x1 = xDblAdd_primefield(aPlus2Over4, &x0, &x1, xP)
+			x0, x1 = x0.DblAdd(&x1, xP, aPlus2Over4)
 			prevBit = bit
 		}
 	}
@@ -525,7 +525,7 @@ func (xR *ProjectivePoint) ThreePointLadder(curve *ProjectiveCurveParameters, xP
 			bit := (scalarByte >> uint(j)) & 0x1
 			ProjectivePointConditionalSwap(&x0, &x1, (bit ^ prevBit))
 			ProjectivePointConditionalSwap(&y0, &y1, (bit ^ prevBit))
-			tmp, x2 = xDblAdd(&cachedParams, &x0, &x2, &y0)
+			tmp, x2 = x0.DblAdd(&x2, &y0, &cachedParams)
 			x1.Add(&x1, &x0, xQ) // = xADD(x1, x0, x(Q))
 			x0 = tmp
 			prevBit = bit
@@ -536,15 +536,9 @@ func (xR *ProjectivePoint) ThreePointLadder(curve *ProjectiveCurveParameters, xP
 	return xR
 }
 
-/**
-Update: This is the right-to-left method for computing the x-coordinate of P+[k]Q.
-
-Desc: This function replaces the ThreePointLadder function and improves the running
-      time by performing 1 Addition + 1 Doubling per bit of k.
-
-Reference: A faster SW implementation of SIDH (github.com/armfazh/flor-sidh-x64).
-*/
-func (xR *ProjectivePoint) R2L(curve *ProjectiveCurveParameters, xP, xQ, xPmQ *ProjectivePoint, scalar []uint8) *ProjectivePoint {
+// RightToLeftLadder is a right-to-left point multiplication that given the
+// x-coordinate of P, Q and P-Q calculates the x-coordinate of R=P+[k]Q.
+func (xR *ProjectivePoint) RightToLeftLadder(curve *ProjectiveCurveParameters, xP, xQ, xPmQ *ProjectivePoint, scalar []uint8) *ProjectivePoint {
 	cachedParams := curve.cachedParams()
 	var R0, R2, R1 ProjectivePoint
 
@@ -559,7 +553,7 @@ func (xR *ProjectivePoint) R2L(curve *ProjectiveCurveParameters, xP, xQ, xPmQ *P
 		for j := 0; j < 8; j++ {
 			bit := (scalarByte >> uint(j)) & 0x1
 			ProjectivePointConditionalSwap(&R1, &R2, (bit ^ prevBit))
-			R0, R2 = xDblAdd(&cachedParams, &R0, &R2, &R1)
+			R0, R2 = R0.DblAdd(&R2, &R1, &cachedParams)
 			prevBit = bit
 		}
 	}
