@@ -190,14 +190,28 @@ func TestThreePointLadderVersusSage(t *testing.T) {
 	}
 }
 
+func TestR2LVersusSage(t *testing.T) {
+	var xR ProjectivePoint
+	xR.RightToLeftLadder(&curve, &threePointLadderInputs[0], &threePointLadderInputs[1], &threePointLadderInputs[2], mScalarBytes[:])
+
+	affine_xR := xR.ToAffine()
+
+	sageAffine_xR := ExtensionFieldElement{A: Fp751Element{0x729465ba800d4fd5, 0x9398015b59e514a1, 0x1a59dd6be76c748e, 0x1a7db94eb28dd55c, 0x444686e680b1b8ec, 0xcc3d4ace2a2454ff, 0x51d3dab4ec95a419, 0xc3b0f33594acac6a, 0x9598a74e7fd44f8a, 0x4fbf8c638f1c2e37, 0x844e347033052f51, 0x6cd6de3eafcf}, B: Fp751Element{0x85da145412d73430, 0xd83c0e3b66eb3232, 0xd08ff2d453ec1369, 0xa64aaacfdb395b13, 0xe9cba211a20e806e, 0xa4f80b175d937cfc, 0x556ce5c64b1f7937, 0xb59b39ea2b3fdf7a, 0xc2526b869a4196b3, 0x8dad90bca9371750, 0xdfb4a30c9d9147a2, 0x346d2130629b}}
+
+	if !affine_xR.VartimeEq(&sageAffine_xR) {
+		t.Error("\nExpected\n", sageAffine_xR, "\nfound\n", affine_xR)
+	}
+}
+
 func TestPointTripleVersusAddDouble(t *testing.T) {
 	tripleEqualsAddDouble := func(curve ProjectiveCurveParameters, P ProjectivePoint) bool {
 
 		cachedParams := curve.cachedParams()
+		cachedTripleParams := curve.cachedTripleParams()
 		var P2, P3, P2plusP ProjectivePoint
-		P2.Double(&P, &cachedParams) // = x([2]P)
-		P3.Triple(&P, &cachedParams) // = x([3]P)
-		P2plusP.Add(&P2, &P, &P)     // = x([2]P + P)
+		P2.Double(&P, &cachedParams)       // = x([2]P)
+		P3.Triple(&P, &cachedTripleParams) // = x([3]P)
+		P2plusP.Add(&P2, &P, &P)           // = x([2]P + P)
 
 		return P3.VartimeEq(&P2plusP)
 	}
@@ -292,7 +306,7 @@ func BenchmarkPointDouble(b *testing.B) {
 
 func BenchmarkPointTriple(b *testing.B) {
 	var xP = ProjectivePoint{X: curve_A, Z: curve_C}
-	cachedParams := curve.cachedParams()
+	cachedParams := curve.cachedTripleParams()
 
 	for n := 0; n < b.N; n++ {
 		xP.Triple(&xP, &cachedParams)
@@ -308,11 +322,30 @@ func BenchmarkScalarMult379BitScalar(b *testing.B) {
 	}
 }
 
+func BenchmarkScalarPrimeFieldMult379BitScalar(b *testing.B) {
+	var xR ProjectivePrimeFieldPoint
+	var a24 PrimeFieldElement
+	var mScalarBytes = [...]uint8{84, 222, 146, 63, 85, 18, 173, 162, 167, 38, 10, 8, 143, 176, 93, 228, 247, 128, 50, 128, 205, 42, 15, 137, 119, 67, 43, 3, 61, 91, 237, 24, 235, 12, 53, 96, 186, 164, 232, 223, 197, 224, 64, 109, 137, 63, 246, 4}
+
+	for n := 0; n < b.N; n++ {
+		ScalarMultPrimeField(&a24, &xR, mScalarBytes[:])
+	}
+}
+
 func BenchmarkThreePointLadder379BitScalar(b *testing.B) {
 	var xR ProjectivePoint
 	var mScalarBytes = [...]uint8{84, 222, 146, 63, 85, 18, 173, 162, 167, 38, 10, 8, 143, 176, 93, 228, 247, 128, 50, 128, 205, 42, 15, 137, 119, 67, 43, 3, 61, 91, 237, 24, 235, 12, 53, 96, 186, 164, 232, 223, 197, 224, 64, 109, 137, 63, 246, 4}
 
 	for n := 0; n < b.N; n++ {
 		xR.ThreePointLadder(&curve, &threePointLadderInputs[0], &threePointLadderInputs[1], &threePointLadderInputs[2], mScalarBytes[:])
+	}
+}
+
+func BenchmarkR2L379BitScalar(b *testing.B) {
+	var xR ProjectivePoint
+	var mScalarBytes = [...]uint8{84, 222, 146, 63, 85, 18, 173, 162, 167, 38, 10, 8, 143, 176, 93, 228, 247, 128, 50, 128, 205, 42, 15, 137, 119, 67, 43, 3, 61, 91, 237, 24, 235, 12, 53, 96, 186, 164, 232, 223, 197, 224, 64, 109, 137, 63, 246, 4}
+
+	for n := 0; n < b.N; n++ {
+		xR.RightToLeftLadder(&curve, &threePointLadderInputs[0], &threePointLadderInputs[1], &threePointLadderInputs[2], mScalarBytes[:])
 	}
 }
