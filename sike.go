@@ -1,10 +1,9 @@
 /*
 Abstract:
-This file contains APIs for Supersingular Isogeny Key Encapsulation (SIKE) protocol which
-recently submitted to NIST PQC candidates.
+This file contains APIs for Supersingular Isogeny Key Encapsulation (SIKE) protocol which is recently submitted to NIST PQC candidates.
 The underlying core functions are based on SIDH keygeneration functions developed by Cloudflare.
-SIKE requires NIST's approved hash functions such as sha3 and cSHAKE256 to encapsulate the key
-based on NIST specifications. The custome SHAKE256 is adopted from  https://gist.github.com/mimoo/7e815318e54d5c07c3330149ddf439c5
+SIKE requires NIST's approved hash functions such as sha3 and cSHAKE256 to encapsulate the key based on NIST specifications. The custome 
+SHAKE256 is adopted from  https://gist.github.com/mimoo/7e815318e54d5c07c3330149ddf439c5
 and placed inside "golang.org/x/crypto/sha3" path
 
 Author: Amir Jalali  				ajalali2016@fau.edu
