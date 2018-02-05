@@ -13,7 +13,6 @@ Date: Feb 2018
 package p751sidh
 
 import (
-	//"errors"
 	"io"
 	"golang.org/x/crypto/sha3"
 	"bytes"
