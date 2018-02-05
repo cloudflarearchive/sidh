@@ -13,7 +13,7 @@ import . "github.com/cloudflare/p751sidh/p751toolbox"
 
 func SIKEGenerateKeypair(quickCheckRand *mathRand.Rand, size int) reflect.Value {
 	// use crypto/rand instead of the quickCheck-provided RNG
-	_, SIKESecretKey, err := crypto_SIKE_keypair(rand.Reader)
+	_, SIKESecretKey, err := GenerateKeyPair(rand.Reader)
 	if err != nil {
 		panic("error generating secret key")
 	}
@@ -23,17 +23,17 @@ func SIKEGenerateKeypair(quickCheckRand *mathRand.Rand, size int) reflect.Value 
 func TestSIKESharedSecret(t *testing.T) {
 	sharedSecretsMatch := func() bool {
 
-		SIKEPublic, SIKESecret, err := crypto_SIKE_keypair(rand.Reader)
+		SIKEPublic, SIKESecret, err := GenerateKeyPair(rand.Reader)
 		if err != nil {
 			panic("error generating key pair")
 		}
 
-		cipherText, sharedSecret_1, err := crypto_SIKE_encap(rand.Reader, SIKEPublic)
+		cipherText, sharedSecret_1, err := Encapsulation(rand.Reader, SIKEPublic)
 		if err != nil {
 			panic("error generating key encapsulation")
 		}
 
-		sharedSecret_2 := crypto_SIKE_decap(SIKESecret, cipherText)
+		sharedSecret_2 := Decapsulation(SIKESecret, cipherText)
 
 		return bytes.Equal(sharedSecret_1.Scalar[:], sharedSecret_2.Scalar[:])
 	}
@@ -45,7 +45,7 @@ func TestSIKESharedSecret(t *testing.T) {
 
 func BenchmarkSIKEKeypair(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		crypto_SIKE_keypair(rand.Reader)
+		GenerateKeyPair(rand.Reader)
 	}
 }
 
@@ -53,7 +53,7 @@ var benchSIKEKeyEncapPublicKey = SIDHPublicKeyBob{affine_xP: ExtensionFieldEleme
 
 func BenchmarkSIKEKeyEncap(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		crypto_SIKE_encap(rand.Reader, &benchSIKEKeyEncapPublicKey)
+		Encapsulation(rand.Reader, &benchSIKEKeyEncapPublicKey)
 	}
 }
 
@@ -73,6 +73,6 @@ var benchSIKEKeyDecapCipherText = SIKECipherText{PublicKey: &publicKeyAlice, Sca
 
 func BenchmarkSIKEKeyDecap(b *testing.B) {
 	for n := 0; n < b.N; n++ {
-		crypto_SIKE_decap(&benchSIKEKeyDecapSecretKey, &benchSIKEKeyDecapCipherText)
+		Decapsulation(&benchSIKEKeyDecapSecretKey, &benchSIKEKeyDecapCipherText)
 	}
 }
