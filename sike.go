@@ -4,15 +4,15 @@
 // SIKE requires NIST's approved hash functions such as sha3 and cSHAKE256 to encapsulate
 // the key based on NIST specifications. 
 //
-//Author: Amir Jalali  				ajalali2016@fau.edu
-//Date: Feb 2018
+// Author: Amir Jalali  				ajalali2016@fau.edu
+// Date: Feb 2018
 
 package p751sidh
 
 import (
 	"io"
-	"golang.org/x/crypto/sha3"
 	"bytes"
+	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -45,14 +45,14 @@ type SIKESharedSecret struct {
 
 // SIKE keypair generation generates SIKE secret-key and public-key.
 // The secret-key contains a random message + secret-key + public-key.   
-func GenerateKeyPair(rand io.Reader) (publicKey *SIDHPublicKeyBob, SIKEsecretKey *SIKESecretKey, err error) {
+func GenerateKeyPair(rand io.Reader) (publicKey *SIDHPublicKeyBob, sikeSecretKey *SIKESecretKey, err error) {
 	
 	publicKey = new(SIDHPublicKeyBob)
-	SIKEsecretKey = new(SIKESecretKey)
+	sikeSecretKey = new(SIKESecretKey)
 	var secretKey = new(SIDHSecretKeyBob)
 
 	// Randomly generate 32 byte s
-	_, err = io.ReadFull(rand, SIKEsecretKey.Scalar[:])
+	_, err = io.ReadFull(rand, sikeSecretKey.Scalar[:])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -61,8 +61,8 @@ func GenerateKeyPair(rand io.Reader) (publicKey *SIDHPublicKeyBob, SIKEsecretKey
 	publicKey, secretKey, err = GenerateBobKeypair(rand)
 
 	// Copy secretKey and publicKey into SIKEsecretKey
-	SIKEsecretKey.SecretKey = secretKey
-	SIKEsecretKey.PublicKey = publicKey
+	sikeSecretKey.SecretKey = secretKey
+	sikeSecretKey.PublicKey = publicKey
 
 	return
 }
@@ -112,7 +112,7 @@ func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIK
 	return
 }
 
-// SIKE decapsulation get the SIKE secret-key and ciphertext as inputs
+// SIKE decapsulation gets the SIKE secret-key and ciphertext as inputs
 // and computes the shared secret. 
 func Decapsulation(sikeSecretKey *SIKESecretKey, cipherText *SIKECipherText) (sharedSecret *SIKESharedSecret) {
 	sharedSecret = new(SIKESharedSecret)

@@ -13,27 +13,27 @@ import . "github.com/cloudflare/p751sidh/p751toolbox"
 
 func SIKEGenerateKeypair(quickCheckRand *mathRand.Rand, size int) reflect.Value {
 	// use crypto/rand instead of the quickCheck-provided RNG
-	_, SIKESecretKey, err := GenerateKeyPair(rand.Reader)
+	_, sikeSecretKey, err := GenerateKeyPair(rand.Reader)
 	if err != nil {
 		panic("error generating secret key")
 	}
-	return reflect.ValueOf(*SIKESecretKey)
+	return reflect.ValueOf(*sikeSecretKey)
 }
 
 func TestSIKESharedSecret(t *testing.T) {
 	sharedSecretsMatch := func() bool {
 
-		SIKEPublic, SIKESecret, err := GenerateKeyPair(rand.Reader)
+		sikePublic, sikeSecret, err := GenerateKeyPair(rand.Reader)
 		if err != nil {
 			panic("error generating key pair")
 		}
 
-		cipherText, sharedSecret_1, err := Encapsulation(rand.Reader, SIKEPublic)
+		cipherText, sharedSecret_1, err := Encapsulation(rand.Reader, sikePublic)
 		if err != nil {
 			panic("error generating key encapsulation")
 		}
 
-		sharedSecret_2 := Decapsulation(SIKESecret, cipherText)
+		sharedSecret_2 := Decapsulation(sikeSecret, cipherText)
 
 		return bytes.Equal(sharedSecret_1.Scalar[:], sharedSecret_2.Scalar[:])
 	}
