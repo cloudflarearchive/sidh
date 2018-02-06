@@ -2,7 +2,8 @@
 // which is recently submitted to NIST PQC standardization workshop.
 // The underlying core functions are based on SIDH API developed by Cloudflare.
 // SIKE requires NIST's approved hash functions such as sha3 and cSHAKE256 to encapsulate
-// the key based on NIST specifications. 
+// the key based on NIST specifications. The sha3 package along with cSHAKE256 implementation
+// is placed inside the p751sidh package to avoid any external dependecies.
 //
 // Author: Amir Jalali  				ajalali2016@fau.edu
 // Date: Feb 2018
@@ -12,8 +13,9 @@ package p751sidh
 import (
 	"io"
 	"bytes"
-	"golang.org/x/crypto/sha3"
 )
+
+import . "github.com/cloudflare/p751sidh/sha3"
 
 const (
 	// The message size, in bytes.
@@ -44,9 +46,9 @@ type SIKESharedSecret struct {
 }
 
 // SIKE keypair generation generates SIKE secret-key and public-key.
-// The secret-key contains a random message + secret-key + public-key.   
+// The secret-key contains a random message + secret-key + public-key.
 func GenerateKeyPair(rand io.Reader) (publicKey *SIDHPublicKeyBob, sikeSecretKey *SIKESecretKey, err error) {
-	
+
 	publicKey = new(SIDHPublicKeyBob)
 	sikeSecretKey = new(SIKESecretKey)
 	var secretKey = new(SIDHSecretKeyBob)
@@ -67,9 +69,9 @@ func GenerateKeyPair(rand io.Reader) (publicKey *SIDHPublicKeyBob, sikeSecretKey
 	return
 }
 
-// SIKE encapsulation gets the public-key as input and generates 
-// the SIKE ciphertex and shared secret. The generated ciphertet contains 
-// the public-key and a random message 
+// SIKE encapsulation gets the public-key as input and generates
+// the SIKE ciphertex and shared secret. The generated ciphertet contains
+// the public-key and a random message
 func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIKECipherText, sharedSecret *SIKESharedSecret, err error) {
 	cipherText = new(SIKECipherText)
 	sharedSecret = new(SIKESharedSecret)
@@ -86,8 +88,8 @@ func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIK
 
 	// Append publicKey to message and hash it
 	publicKey.ToBytes(tmp[MessageSize:])
-	sha3.CShakeSum256(ephemeral_sk.Scalar[:], tmp[:CiphertextSize], []byte(G))
-	
+	CShakeSum256(ephemeral_sk.Scalar[:], tmp[:CiphertextSize], []byte(G))
+
 	// Perform mod oA
 	ephemeral_sk.Scalar[47] = 0
 	ephemeral_sk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
@@ -98,7 +100,7 @@ func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIK
 	*tmp_pk = ephemeral_sk.PublicKey()
 	cipherText.PublicKey =  tmp_pk
 	jinvariant = ephemeral_sk.SharedSecret(publicKey)
-	sha3.CShakeSum256(h_[:], jinvariant[:], []byte(P))
+	CShakeSum256(h_[:], jinvariant[:], []byte(P))
 
 	for i := 0; i < MessageSize; i++ {
 		cipherText.Scalar[i] = tmp[i] ^ h_[i]
@@ -107,13 +109,13 @@ func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIK
 	// Generate shared secret: ss = H(m||ct)
 	cipherText.PublicKey.ToBytes(tmp[MessageSize:])
 	copy(tmp[CiphertextSize:], cipherText.Scalar[:])
-	sha3.CShakeSum256(sharedSecret.Scalar[:], tmp[:], []byte(H))
+	CShakeSum256(sharedSecret.Scalar[:], tmp[:], []byte(H))
 
 	return
 }
 
 // SIKE decapsulation gets the SIKE secret-key and ciphertext as inputs
-// and computes the shared secret. 
+// and computes the shared secret.
 func Decapsulation(sikeSecretKey *SIKESecretKey, cipherText *SIKECipherText) (sharedSecret *SIKESharedSecret) {
 	sharedSecret = new(SIKESharedSecret)
 	var ephemeral_sk = new(SIDHSecretKeyAlice)
@@ -123,17 +125,17 @@ func Decapsulation(sikeSecretKey *SIKESecretKey, cipherText *SIKECipherText) (sh
 	var c0_bytes [PublicKeySize]byte
 	var c1_bytes [PublicKeySize]byte
 	var tmp = make([]byte, (CiphertextSize + MessageSize))
-	
+
 	// Decrypt
 	jinvariant = sikeSecretKey.SecretKey.SharedSecret(cipherText.PublicKey)
-	sha3.CShakeSum256(h_[:], jinvariant[:], []byte(P))
+	CShakeSum256(h_[:], jinvariant[:], []byte(P))
 	for i:= 0; i < MessageSize; i++ {
 		tmp[i] = cipherText.Scalar[i] ^ h_[i]
 	}
 
 	// Generate ephemeral secretKey G(m||pk) mod oA
 	sikeSecretKey.PublicKey.ToBytes(tmp[MessageSize:])
-	sha3.CShakeSum256(ephemeral_sk.Scalar[:], tmp[:CiphertextSize], []byte(G))
+	CShakeSum256(ephemeral_sk.Scalar[:], tmp[:CiphertextSize], []byte(G))
 	ephemeral_sk.Scalar[47] = 0
 	ephemeral_sk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
 	ephemeral_sk.Scalar[0] &= 254 // clear low bit, so scalar is even
@@ -147,7 +149,7 @@ func Decapsulation(sikeSecretKey *SIKESecretKey, cipherText *SIKECipherText) (sh
 	}
 	cipherText.PublicKey.ToBytes(tmp[MessageSize:])
 	copy(tmp[CiphertextSize:], cipherText.Scalar[:])
-	sha3.CShakeSum256(sharedSecret.Scalar[:], tmp[:], []byte(H))
+	CShakeSum256(sharedSecret.Scalar[:], tmp[:], []byte(H))
 
 	return
 }
