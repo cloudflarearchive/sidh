@@ -12,7 +12,7 @@
 //
 // If you feel that SIDH may be appropriate for you, consult your
 // cryptographer.
-package p751sidh
+package sidh
 
 import (
 	"errors"

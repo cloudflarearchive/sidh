@@ -3,53 +3,66 @@
 // The underlying core functions are based on SIDH API developed by Cloudflare.
 // SIKE requires NIST's approved hash functions such as sha3 and cSHAKE256 to encapsulate
 // the key based on NIST specifications. The sha3 package along with cSHAKE256 implementation
-// is placed inside the p751sidh package to avoid any external dependecies.
+// is placed inside the p751sidh package. Note that the standard sha3 package from
+// "golang.org/x/crypto/sha3" does not include cSHAKE256 functions.
 //
 // Author: Amir Jalali  				ajalali2016@fau.edu
 // Date: Feb 2018
 
-package p751sidh
+package sike
 
 import (
-	"io"
 	"bytes"
+	"io"
 )
 
 import . "github.com/cloudflare/p751sidh/sha3"
 
+import . "github.com/cloudflare/p751sidh/sidh"
+
 const (
-	// The message size, in bytes.
+	// MessageSize in bytes.
 	MessageSize = 32
-	// The ciphertext size, in bytes = PublicKeySize + MessageSize
+	// CiphertextSize in bytes = PublicKeySize + MessageSize
 	CiphertextSize = 596
-	// SIKE secret key size, in bytes = MessageSize + PublicKeySize + SecretKeySize
+	// SIKESecretKeySize in bytes = MessageSize + SIDHPublicKeySize + SIDHSecretKeySize
 	SIKESecretKeySize = 644
-	// Custom values for cSHAKE256
+	// G is a custom vallue for cSHAKE256
 	G = "0"
+	// H is a custom vallue for cSHAKE256
 	H = "1"
+	// P is a custom vallue for cSHAKE256
 	P = "2"
 )
 
+// SIKESecretKey contains SIDHSecretKeyBob, SIDHPublicKeyBob, and Scalar
 type SIKESecretKey struct {
-	Scalar [MessageSize]byte
+	Scalar    [MessageSize]byte
 	SecretKey *SIDHSecretKeyBob
 	PublicKey *SIDHPublicKeyBob
 }
 
-type SIKECipherText struct {
-	PublicKey *SIDHPublicKeyAlice
-	Scalar [MessageSize]byte
+// SIKEPublicKey is just a wrapper around SIDHPublicKeyBob
+type SIKEPublicKey struct {
+	PublicKey *SIDHPublicKeyBob
 }
 
+// SIKECipherText contains SIDHSecretKeyBob, SIDHPublicKeyBob, and Scalar
+type SIKECipherText struct {
+	PublicKey *SIDHPublicKeyAlice
+	Scalar    [MessageSize]byte
+}
+
+// SIKESharedSecret contains SIDHSecretKeyBob, SIDHPublicKeyBob, and Scalar
 type SIKESharedSecret struct {
 	Scalar [SharedSecretSize]byte
 }
 
-// SIKE keypair generation generates SIKE secret-key and public-key.
+// GenerateKeyPair generation generates SIKE secret-key and public-key.
 // The secret-key contains a random message + secret-key + public-key.
-func GenerateKeyPair(rand io.Reader) (publicKey *SIDHPublicKeyBob, sikeSecretKey *SIKESecretKey, err error) {
+func GenerateKeyPair(rand io.Reader) (publicKey *SIKEPublicKey, sikeSecretKey *SIKESecretKey, err error) {
 
-	publicKey = new(SIDHPublicKeyBob)
+	publicKey = new(SIKEPublicKey)
 	sikeSecretKey = new(SIKESecretKey)
 	var secretKey = new(SIDHSecretKeyBob)
 
@@ -60,24 +73,24 @@ func GenerateKeyPair(rand io.Reader) (publicKey *SIDHPublicKeyBob, sikeSecretKey
 	}
 
 	// Generate Encryptor secret-key and public-key
-	publicKey, secretKey, err = GenerateBobKeypair(rand)
+	publicKey.PublicKey, secretKey, err = GenerateBobKeypair(rand)
 
 	// Copy secretKey and publicKey into SIKEsecretKey
 	sikeSecretKey.SecretKey = secretKey
-	sikeSecretKey.PublicKey = publicKey
+	sikeSecretKey.PublicKey = publicKey.PublicKey
 
 	return
 }
 
-// SIKE encapsulation gets the public-key as input and generates
+// Encapsulation gets the public-key as input and generates
 // the SIKE ciphertex and shared secret. The generated ciphertet contains
 // the public-key and a random message
-func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIKECipherText, sharedSecret *SIKESharedSecret, err error) {
+func Encapsulation(rand io.Reader, publicKey *SIKEPublicKey) (cipherText *SIKECipherText, sharedSecret *SIKESharedSecret, err error) {
 	cipherText = new(SIKECipherText)
 	sharedSecret = new(SIKESharedSecret)
-	var ephemeral_sk = new(SIDHSecretKeyAlice)
+	var ephemeralSk = new(SIDHSecretKeyAlice)
 	var jinvariant [SharedSecretSize]byte
-	var h_ [MessageSize]byte
+	var h [MessageSize]byte
 	var tmp = make([]byte, (CiphertextSize + MessageSize))
 
 	// Generate ephemeral secretKey G(m||pk) mod oA
@@ -87,23 +100,23 @@ func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIK
 	}
 
 	// Append publicKey to message and hash it
-	publicKey.ToBytes(tmp[MessageSize:])
-	CShakeSum256(ephemeral_sk.Scalar[:], tmp[:CiphertextSize], []byte(G))
+	publicKey.PublicKey.ToBytes(tmp[MessageSize:])
+	CShakeSum256(ephemeralSk.Scalar[:], tmp[:CiphertextSize], []byte(G))
 
 	// Perform mod oA
-	ephemeral_sk.Scalar[47] = 0
-	ephemeral_sk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
-	ephemeral_sk.Scalar[0] &= 254 // clear low bit, so scalar is even
+	ephemeralSk.Scalar[47] = 0
+	ephemeralSk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
+	ephemeralSk.Scalar[0] &= 254 // clear low bit, so scalar is even
 
 	// Encryption
-	var tmp_pk = new(SIDHPublicKeyAlice)
-	*tmp_pk = ephemeral_sk.PublicKey()
-	cipherText.PublicKey =  tmp_pk
-	jinvariant = ephemeral_sk.SharedSecret(publicKey)
-	CShakeSum256(h_[:], jinvariant[:], []byte(P))
+	var tmpPk = new(SIDHPublicKeyAlice)
+	*tmpPk = ephemeralSk.PublicKey()
+	cipherText.PublicKey = tmpPk
+	jinvariant = ephemeralSk.SharedSecret(publicKey.PublicKey)
+	CShakeSum256(h[:], jinvariant[:], []byte(P))
 
 	for i := 0; i < MessageSize; i++ {
-		cipherText.Scalar[i] = tmp[i] ^ h_[i]
+		cipherText.Scalar[i] = tmp[i] ^ h[i]
 	}
 
 	// Generate shared secret: ss = H(m||ct)
@@ -114,37 +127,37 @@ func Encapsulation(rand io.Reader, publicKey *SIDHPublicKeyBob) (cipherText *SIK
 	return
 }
 
-// SIKE decapsulation gets the SIKE secret-key and ciphertext as inputs
+// Decapsulation gets the SIKE secret-key and ciphertext as inputs
 // and computes the shared secret.
 func Decapsulation(sikeSecretKey *SIKESecretKey, cipherText *SIKECipherText) (sharedSecret *SIKESharedSecret) {
 	sharedSecret = new(SIKESharedSecret)
-	var ephemeral_sk = new(SIDHSecretKeyAlice)
+	var ephemeralSk = new(SIDHSecretKeyAlice)
 	var jinvariant [SharedSecretSize]byte
-	var h_ [MessageSize]byte
-	var c0_ = new(SIDHPublicKeyAlice)
-	var c0_bytes [PublicKeySize]byte
-	var c1_bytes [PublicKeySize]byte
+	var h [MessageSize]byte
+	var c0 = new(SIDHPublicKeyAlice)
+	var c0Bytes [PublicKeySize]byte
+	var c1Bytes [PublicKeySize]byte
 	var tmp = make([]byte, (CiphertextSize + MessageSize))
 
 	// Decrypt
 	jinvariant = sikeSecretKey.SecretKey.SharedSecret(cipherText.PublicKey)
-	CShakeSum256(h_[:], jinvariant[:], []byte(P))
-	for i:= 0; i < MessageSize; i++ {
-		tmp[i] = cipherText.Scalar[i] ^ h_[i]
+	CShakeSum256(h[:], jinvariant[:], []byte(P))
+	for i := 0; i < MessageSize; i++ {
+		tmp[i] = cipherText.Scalar[i] ^ h[i]
 	}
 
 	// Generate ephemeral secretKey G(m||pk) mod oA
 	sikeSecretKey.PublicKey.ToBytes(tmp[MessageSize:])
-	CShakeSum256(ephemeral_sk.Scalar[:], tmp[:CiphertextSize], []byte(G))
-	ephemeral_sk.Scalar[47] = 0
-	ephemeral_sk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
-	ephemeral_sk.Scalar[0] &= 254 // clear low bit, so scalar is even
+	CShakeSum256(ephemeralSk.Scalar[:], tmp[:CiphertextSize], []byte(G))
+	ephemeralSk.Scalar[47] = 0
+	ephemeralSk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
+	ephemeralSk.Scalar[0] &= 254 // clear low bit, so scalar is even
 
 	// Generate shared secret ss = H(m||ct) or return ss = H(s||ct)
-	*c0_ = ephemeral_sk.PublicKey()
-	c0_.ToBytes(c0_bytes[:])
-	cipherText.PublicKey.ToBytes(c1_bytes[:])
-	if !bytes.Equal(c0_bytes[:], c1_bytes[:]){
+	*c0 = ephemeralSk.PublicKey()
+	c0.ToBytes(c0Bytes[:])
+	cipherText.PublicKey.ToBytes(c1Bytes[:])
+	if !bytes.Equal(c0Bytes[:], c1Bytes[:]) {
 		copy(tmp[:MessageSize], sikeSecretKey.Scalar[:])
 	}
 	cipherText.PublicKey.ToBytes(tmp[MessageSize:])

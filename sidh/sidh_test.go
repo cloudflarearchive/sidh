@@ -1,4 +1,4 @@
-package p751sidh
+package sidh
 
 import (
 	"bytes"
