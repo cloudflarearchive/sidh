@@ -20,20 +20,7 @@ import . "github.com/cloudflare/p751sidh/sha3"
 
 import . "github.com/cloudflare/p751sidh/sidh"
 
-const (
-	// MessageSize in bytes.
-	MessageSize = 32
-	// CiphertextSize in bytes = PublicKeySize + MessageSize
-	CiphertextSize = 596
-	// SIKESecretKeySize in bytes = MessageSize + SIDHPublicKeySize + SIDHSecretKeySize
-	SIKESecretKeySize = 644
-	// G is a custom vallue for cSHAKE256
-	G = "0"
-	// H is a custom vallue for cSHAKE256
-	H = "1"
-	// P is a custom vallue for cSHAKE256
-	P = "2"
-)
+import . "github.com/cloudflare/p751sidh/p751toolbox"
 
 // SIKESecretKey contains SIDHSecretKeyBob, SIDHPublicKeyBob, and Scalar
 type SIKESecretKey struct {
@@ -104,9 +91,9 @@ func Encapsulation(rand io.Reader, publicKey *SIKEPublicKey) (cipherText *SIKECi
 	CShakeSum256(ephemeralSk.Scalar[:], tmp[:CiphertextSize], []byte(G))
 
 	// Perform mod oA
-	ephemeralSk.Scalar[47] = 0
-	ephemeralSk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
-	ephemeralSk.Scalar[0] &= 254 // clear low bit, so scalar is even
+	ephemeralSk.Scalar[SecretKeySize-1] = MaskAliceByte1
+	ephemeralSk.Scalar[SecretKeySize-2] &= MaskAliceByte2 // clear high bits, so scalar < 2^372
+	ephemeralSk.Scalar[0] &= MaskAliceByte3               // clear low bit, so scalar is even
 
 	// Encryption
 	var tmpPk = new(SIDHPublicKeyAlice)
@@ -149,9 +136,9 @@ func Decapsulation(sikeSecretKey *SIKESecretKey, cipherText *SIKECipherText) (sh
 	// Generate ephemeral secretKey G(m||pk) mod oA
 	sikeSecretKey.PublicKey.ToBytes(tmp[MessageSize:])
 	CShakeSum256(ephemeralSk.Scalar[:], tmp[:CiphertextSize], []byte(G))
-	ephemeralSk.Scalar[47] = 0
-	ephemeralSk.Scalar[46] &= 15 // clear high bits, so scalar < 2^372
-	ephemeralSk.Scalar[0] &= 254 // clear low bit, so scalar is even
+	ephemeralSk.Scalar[SecretKeySize-1] = MaskAliceByte1
+	ephemeralSk.Scalar[SecretKeySize-2] &= MaskAliceByte2 // clear high bits, so scalar < 2^372
+	ephemeralSk.Scalar[0] &= MaskAliceByte3               // clear low bit, so scalar is even
 
 	// Generate shared secret ss = H(m||ct) or return ss = H(s||ct)
 	*c0 = ephemeralSk.PublicKey()
