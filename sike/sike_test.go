@@ -3,72 +3,39 @@ package sike
 import (
 	"bytes"
 	"crypto/rand"
-	mathRand "math/rand"
-	"reflect"
 	"testing"
-	"testing/quick"
 )
 
-import . "github.com/cloudflare/p751sidh/sidh"
-
-func SIKEGenerateKeypair(quickCheckRand *mathRand.Rand, size int) reflect.Value {
-	// use crypto/rand instead of the quickCheck-provided RNG
-	_, sikeSecretKey, err := GenerateKeyPair(rand.Reader)
-	if err != nil {
-		panic("error generating secret key")
-	}
-	return reflect.ValueOf(*sikeSecretKey)
+func TestP751(t *testing.T) {
+	testSIKE(NewP751SIKE(), t)
 }
 
-func TestSIKESharedSecret(t *testing.T) {
-	sharedSecretsMatch := func() bool {
-
-		sikePublic, sikeSecret, err := GenerateKeyPair(rand.Reader)
-		if err != nil {
-			panic("error generating key pair")
-		}
-
-		cipherText, sharedSecret1, err := Encapsulation(rand.Reader, sikePublic)
-		if err != nil {
-			panic("error generating key encapsulation")
-		}
-
-		sharedSecret2 := Decapsulation(sikeSecret, cipherText)
-
-		return bytes.Equal(sharedSecret1.Scalar[:], sharedSecret2.Scalar[:])
+func BenchmarkP751SIKE(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		testSIKE(NewP751SIKE(), b)
 	}
+}
 
-	if err := quick.Check(sharedSecretsMatch, nil); err != nil {
+func testSIKE(sikep751 SIKE, t testing.TB) {
+	var secretKey SecretKey
+	var publicKey PublicKey
+	var ciphertext Ciphertext
+	var secret1, secret2 []byte 
+	var err error
+
+	publicKey, secretKey, err = sikep751.GenerateKeyPair(rand.Reader)
+	if err != nil {
 		t.Error(err)
 	}
-}
 
-func BenchmarkSIKEKeypair(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		GenerateKeyPair(rand.Reader)
+	ciphertext, secret1, err = sikep751.Encapsulation(rand.Reader, publicKey)
+	if err != nil {
+		t.Error(err)
 	}
-}
 
-var publicKeyBob, secretKeyBob, err = GenerateBobKeypair(rand.Reader)
+	secret2 = sikep751.Decapsulation(secretKey, ciphertext)
 
-var benchSIKEKeyEncapPublicKey = SIKEPublicKey{publicKeyBob}
-
-func BenchmarkSIKEKeyEncap(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		Encapsulation(rand.Reader, &benchSIKEKeyEncapPublicKey)
-	}
-}
-
-var msg = [32]uint8{31, 9, 39, 165, 125, 79, 135, 70, 97, 87, 231, 221, 204, 245, 38, 150, 198, 187, 184, 199, 148, 156, 18, 137, 71, 248, 83, 111, 170, 138, 61, 122}
-
-var publicKeyAlice, secretKeyAlice, _ = GenerateAliceKeypair(rand.Reader)
-
-var benchSIKEKeyDecapSecretKey = SIKESecretKey{Scalar: msg, SecretKey: secretKeyBob, PublicKey: publicKeyBob}
-
-var benchSIKEKeyDecapCipherText = SIKECipherText{PublicKey: publicKeyAlice, Scalar: msg}
-
-func BenchmarkSIKEKeyDecap(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		Decapsulation(&benchSIKEKeyDecapSecretKey, &benchSIKEKeyDecapCipherText)
+	if !bytes.Equal(secret1, secret2) {
+		t.Fatalf("The two shared keys: %d, %d do not match", secret1, secret2)
 	}
 }
