@@ -8,6 +8,8 @@
 #define THREE238M1_4 $0xb858a87e8f4222c7
 #define THREE238M1_5 $0x254c9c6b525eaf5
 
+// Set result to zero if the input scalar is <= 3^238. scalar must be 48-byte array
+// of bytes.
 TEXT ·checkLessThanThree238(SB), NOSPLIT, $0-16
 	MOVQ	scalar+0(FP), SI
 	MOVQ 	result+8(FP), DI
@@ -36,9 +38,10 @@ TEXT ·checkLessThanThree238(SB), NOSPLIT, $0-16
 
 	RET
 
+// Multiply 48-byte scalar by 3 to get a scalar in 3*[0,3^238)
 TEXT ·multiplyByThree(SB), NOSPLIT, $0-8
 	MOVQ	scalar+0(FP), SI
-	
+
 	// Set [R10,...,R15] = scalar
 	MOVQ	    (SI), R10
 	MOVQ	 (8)(SI), R11

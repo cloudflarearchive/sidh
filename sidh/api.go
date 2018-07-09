@@ -1,0 +1,184 @@
+package sidh
+
+import (
+	"errors"
+	. "github.com/cloudflare/p751sidh/p751toolbox"
+	"io"
+)
+
+// I keep it bool in order to be able to apply logical NOT
+type KeyVariant uint
+type PrimeFieldId uint
+
+// Id's correspond to bitlength of the prime field characteristic
+// Currently FP_751 is the only one supported by this implementation
+const (
+	FP_503 PrimeFieldId = iota
+	FP_751
+	FP_964
+	maxPrimeFieldId
+)
+
+const (
+	// SIDH variant - either A for 2-torsion or B for 3-torsion group
+
+	// 001 - SIDH: corresponds to 2-torsion group
+	KeyVariant_SIDH_A KeyVariant = 1 << 0
+	// 010 - SIDH: corresponds to 3-torsion group
+	KeyVariant_SIDH_B = 1 << 1
+)
+
+// Base type for public and private key. Used mainly to carry domain
+// parameters.
+type key struct {
+	// Domain parameters of the algorithm to be used with a key
+	params *SidhParams
+	// Flag indicates wether corresponds to 2- or 3-torsion group
+	keyVariant KeyVariant
+}
+
+// Defines operations on public key
+type PublicKey struct {
+	key
+	affine_xP   ExtensionFieldElement
+	affine_xQ   ExtensionFieldElement
+	affine_xQmP ExtensionFieldElement
+}
+
+// Defines operations on private key
+type PrivateKey struct {
+	key
+	// Secret key
+	Scalar []byte
+}
+
+// Accessor to the domain parameters
+func (key *key) Params() *SidhParams {
+	return key.params
+}
+
+// Accessor to key variant
+func (key *key) Variant() KeyVariant {
+	return key.keyVariant
+}
+
+// NewPrivateKey initializes private key.
+// Usage of this function guarantees that the object is correctly initialized.
+func NewPrivateKey(id PrimeFieldId, v KeyVariant) *PrivateKey {
+	prv := &PrivateKey{key: key{params: Params(id), keyVariant: v}}
+	prv.Scalar = make([]byte, prv.params.SecretKeySize)
+	return prv
+}
+
+// NewPublicKey initializes public key.
+// Usage of this function guarantees that the object is correctly initialized.
+func NewPublicKey(id PrimeFieldId, v KeyVariant) *PublicKey {
+	return &PublicKey{key: key{params: Params(id), keyVariant: v}}
+}
+
+// Import clears content of the public key currently stored in the structure
+// and imports key stored in the byte string. Returns error in case byte string
+// size is wrong. Doesn't perform any validation.
+func (pub *PublicKey) Import(input []byte) error {
+	if len(input) != pub.Size() {
+		return errors.New("sidh: input to short")
+	}
+	pub.affine_xP.FromBytes(input[0:pub.params.SharedSecretSize])
+	pub.affine_xQ.FromBytes(input[pub.params.SharedSecretSize : 2*pub.params.SharedSecretSize])
+	pub.affine_xQmP.FromBytes(input[2*pub.params.SharedSecretSize : 3*pub.params.SharedSecretSize])
+	return nil
+}
+
+// Exports currently stored key. In case structure hasn't been filled with key data
+// returned byte string is filled with zeros.
+func (pub *PublicKey) Export() []byte {
+	output := make([]byte, pub.params.PublicKeySize)
+	pub.affine_xP.ToBytes(output[0:pub.params.SharedSecretSize])
+	pub.affine_xQ.ToBytes(output[pub.params.SharedSecretSize : 2*pub.params.SharedSecretSize])
+	pub.affine_xQmP.ToBytes(output[2*pub.params.SharedSecretSize : 3*pub.params.SharedSecretSize])
+	return output
+}
+
+// Size returns size of the public key in bytes
+func (pub *PublicKey) Size() int {
+	return pub.params.PublicKeySize
+}
+
+// Exports currently stored key. In case structure hasn't been filled with key data
+// returned byte string is filled with zeros.
+func (prv *PrivateKey) Export() []byte {
+	ret := make([]byte, len(prv.Scalar))
+	copy(ret, prv.Scalar)
+	return ret
+}
+
+// Size returns size of the private key in bytes
+func (prv *PrivateKey) Size() int {
+	return prv.params.SecretKeySize
+}
+
+// Import clears content of the private key currently stored in the structure
+// and imports key from octet string.
+func (prv *PrivateKey) Import(input []byte) error {
+	if len(input) != prv.Size() {
+		return errors.New("sidh: input to short")
+	}
+	if len(prv.Scalar) != prv.params.SecretKeySize {
+		return errors.New("sidh: object wrongly initialized")
+	}
+	copy(prv.Scalar, input)
+	return nil
+}
+
+// Generates random private key for SIDH. Returns error
+// in case user provided RNG or memory initialization fails.
+func (prv *PrivateKey) Generate(rand io.Reader) error {
+	var err error
+
+	if (prv.keyVariant & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
+		err = prv.generatePrivateKeyA(rand)
+	} else {
+		err = prv.generatePrivateKeyB(rand)
+	}
+
+	return err
+}
+
+// Generates public key corresponding to prv. KeyVariant of generated public key
+// is same as PrivateKey. Fails only if prv was wrongly initialized.
+func GeneratePublicKey(prv *PrivateKey) (*PublicKey, error) {
+	if prv == nil {
+		return nil, errors.New("sidh: invalid arguments")
+	}
+
+	if (prv.keyVariant & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
+		return publicKeyGenA(prv), nil
+	} else {
+		return publicKeyGenB(prv), nil
+	}
+}
+
+// Computes a shared secret which is a j-invariant. Function requires that pub has
+// different KeyVariant than prv. Length of returned output is 2*ceil(log_2 P)/8),
+// where P is a prime defining finite field.
+//
+// It's important to notice that each keypair must not be used more than once
+// to calculate shared secret.
+//
+// Function may return error. This happens only in case provided input is invalid.
+func DeriveSecret(prv *PrivateKey, pub *PublicKey) ([]byte, error) {
+
+	if (pub == nil) || (prv == nil) {
+		return nil, errors.New("sidh: invalid arguments")
+	}
+
+	if (pub.keyVariant == prv.keyVariant) || (pub.params.Id != prv.params.Id) {
+		return nil, errors.New("sidh: public and private are incompatbile")
+	}
+
+	if (prv.keyVariant & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
+		return deriveSecretA(prv, pub), nil
+	} else {
+		return deriveSecretB(prv, pub), nil
+	}
+}
