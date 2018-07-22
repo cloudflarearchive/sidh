@@ -210,18 +210,6 @@ func ExtensionFieldConditionalSwap(x, y *ExtensionFieldElement, choice uint8) {
 	fp751ConditionalSwap(&x.B, &y.B, choice)
 }
 
-// Set dest = if choice == 0 { x } else { y }, in constant time.
-//
-// Can overlap z with x or y or both.
-//
-// Returns dest to allow chaining operations.
-func (dest *ExtensionFieldElement) ConditionalAssign(x, y *ExtensionFieldElement, choice uint8) *ExtensionFieldElement {
-	fp751ConditionalAssign(&dest.A, &x.A, &y.A, choice)
-	fp751ConditionalAssign(&dest.B, &x.B, &y.B, choice)
-
-	return dest
-}
-
 // Returns true if lhs = rhs.  Takes variable time.
 func (lhs *ExtensionFieldElement) VartimeEq(rhs *ExtensionFieldElement) bool {
 	return lhs.A.vartimeEq(rhs.A) && lhs.B.vartimeEq(rhs.B)
@@ -387,17 +375,6 @@ func PrimeFieldConditionalSwap(x, y *PrimeFieldElement, choice uint8) {
 	fp751ConditionalSwap(&x.A, &y.A, choice)
 }
 
-// Set dest = if choice == 0 { x } else { y }, in constant time.
-//
-// Can overlap z with x or y or both.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) ConditionalAssign(x, y *PrimeFieldElement, choice uint8) *PrimeFieldElement {
-	fp751ConditionalAssign(&dest.A, &x.A, &y.A, choice)
-
-	return dest
-}
-
 // Set dest = sqrt(x), if x is a square.  If x is nonsquare dest is undefined.
 //
 // Allowed to overlap x with dest.
@@ -499,13 +476,6 @@ type fp751X2 [2 * fp751NumWords]uint64
 // This function executes in constant time.
 //go:noescape
 func fp751ConditionalSwap(x, y *Fp751Element, choice uint8)
-
-// If choice = 0, set z = x. If choice = 1, set z = y.
-// This function executes in constant time.
-//
-// Can overlap z with x or y or both.
-//go:noescape
-func fp751ConditionalAssign(z, x, y *Fp751Element, choice uint8)
 
 // Compute z = x + y (mod p).
 //go:noescape
