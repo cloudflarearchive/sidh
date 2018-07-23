@@ -297,6 +297,13 @@ func BenchmarkAliceKeyGenPrv(b *testing.B) {
 	}
 }
 
+func BenchmarkBobKeyGenPrv(b *testing.B) {
+	prv := NewPrivateKey(params.Id, KeyVariant_SIDH_B)
+	for n := 0; n < b.N; n++ {
+		prv.Generate(rand.Reader)
+	}
+}
+
 func BenchmarkAliceKeyGenPub(b *testing.B) {
 	prv := NewPrivateKey(params.Id, KeyVariant_SIDH_A)
 	prv.Generate(rand.Reader)
