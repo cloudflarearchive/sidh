@@ -497,6 +497,8 @@ func BenchmarkPrimeFieldElementSub(b *testing.B) {
 	}
 }
 
+// --- field operation functions
+
 func BenchmarkFp751Multiply(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		fp751Mul(&benchmarkFp751X2, &bench_x, &bench_y)
@@ -523,5 +525,42 @@ func BenchmarkFp751AddReduced(b *testing.B) {
 func BenchmarkFp751SubReduced(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		fp751SubReduced(&benchmarkFp751Element, &bench_x, &bench_y)
+	}
+}
+
+func BenchmarkFp751ConditionalSwap(b *testing.B) {
+	x, y := bench_x, bench_y
+	for n := 0; n < b.N; n++ {
+		fp751ConditionalSwap(&x, &y, 1)
+		fp751ConditionalSwap(&x, &y, 0)
+	}
+}
+
+func BenchmarkFp751StrongReduce(b *testing.B) {
+	x := bench_x
+	for n := 0; n < b.N; n++ {
+		fp751StrongReduce(&x)
+	}
+}
+
+func BenchmarkFp751AddLazy(b *testing.B) {
+	var z Fp751Element
+	x, y := bench_x, bench_y
+	for n := 0; n < b.N; n++ {
+		fp751AddLazy(&z, &x, &y)
+	}
+}
+
+func BenchmarkFp751X2AddLazy(b *testing.B) {
+	x, y, z := bench_z, bench_z, bench_z
+	for n := 0; n < b.N; n++ {
+		fp751X2AddLazy(&x, &y, &z)
+	}
+}
+
+func BenchmarkFp751X2SubLazy(b *testing.B) {
+	x, y, z := bench_z, bench_z, bench_z
+	for n := 0; n < b.N; n++ {
+		fp751X2SubLazy(&x, &y, &z)
 	}
 }

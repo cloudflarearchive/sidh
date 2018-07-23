@@ -10,9 +10,9 @@
 #define THREE238M1_4 $0xb858a87e8f4222c7
 #define THREE238M1_5 $0x254c9c6b525eaf5
 
-// Set result to zero if the input scalar is <= 3^238. scalar must be 48-byte array
-// of bytes.
-// func checkLessThanThree238(s_base uintptr, s_len uint, s_cap uint) uint64
+// Set result to zero if the input scalar is <= 3^238, otherwise result is 1.
+// Scalar must be array of 48 bytes
+// func checkLessThanThree238(s_base uintptr, s_len uint, s_cap uint) uint8
 TEXT ·checkLessThanThree238(SB), NOSPLIT, $0-16
 	MOVQ	scalar+0(FP), SI
 
@@ -34,9 +34,9 @@ TEXT ·checkLessThanThree238(SB), NOSPLIT, $0-16
 	SBBQ	32(SI), R14
 	SBBQ	40(SI), R15
 
-	// Save borrow flag indicating 3^238 - scalar < 0 as a mask in AX (eax)
-	SBBL	$0, AX
-	MOVL	AX, ret+24(FP)
+	// Save borrow flag indicating 3^238 - scalar < 0 as a mask in AX (rax)
+	ADCB	$0, AX
+	MOVB	AX, ret+24(FP)
 
 	RET
 

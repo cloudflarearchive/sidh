@@ -1,3 +1,5 @@
+// +build amd64,!noasm
+
 #include "textflag.h"
 
 // p751 + 1

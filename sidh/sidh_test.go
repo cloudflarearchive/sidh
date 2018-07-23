@@ -259,19 +259,28 @@ func TestCheckLessThanThree238(t *testing.T) {
 		212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12,
 		153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198,
 		201, 84, 2}
+	// makes second 64-bit digits bigger than in three238. checks if carries are correctly propagated
+	var three238plus2power65 = [48]byte{249, 132, 131, 130, 138, 113, 205, 237, 22, 122,
+		66, 212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12,
+		153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198,
+		201, 84, 2}
 
-	var result uint64
+	var result uint8
 
 	result = checkLessThanThree238(three238minus1[:])
 	if result != 0 {
 		t.Error("expected 0, got", result)
 	}
 	result = checkLessThanThree238(three238[:])
-	if result == 0 {
+	if result != 1 {
 		t.Error("expected nonzero, got", result)
 	}
 	result = checkLessThanThree238(three238plus1[:])
-	if result == 0 {
+	if result != 1 {
+		t.Error("expected nonzero, got", result)
+	}
+	result = checkLessThanThree238(three238plus2power65[:])
+	if result != 1 {
 		t.Error("expected nonzero, got", result)
 	}
 }
