@@ -24,6 +24,27 @@ var oneExtensionField = ExtensionFieldElement{
 	B: Fp751Element{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
+// 2*p751
+var p751x2 = Fp751Element{
+	0xFFFFFFFFFFFFFFFE, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF,
+	0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0xDD5FFFFFFFFFFFFF,
+	0xC7D92D0A93F0F151, 0xB52B363427EF98ED, 0x109D30CFADD7D0ED,
+	0x0AC56A08B964AE90, 0x1C25213F2F75B8CD, 0x0000DFCBAA83EE38}
+
+// p751
+var p751 = Fp751Element{
+	0xffffffffffffffff, 0xffffffffffffffff, 0xffffffffffffffff,
+	0xffffffffffffffff, 0xffffffffffffffff, 0xeeafffffffffffff,
+	0xe3ec968549f878a8, 0xda959b1a13f7cc76, 0x084e9867d6ebe876,
+	0x8562b5045cb25748, 0x0e12909f97badc66, 0x00006fe5d541f71c}
+
+// p751 + 1
+var p751p1 = Fp751Element{
+	0x0000000000000000, 0x0000000000000000, 0x0000000000000000,
+	0x0000000000000000, 0x0000000000000000, 0xeeb0000000000000,
+	0xe3ec968549f878a8, 0xda959b1a13f7cc76, 0x084e9867d6ebe876,
+	0x8562b5045cb25748, 0x0e12909f97badc66, 0x00006fe5d541f71c}
+
 // Set dest = 0.
 //
 // Returns dest to allow chaining operations.
@@ -451,11 +472,6 @@ func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) *PrimeFieldElement {
 
 const fp751NumWords = 12
 
-// (2^768) mod p.
-// This can't be a constant because Go doesn't allow array constants, so try
-// not to modify it.
-var montgomeryR = Fp751Element{149933, 0, 0, 0, 0, 9444048418595930112, 6136068611055053926, 7599709743867700432, 14455912356952952366, 5522737203492907350, 1222606818372667369, 49869481633250}
-
 // (2^768)^2 mod p
 // This can't be a constant because Go doesn't allow array constants, so try
 // not to modify it.
@@ -471,44 +487,6 @@ type Fp751Element [fp751NumWords]uint64
 
 // Represents an intermediate product of two elements of the base field F_p.
 type fp751X2 [2 * fp751NumWords]uint64
-
-// If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
-// This function executes in constant time.
-//go:noescape
-func fp751ConditionalSwap(x, y *Fp751Element, choice uint8)
-
-// Compute z = x + y (mod p).
-//go:noescape
-func fp751AddReduced(z, x, y *Fp751Element)
-
-// Compute z = x - y (mod p).
-//go:noescape
-func fp751SubReduced(z, x, y *Fp751Element)
-
-// Compute z = x + y, without reducing mod p.
-//go:noescape
-func fp751AddLazy(z, x, y *Fp751Element)
-
-// Compute z = x + y, without reducing mod p.
-//go:noescape
-func fp751X2AddLazy(z, x, y *fp751X2)
-
-// Compute z = x - y, without reducing mod p.
-//go:noescape
-func fp751X2SubLazy(z, x, y *fp751X2)
-
-// Compute z = x * y.
-//go:noescape
-func fp751Mul(z *fp751X2, x, y *Fp751Element)
-
-// Perform Montgomery reduction: set z = x R^{-1} (mod p).
-// Destroys the input value.
-//go:noescape
-func fp751MontgomeryReduce(z *Fp751Element, x *fp751X2)
-
-// Reduce a field element in [0, 2*p) to one in [0,p).
-//go:noescape
-func fp751StrongReduce(x *Fp751Element)
 
 func (x Fp751Element) vartimeEq(y Fp751Element) bool {
 	fp751StrongReduce(&x)

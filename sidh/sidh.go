@@ -9,16 +9,6 @@ import (
 	. "github.com/cloudflare/p751sidh/p751toolbox"
 )
 
-// Set result to zero if the input scalar is <= 3^238. scalar must be 48-byte array
-// of bytes. This function is specific to P751.
-//go:noescape
-func checkLessThanThree238(scalar []byte) uint64
-
-// Multiply 48-byte scalar by 3 to get a scalar in 3*[0,3^238). This
-// function is specific to P751.
-//go:noescape
-func multiplyByThree(scalar []byte)
-
 // -----------------------------------------------------------------------------
 // Functions for traversing isogeny trees acoording to strategy. Key type 'A' is
 //
@@ -196,7 +186,7 @@ func (prv *PrivateKey) generatePrivateKeyA(rand io.Reader) error {
 // shared secret computation.
 func (prv *PrivateKey) generatePrivateKeyB(rand io.Reader) error {
 	// Perform rejection sampling to obtain a random value in [0,3^238]:
-	var ok uint64
+	var ok uint8
 	for i := uint(0); i < prv.params.SampleRate; i++ {
 		_, err := io.ReadFull(rand, prv.Scalar)
 		if err != nil {
