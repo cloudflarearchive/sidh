@@ -12,12 +12,12 @@ import (
 // Set result to zero if the input scalar is <= 3^238. scalar must be 48-byte array
 // of bytes. This function is specific to P751.
 //go:noescape
-func checkLessThanThree238(scalar *byte, result *uint32)
+func checkLessThanThree238(scalar []byte) uint64
 
 // Multiply 48-byte scalar by 3 to get a scalar in 3*[0,3^238). This
 // function is specific to P751.
 //go:noescape
-func multiplyByThree(scalar *byte)
+func multiplyByThree(scalar []byte)
 
 // -----------------------------------------------------------------------------
 // Functions for traversing isogeny trees acoording to strategy. Key type 'A' is
@@ -196,7 +196,7 @@ func (prv *PrivateKey) generatePrivateKeyA(rand io.Reader) error {
 // shared secret computation.
 func (prv *PrivateKey) generatePrivateKeyB(rand io.Reader) error {
 	// Perform rejection sampling to obtain a random value in [0,3^238]:
-	var ok uint32
+	var ok uint64
 	for i := uint(0); i < prv.params.SampleRate; i++ {
 		_, err := io.ReadFull(rand, prv.Scalar)
 		if err != nil {
@@ -209,7 +209,7 @@ func (prv *PrivateKey) generatePrivateKeyB(rand io.Reader) error {
 
 		// Accept if scalar < 3^238 (this happens w/ prob ~0.5828)
 		// TODO this is specific to P751
-		checkLessThanThree238(&prv.Scalar[0], &ok)
+		ok = checkLessThanThree238(prv.Scalar)
 		if ok == 0 {
 			break
 		}
@@ -223,7 +223,7 @@ func (prv *PrivateKey) generatePrivateKeyB(rand io.Reader) error {
 	}
 
 	// Multiply by 3 to get a scalar in 3*[0,3^238):
-	multiplyByThree(&prv.Scalar[0])
+	multiplyByThree(prv.Scalar)
 	// We actually want scalar in 2*(0,2^371), but the above procedure
 	// generates 0 with probability 2^(-371), which isn't worth checking
 	// for.

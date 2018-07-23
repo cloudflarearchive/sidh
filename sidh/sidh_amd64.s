@@ -1,3 +1,5 @@
+// +build amd64,!noasm
+
 #include "textflag.h"
 
 // Digits of 3^238 - 1
@@ -10,9 +12,9 @@
 
 // Set result to zero if the input scalar is <= 3^238. scalar must be 48-byte array
 // of bytes.
+// func checkLessThanThree238(s_base uintptr, s_len uint, s_cap uint) uint64
 TEXT ·checkLessThanThree238(SB), NOSPLIT, $0-16
 	MOVQ	scalar+0(FP), SI
-	MOVQ 	result+8(FP), DI
 
 	XORQ	AX, AX
 
@@ -25,16 +27,16 @@ TEXT ·checkLessThanThree238(SB), NOSPLIT, $0-16
 	MOVQ	THREE238M1_5, R15
 
 	// Set [R10,...,R15] = 3^238 - scalar
-	SUBQ	    (SI), R10
-	SBBQ	 (8)(SI), R11
-	SBBQ	(16)(SI), R12
-	SBBQ	(24)(SI), R13
-	SBBQ	(32)(SI), R14
-	SBBQ	(40)(SI), R15
+	SUBQ	  (SI), R10
+	SBBQ	 8(SI), R11
+	SBBQ	16(SI), R12
+	SBBQ	24(SI), R13
+	SBBQ	32(SI), R14
+	SBBQ	40(SI), R15
 
 	// Save borrow flag indicating 3^238 - scalar < 0 as a mask in AX (eax)
 	SBBL	$0, AX
-	MOVL	AX, (DI)
+	MOVL	AX, ret+24(FP)
 
 	RET
 
@@ -43,12 +45,12 @@ TEXT ·multiplyByThree(SB), NOSPLIT, $0-8
 	MOVQ	scalar+0(FP), SI
 
 	// Set [R10,...,R15] = scalar
-	MOVQ	    (SI), R10
-	MOVQ	 (8)(SI), R11
-	MOVQ	(16)(SI), R12
-	MOVQ	(24)(SI), R13
-	MOVQ	(32)(SI), R14
-	MOVQ	(40)(SI), R15
+	MOVQ	  (SI), R10
+	MOVQ	 8(SI), R11
+	MOVQ	16(SI), R12
+	MOVQ	24(SI), R13
+	MOVQ	32(SI), R14
+	MOVQ	40(SI), R15
 
 	// Add scalar twice to compute 3*scalar
 	ADDQ	R10, (SI)
