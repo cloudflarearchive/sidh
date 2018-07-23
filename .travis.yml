@@ -10,6 +10,7 @@ matrix:
 script:
   - make bench
   - make cover
+  - NOASM=1 make cover-sidh
 
 after_script:
   - bash <(curl -s https://codecov.io/bash) -t 3cee0edf-64e9-4440-82f1-f1f41967f336
