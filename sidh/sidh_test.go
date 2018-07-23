@@ -236,7 +236,7 @@ func TestMultiplyByThree(t *testing.T) {
 		135, 190, 110, 125, 134, 233, 132, 128, 116, 37, 203, 69, 80, 43, 86, 104, 198, 173,
 		123, 249, 9, 41, 225, 192, 113, 31, 84, 93, 254, 6}
 
-	multiplyByThree(&three238minus1[0])
+	multiplyByThree(three238minus1[:])
 
 	for i := 0; i < 48; i++ {
 		if three238minus1[i] != threeTimesThree238minus1[i] {
@@ -260,17 +260,17 @@ func TestCheckLessThanThree238(t *testing.T) {
 		153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198,
 		201, 84, 2}
 
-	var result = uint32(57)
+	var result uint64
 
-	checkLessThanThree238(&three238minus1[0], &result)
+	result = checkLessThanThree238(three238minus1[:])
 	if result != 0 {
 		t.Error("expected 0, got", result)
 	}
-	checkLessThanThree238(&three238[0], &result)
+	result = checkLessThanThree238(three238[:])
 	if result == 0 {
 		t.Error("expected nonzero, got", result)
 	}
-	checkLessThanThree238(&three238plus1[0], &result)
+	result = checkLessThanThree238(three238plus1[:])
 	if result == 0 {
 		t.Error("expected nonzero, got", result)
 	}
