@@ -1,5 +1,7 @@
 package p751toolbox
 
+// Tools used for testing and debugging
+
 import (
 	"bytes"
 	"fmt"
@@ -38,4 +40,31 @@ func (point ProjectivePoint) String() string {
 
 func (point ProjectivePrimeFieldPoint) String() string {
 	return fmt.Sprintf("X:\n%sZ:\n%s", point.X.String(), point.Z.String())
+}
+
+func (point Fp751Element) PrintHex() {
+	fmt.Printf("\t")
+	for i := 0; i < fp751NumWords/2; i++ {
+		fmt.Printf("0x%0.16X, ", point[i])
+	}
+	fmt.Printf("\n\t\t")
+	for i := fp751NumWords / 2; i < fp751NumWords; i++ {
+		fmt.Printf("0x%0.16X, ", point[i])
+	}
+	fmt.Printf("\n")
+}
+
+func (extElement ExtensionFieldElement) PrintHex() {
+	fmt.Printf("\t[r]: ")
+	extElement.A.PrintHex()
+	fmt.Printf("\t[u]: ")
+	extElement.B.PrintHex()
+}
+
+func (point ProjectivePoint) PrintHex() {
+	fmt.Printf("X:")
+	point.X.PrintHex()
+	fmt.Printf("Z:")
+	point.X.PrintHex()
+	fmt.Printf("\n")
 }

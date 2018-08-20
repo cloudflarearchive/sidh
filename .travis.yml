@@ -1,0 +1,15 @@
+sudo: required
+language: go
+
+go:
+  - 1.10.x
+
+matrix:
+  fast_finish: true
+
+script:
+  - make bench
+  - make cover
+
+after_script:
+  - bash <(curl -s https://codecov.io/bash) -t 3cee0edf-64e9-4440-82f1-f1f41967f336
