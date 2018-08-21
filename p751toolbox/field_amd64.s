@@ -1630,7 +1630,7 @@ TEXT ·fp751Mul(SB), $96-24
 	ADCQ	DX, T2			\
 	ADCQ	AX, T4
 
-TEXT ·fp751MontgomeryReduce(SB), $48-16
+TEXT ·fp751MontgomeryReduce(SB), $0-16
 
 	MOVQ z+0(FP), REG_P2
 	MOVQ x+8(FP), REG_P1
@@ -1640,13 +1640,6 @@ TEXT ·fp751MontgomeryReduce(SB), $48-16
 	// reduction.
 	CMPB ·hasBMI2(SB), $0
 	JE	noBMI2
-
-	MOVQ	BX, 0(SP)
-	MOVQ	BP, 8(SP)
-	MOVQ	R12, 16(SP)
-	MOVQ	R13, 24(SP)
-	MOVQ	R14, 32(SP)
-	MOVQ	R15, 40(SP)
 
 	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
 	CMPB ·hasADX(SB), $0
@@ -1790,13 +1783,6 @@ continue3:
 	MOVQ	R12, 72(REG_P2)
 	MOVQ	R13, 80(REG_P2)
 	MOVQ	R14, 88(REG_P2)
-
-	MOVQ 0(SP), BX
-	MOVQ 8(SP), BP
-	MOVQ 16(SP), R12
-	MOVQ 24(SP), R13
-	MOVQ 32(SP), R14
-	MOVQ 40(SP), R15
 
 	RET
 
