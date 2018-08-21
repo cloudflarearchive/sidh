@@ -3,13 +3,15 @@ MK_FILE_PATH = $(lastword $(MAKEFILE_LIST))
 PRJ_DIR      = $(abspath $(dir $(MK_FILE_PATH)))
 GOPATH_LOCAL = $(PRJ_DIR)/build
 GOPATH_PKG   = src/github.com/cloudflare/p751sidh
-TARGETS = p751toolbox sidh
+CSHAKE_PKG   = github.com/henrydcase/nobs/hash/sha3
+TARGETS      = p751toolbox sidh sike
 
 clean:
 	rm -rf $(GOPATH_LOCAL)
 	rm -rf coverage*.txt
 
 prep:
+	GOPATH=$(GOPATH_LOCAL) go get $(CSHAKE_PKG)
 	mkdir -p $(GOPATH_LOCAL)/$(GOPATH_PKG)
 	cp -rf p751toolbox $(GOPATH_LOCAL)/$(GOPATH_PKG)
 	cp -rf sidh $(GOPATH_LOCAL)/$(GOPATH_PKG)

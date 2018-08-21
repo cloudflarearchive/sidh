@@ -25,6 +25,11 @@ type SidhParams struct {
 	A, B DomainParams
 	// Sample rate to obtain a value in [0,3^238]
 	SampleRate uint
+	// Length of SIKE secret message. Must be one of {24,32,40},
+	// depending on size of prime field used (see [SIKE], 1.4 and 5.1)
+	MsgLen uint
+	// Length of SIKE ephemeral KEM key (see [SIKE], 1.4 and 5.1)
+	KemSize uint
 }
 
 // Keeps mapping: SIDH prime field ID to domain parameters
@@ -61,6 +66,9 @@ func init() {
 			MaskBytes:       []byte{P751_MaskBobByte},
 			IsogenyStrategy: P751_BobIsogenyStrategy[:],
 		},
+		MsgLen: 32,
+		// SIKEp751 provides 192 bit of classical security ([SIKE], 5.1)
+		KemSize:    24,
 		SampleRate: P751_SampleRate,
 	}
 
