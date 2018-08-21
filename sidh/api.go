@@ -20,12 +20,15 @@ const (
 )
 
 const (
-	// SIDH variant - either A for 2-torsion or B for 3-torsion group
+	// First 2 bits identify SIDH variant third bit indicates
+	// wether key is a SIKE variant (set) or SIDH (not set)
 
 	// 001 - SIDH: corresponds to 2-torsion group
 	KeyVariant_SIDH_A KeyVariant = 1 << 0
 	// 010 - SIDH: corresponds to 3-torsion group
 	KeyVariant_SIDH_B = 1 << 1
+	// 110 - SIKE
+	KeyVariant_SIKE = 1<<2 | KeyVariant_SIDH_B
 )
 
 // Base type for public and private key. Used mainly to carry domain
@@ -33,7 +36,7 @@ const (
 type key struct {
 	// Domain parameters of the algorithm to be used with a key
 	params *SidhParams
-	// Flag indicates wether corresponds to 2- or 3-torsion group
+	// Flag indicates wether corresponds to 2-, 3-torsion group or SIKE
 	keyVariant KeyVariant
 }
 
@@ -50,6 +53,8 @@ type PrivateKey struct {
 	key
 	// Secret key
 	Scalar []byte
+	// Used only by KEM
+	S []byte
 }
 
 // Accessor to the domain parameters
@@ -67,6 +72,9 @@ func (key *key) Variant() KeyVariant {
 func NewPrivateKey(id PrimeFieldId, v KeyVariant) *PrivateKey {
 	prv := &PrivateKey{key: key{params: Params(id), keyVariant: v}}
 	prv.Scalar = make([]byte, prv.params.SecretKeySize)
+	if v == KeyVariant_SIKE {
+		prv.S = make([]byte, prv.params.MsgLen)
+	}
 	return prv
 }
 
@@ -107,18 +115,25 @@ func (pub *PublicKey) Size() int {
 // Exports currently stored key. In case structure hasn't been filled with key data
 // returned byte string is filled with zeros.
 func (prv *PrivateKey) Export() []byte {
-	ret := make([]byte, len(prv.Scalar))
-	copy(ret, prv.Scalar)
+	ret := make([]byte, len(prv.Scalar)+len(prv.S))
+	copy(ret, prv.S)
+	copy(ret[len(prv.S):], prv.Scalar)
 	return ret
 }
 
 // Size returns size of the private key in bytes
 func (prv *PrivateKey) Size() int {
-	return prv.params.SecretKeySize
+	tmp := prv.params.SecretKeySize
+	if prv.Variant() == KeyVariant_SIKE {
+		tmp += int(prv.params.MsgLen)
+	}
+	return tmp
 }
 
 // Import clears content of the private key currently stored in the structure
-// and imports key from octet string.
+// and imports key from octet string. In case of SIKE, the random value 'S'
+// must be prepended to the value of actual private key (see SIKE spec for details).
+// Function doesn't import public key value to PrivateKey object.
 func (prv *PrivateKey) Import(input []byte) error {
 	if len(input) != prv.Size() {
 		return errors.New("sidh: input to short")
@@ -126,11 +141,12 @@ func (prv *PrivateKey) Import(input []byte) error {
 	if len(prv.Scalar) != prv.params.SecretKeySize {
 		return errors.New("sidh: object wrongly initialized")
 	}
-	copy(prv.Scalar, input)
+	copy(prv.S, input[:len(prv.S)])
+	copy(prv.Scalar, input[len(prv.S):])
 	return nil
 }
 
-// Generates random private key for SIDH. Returns error
+// Generates random private key for SIDH or SIKE. Returns error
 // in case user provided RNG or memory initialization fails.
 func (prv *PrivateKey) Generate(rand io.Reader) error {
 	var err error
@@ -141,11 +157,16 @@ func (prv *PrivateKey) Generate(rand io.Reader) error {
 		err = prv.generatePrivateKeyB(rand)
 	}
 
+	if prv.keyVariant == KeyVariant_SIKE && err == nil {
+		_, err = io.ReadFull(rand, prv.S)
+	}
+
 	return err
 }
 
 // Generates public key corresponding to prv. KeyVariant of generated public key
 // is same as PrivateKey. Fails only if prv was wrongly initialized.
+// Constant time for properly initialzied PrivateKey
 func GeneratePublicKey(prv *PrivateKey) (*PublicKey, error) {
 	if prv == nil {
 		return nil, errors.New("sidh: invalid arguments")
@@ -166,6 +187,7 @@ func GeneratePublicKey(prv *PrivateKey) (*PublicKey, error) {
 // to calculate shared secret.
 //
 // Function may return error. This happens only in case provided input is invalid.
+// Constant time for properly initialized private and public key.
 func DeriveSecret(prv *PrivateKey, pub *PublicKey) ([]byte, error) {
 
 	if (pub == nil) || (prv == nil) {
