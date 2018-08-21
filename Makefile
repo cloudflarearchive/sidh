@@ -18,7 +18,7 @@ test-%: clean prep
 	GOPATH=$(GOPATH_LOCAL) go test -race -v ./$*
 
 bench-%: clean prep
-	cd $*; GOPATH=$(GOPATH_LOCAL) go test -v -bench=.
+	GOPATH=$(GOPATH_LOCAL) go test -v -bench=.
 
 cover-%: clean prep
 	GOPATH=$(GOPATH_LOCAL) go test -race -coverprofile=coverage_$*.txt -covermode=atomic ./$*
