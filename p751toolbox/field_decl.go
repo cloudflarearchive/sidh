@@ -2,6 +2,13 @@
 
 package p751toolbox
 
+import (
+    "golang.org/x/sys/cpu"
+)
+
+var hasADX = cpu.X86.HasADX
+var hasBMI2 = cpu.X86.HasBMI2
+
 // If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
 // If choice is neither 0 nor 1 then behaviour is undefined.
 // This function executes in constant time.
