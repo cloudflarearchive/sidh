@@ -1630,163 +1630,170 @@ TEXT ·fp751Mul(SB), $96-24
 	ADCQ	DX, T2			\
 	ADCQ	AX, T4
 
-TEXT ·fp751MontgomeryReduce(SB), $0-16
+#define fp751MontgomeryReduceCommonPart1(M0, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)\
+	XORQ	T7, T7			\
+	MOVQ	48+C, AX		\
+	MOVQ	56+C, DX		\
+	MOVQ	64+C, T9		\
+	ADDQ	40+M0, AX		\
+	ADCQ	48+M0, DX		\
+	ADCQ	56+M0, T9		\
+	MOVQ	AX, 40+M0		\
+	MOVQ	DX, 48+M0		\
+	MOVQ	T9, 56+M0		\
+	ADCQ	64+M0, T8		\
+	ADCQ	72+M0, T0		\
+	ADCQ	80+M0, T1		\
+	ADCQ	88+M0, T2		\
+	ADCQ	96+M0, T3		\
+	ADCQ	104+M0, T4		\
+	ADCQ	112+M0, T5		\
+	ADCQ	120+M0, T6		\
+	ADCQ	128+M0, T7		\
+	MOVQ	T8, 64+M0		\
+	MOVQ	T0, 72+M0		\
+	MOVQ	T1, 80+M0		\
+	MOVQ	T2, 88+M0		\
+	MOVQ	T3, 96+M0		\
+	MOVQ	T4, 104+M0		\
+	MOVQ	T5, 112+M0		\
+	MOVQ	T6, 120+M0		\
+	MOVQ	T7, 128+M0		\
+	MOVQ	136+M0, T0		\
+	MOVQ	144+M0, T1		\
+	MOVQ	152+M0, T2		\
+	MOVQ	160+M0, T3		\
+	MOVQ	168+M0, T4		\
+	MOVQ	176+M0, T5		\
+	MOVQ	184+M0, T6		\
+	ADCQ	$0, T0			\
+	ADCQ	$0, T1			\
+	ADCQ	$0, T2			\
+	ADCQ	$0, T3			\
+	ADCQ	$0, T4			\
+	ADCQ	$0, T5			\
+	ADCQ	$0, T6			\
+	MOVQ	T0, 136+M0		\
+	MOVQ	T1, 144+M0		\
+	MOVQ	T2, 152+M0		\
+	MOVQ	T3, 160+M0		\
+	MOVQ	T4, 168+M0		\
+	MOVQ	T5, 176+M0		\
+	MOVQ	T6, 184+M0
+
+#define fp751MontgomeryReduceCommonPart2(M0, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)\
+	XORQ	T7, T7			\
+	MOVQ	48+C, AX		\
+	MOVQ	56+C, DX		\
+	MOVQ	64+C, T9		\
+	ADDQ	72+M0, AX		\
+	ADCQ	80+M0, DX		\
+	ADCQ	88+M0, T9		\
+	MOVQ	AX, 72+M0		\
+	MOVQ	DX, 80+M0		\
+	MOVQ	T9, 88+M0		\
+	ADCQ	96+M0, T8		\
+	ADCQ	104+M0, T0		\
+	ADCQ	112+M0, T1		\
+	ADCQ	120+M0, T2		\
+	ADCQ	128+M0, T3		\
+	ADCQ	136+M0, T4		\
+	ADCQ	144+M0, T5		\
+	ADCQ	152+M0, T6		\
+	ADCQ	160+M0, T7		\
+	MOVQ	T8, 0+C			\	// Final result c0
+	MOVQ	T0, 104+M0		\
+	MOVQ	T1, 112+M0		\
+	MOVQ	T2, 120+M0		\
+	MOVQ	T3, 128+M0		\
+	MOVQ	T4, 136+M0		\
+	MOVQ	T5, 144+M0		\
+	MOVQ	T6, 152+M0		\
+	MOVQ	T7, 160+M0		\
+	MOVQ	168+M0, T4		\
+	MOVQ	176+M0, T5		\
+	MOVQ	184+M0, T6		\
+	ADCQ	$0, T4			\
+	ADCQ	$0, T5			\
+	ADCQ	$0, T6			\
+	MOVQ	T4, 168+M0		\
+	MOVQ	T5, 176+M0		\
+	MOVQ	T6, 184+M0
+
+#define fp751MontgomeryReduceCommonPart3(M0, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)\
+	MOVQ	48+C, AX		\	// Final result c1:c11
+	MOVQ	56+C, DX		\
+	MOVQ	64+C, T9		\
+	ADDQ	104+M0, AX		\
+	ADCQ	112+M0, DX		\
+	ADCQ	120+M0, T9		\
+	MOVQ	AX, 8+C			\
+	MOVQ	DX, 16+C		\
+	MOVQ	T9, 24+C		\
+	ADCQ	128+M0, T8		\
+	ADCQ	136+M0, T0		\
+	ADCQ	144+M0, T1		\
+	ADCQ	152+M0, T2		\
+	ADCQ	160+M0, T3		\
+	ADCQ	168+M0, T4		\
+	ADCQ	176+M0, T5		\
+	ADCQ	184+M0, T6		\
+	MOVQ	T8, 32+C		\
+	MOVQ	T0, 40+C		\
+	MOVQ	T1, 48+C		\
+	MOVQ	T2, 56+C		\
+	MOVQ	T3, 64+C		\
+	MOVQ	T4, 72+C		\
+	MOVQ	T5, 80+C		\
+	MOVQ	T6, 88+C
+
+TEXT ·fp751MontgomeryReduceBMI2ADX(SB), $0-16
+	MOVQ z+0(FP), REG_P2
+	MOVQ x+8(FP), REG_P1
+
+	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+	mul256x448bmi2adx(0(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+
+	fp751MontgomeryReduceCommonPart1(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
+
+	// a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+	mul256x448bmi2adx(32(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+
+	fp751MontgomeryReduceCommonPart2(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
+
+	// a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+	mul256x448bmi2adx(64(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+
+	fp751MontgomeryReduceCommonPart3(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
+
+	RET
+
+TEXT ·fp751MontgomeryReduceBMI2(SB), $0-16
+	MOVQ z+0(FP), REG_P2
+	MOVQ x+8(FP), REG_P1
+
+	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+	mul256x448bmi2(0(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+
+	fp751MontgomeryReduceCommonPart1(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
+
+	// a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+	mul256x448bmi2(32(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+
+	fp751MontgomeryReduceCommonPart2(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
+
+	// a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+	mul256x448bmi2(64(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+
+	fp751MontgomeryReduceCommonPart3(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
+
+	RET
+
+TEXT ·fp751MontgomeryReduceFallback(SB), $0-16
 
 	MOVQ z+0(FP), REG_P2
 	MOVQ x+8(FP), REG_P1
 
-	// If the MULX instruction is available, a technique from
-	// https://eprint.iacr.org/2017/1015 can be used for a faster Montgomery
-	// reduction.
-	CMPB ·hasBMI2(SB), $0
-	JE	noBMI2
-
-	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	CMPB ·hasADX(SB), $0
-	JE	noADX1
-	mul256x448bmi2adx(0(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-	JMP continue1
-noADX1:
-	mul256x448bmi2(0(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-continue1:
-	XORQ	R15, R15
-	MOVQ	48(REG_P2), AX
-	MOVQ	56(REG_P2), DX
-	MOVQ	64(REG_P2), BX
-	ADDQ	40(REG_P1), AX
-	ADCQ	48(REG_P1), DX
-	ADCQ	56(REG_P1), BX
-	MOVQ	AX, 40(REG_P1)
-	MOVQ	DX, 48(REG_P1)
-	MOVQ	BX, 56(REG_P1)
-	ADCQ	64(REG_P1), BP
-	ADCQ	72(REG_P1), R8
-	ADCQ	80(REG_P1), R9
-	ADCQ	88(REG_P1), R10
-	ADCQ	96(REG_P1), R11
-	ADCQ	104(REG_P1), R12
-	ADCQ	112(REG_P1), R13
-	ADCQ	120(REG_P1), R14
-	ADCQ	128(REG_P1), R15
-	MOVQ	BP, 64(REG_P1)
-	MOVQ	R8, 72(REG_P1)
-	MOVQ	R9, 80(REG_P1)
-	MOVQ	R10, 88(REG_P1)
-	MOVQ	R11, 96(REG_P1)
-	MOVQ	R12, 104(REG_P1)
-	MOVQ	R13, 112(REG_P1)
-	MOVQ	R14, 120(REG_P1)
-	MOVQ	R15, 128(REG_P1)
-	MOVQ	136(REG_P1), R8
-	MOVQ	144(REG_P1), R9
-	MOVQ	152(REG_P1), R10
-	MOVQ	160(REG_P1), R11
-	MOVQ	168(REG_P1), R12
-	MOVQ	176(REG_P1), R13
-	MOVQ	184(REG_P1), R14
-	ADCQ	$0, R8
-	ADCQ	$0, R9
-	ADCQ	$0, R10
-	ADCQ	$0, R11
-	ADCQ	$0, R12
-	ADCQ	$0, R13
-	ADCQ	$0, R14
-	MOVQ	R8, 136(REG_P1)
-	MOVQ	R9, 144(REG_P1)
-	MOVQ	R10, 152(REG_P1)
-	MOVQ	R11, 160(REG_P1)
-	MOVQ	R12, 168(REG_P1)
-	MOVQ	R13, 176(REG_P1)
-	MOVQ	R14, 184(REG_P1)
-
-	// a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	CMPB ·hasADX(SB), $0
-	JE	noADX2
-	mul256x448bmi2adx(32(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-	JMP continue2
-noADX2:
-	mul256x448bmi2(32(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-continue2:
-	XORQ	R15, R15
-	MOVQ	48(REG_P2), AX
-	MOVQ	56(REG_P2), DX
-	MOVQ	64(REG_P2), BX
-	ADDQ	72(REG_P1), AX
-	ADCQ	80(REG_P1), DX
-	ADCQ	88(REG_P1), BX
-	MOVQ	AX, 72(REG_P1)
-	MOVQ	DX, 80(REG_P1)
-	MOVQ	BX, 88(REG_P1)
-	ADCQ	96(REG_P1), BP
-	ADCQ	104(REG_P1), R8
-	ADCQ	112(REG_P1), R9
-	ADCQ	120(REG_P1), R10
-	ADCQ	128(REG_P1), R11
-	ADCQ	136(REG_P1), R12
-	ADCQ	144(REG_P1), R13
-	ADCQ	152(REG_P1), R14
-	ADCQ	160(REG_P1), R15
-	MOVQ	BP, (REG_P2)			// Final result c0
-	MOVQ	R8, 104(REG_P1)
-	MOVQ	R9, 112(REG_P1)
-	MOVQ	R10, 120(REG_P1)
-	MOVQ	R11, 128(REG_P1)
-	MOVQ	R12, 136(REG_P1)
-	MOVQ	R13, 144(REG_P1)
-	MOVQ	R14, 152(REG_P1)
-	MOVQ	R15, 160(REG_P1)
-	MOVQ	168(REG_P1), R12
-	MOVQ	176(REG_P1), R13
-	MOVQ	184(REG_P1), R14
-	ADCQ	$0, R12
-	ADCQ	$0, R13
-	ADCQ	$0, R14
-	MOVQ	R12, 168(REG_P1)
-	MOVQ	R13, 176(REG_P1)
-	MOVQ	R14, 184(REG_P1)
-
-
-	// a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	CMPB ·hasADX(SB), $0
-	JE	noADX3
-	mul256x448bmi2adx(64(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-	JMP continue3
-noADX3:
-	mul256x448bmi2(64(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-continue3:
-	// Final result c1:c11
-	MOVQ	48(REG_P2), AX
-	MOVQ	56(REG_P2), DX
-	MOVQ	64(REG_P2), BX
-	ADDQ	104(REG_P1), AX
-	ADCQ	112(REG_P1), DX
-	ADCQ	120(REG_P1), BX
-	MOVQ	AX, 8(REG_P2)
-	MOVQ	DX, 16(REG_P2)
-	MOVQ	BX, 24(REG_P2)
-	ADCQ	128(REG_P1), BP
-	ADCQ	136(REG_P1), R8
-	ADCQ	144(REG_P1), R9
-	ADCQ	152(REG_P1), R10
-	ADCQ	160(REG_P1), R11
-	ADCQ	168(REG_P1), R12
-	ADCQ	176(REG_P1), R13
-	ADCQ	184(REG_P1), R14
-	MOVQ	BP, 32(REG_P2)
-	MOVQ	R8, 40(REG_P2)
-	MOVQ	R9, 48(REG_P2)
-	MOVQ	R10, 56(REG_P2)
-	MOVQ	R11, 64(REG_P2)
-	MOVQ	R12, 72(REG_P2)
-	MOVQ	R13, 80(REG_P2)
-	MOVQ	R14, 88(REG_P2)
-
-	RET
-
-noBMI2:
 	MOVQ	(REG_P1), R11
 	MOVQ	P751P1_5, AX
 	MULQ	R11
