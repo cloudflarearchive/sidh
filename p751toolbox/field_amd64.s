@@ -30,15 +30,6 @@
 #define P751X2_10  $0x1C25213F2F75B8CD
 #define P751X2_11  $0x0000DFCBAA83EE38
 
-DATA	P751P1_NZ<>+0x00(SB)/8,	$0xEEB0000000000000
-DATA	P751P1_NZ<>+0x08(SB)/8,	$0xE3EC968549F878A8
-DATA	P751P1_NZ<>+0x10(SB)/8,	$0xDA959B1A13F7CC76
-DATA	P751P1_NZ<>+0x18(SB)/8,	$0x084E9867D6EBE876
-DATA	P751P1_NZ<>+0x20(SB)/8,	$0x8562B5045CB25748
-DATA	P751P1_NZ<>+0x28(SB)/8,	$0x0E12909F97BADC66
-DATA	P751P1_NZ<>+0x30(SB)/8,	$0x00006FE5D541F71C
-GLOBL	P751P1_NZ<>(SB), (NOPTR + RODATA), $0x38
-
 // The MSR code uses these registers for parameter passing.  Keep using
 // them to avoid significant code changes.  This means that when the Go
 // assembler does something strange, we can diff the machine code
@@ -1428,42 +1419,42 @@ TEXT ·fp751Mul(SB), $96-24
 
 #define mul256x448bmi2adx(M0, M1, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) \
 	MOVQ	0+M0, DX		\
-	MULXQ	M1+0(SB), T1, T0	\
-	MULXQ	M1+8(SB), T3, T2	\
+	MULXQ	M1+40(SB), T1, T0	\
+	MULXQ	M1+48(SB), T3, T2	\
 	MOVQ	T1, 0+C			\	// C0_final
 	XORQ	AX, AX			\
-	MULXQ	M1+16(SB), T5, T4	\
+	MULXQ	M1+56(SB), T5, T4	\
 	ADOXQ	T3, T0			\
 	ADOXQ	T5, T2			\
-	MULXQ	M1+24(SB), T3, T1	\
+	MULXQ	M1+64(SB), T3, T1	\
 	ADOXQ	T3, T4			\
-	MULXQ	M1+32(SB), T6, T5	\
+	MULXQ	M1+72(SB), T6, T5	\
 	ADOXQ	T6, T1			\
-	MULXQ	M1+40(SB), T7, T3	\
+	MULXQ	M1+80(SB), T7, T3	\
 	ADOXQ	T7, T5			\
-	MULXQ	M1+48(SB), T8, T6	\
+	MULXQ	M1+88(SB), T8, T6	\
 	ADOXQ	T8, T3			\
 	ADOXQ	AX, T6			\
 					\
 	MOVQ	8+M0, DX		\
-	MULXQ	M1+0(SB), T7, T8	\
+	MULXQ	M1+40(SB), T7, T8	\
 	XORQ	AX, AX			\
 	ADCXQ	T7, T0			\
 	MOVQ	T0, 8+C			\	// C1_final
 	ADCXQ	T8, T2			\
-	MULXQ	M1+8(SB), T8, T7	\
+	MULXQ	M1+48(SB), T8, T7	\
 	ADOXQ	T8, T2			\
 	ADCXQ	T7, T4			\
-	MULXQ	M1+16(SB), T8, T0	\
+	MULXQ	M1+56(SB), T8, T0	\
 	ADOXQ	T8, T4			\
 	ADCXQ	T1, T0			\
-	MULXQ	M1+24(SB), T7, T1	\
+	MULXQ	M1+64(SB), T7, T1	\
 	ADCXQ	T5, T1			\
-	MULXQ	M1+32(SB), T8, T5	\
+	MULXQ	M1+72(SB), T8, T5	\
 	ADCXQ	T5, T3			\
-	MULXQ	M1+40(SB), T9, T5	\
+	MULXQ	M1+80(SB), T9, T5	\
 	ADCXQ	T5, T6			\
-	MULXQ	M1+48(SB), DX, T5	\
+	MULXQ	M1+88(SB), DX, T5	\
 	ADCXQ	AX, T5			\
 					\
 	ADOXQ	T7, T0			\
@@ -1473,24 +1464,24 @@ TEXT ·fp751Mul(SB), $96-24
 	ADOXQ	AX, T5			\
 					\
 	MOVQ	16+M0, DX		\
-	MULXQ	M1+0(SB), T7, T8	\
+	MULXQ	M1+40(SB), T7, T8	\
 	XORQ	AX, AX			\
 	ADCXQ	T7, T2			\
 	MOVQ	T2, 16+C		\	// C2_final
 	ADCXQ	T8, T4			\
-	MULXQ	M1+8(SB), T7, T8	\
+	MULXQ	M1+48(SB), T7, T8	\
 	ADOXQ	T7, T4			\
 	ADCXQ	T8, T0			\
-	MULXQ	M1+16(SB), T8, T2	\
+	MULXQ	M1+56(SB), T8, T2	\
 	ADOXQ	T8, T0			\
 	ADCXQ	T2, T1			\
-	MULXQ	M1+24(SB), T7, T2	\
+	MULXQ	M1+64(SB), T7, T2	\
 	ADCXQ	T2, T3			\
-	MULXQ	M1+32(SB), T8, T2	\
+	MULXQ	M1+72(SB), T8, T2	\
 	ADCXQ	T2, T6			\
-	MULXQ	M1+40(SB), T9, T2	\
+	MULXQ	M1+80(SB), T9, T2	\
 	ADCXQ	T2, T5			\
-	MULXQ	M1+48(SB), DX, T2	\
+	MULXQ	M1+88(SB), DX, T2	\
 	ADCXQ	AX, T2			\
 					\
 	ADOXQ	T7, T1			\
@@ -1500,23 +1491,23 @@ TEXT ·fp751Mul(SB), $96-24
 	ADOXQ	AX, T2			\
 					\
 	MOVQ	24+M0, DX		\
-	MULXQ	M1+0(SB), T7, T8	\
+	MULXQ	M1+40(SB), T7, T8	\
 	XORQ	AX, AX			\
 	ADCXQ	T4, T7			\
 	ADCXQ	T8, T0			\
-	MULXQ	M1+8(SB), T10, T8	\
+	MULXQ	M1+48(SB), T10, T8	\
 	ADOXQ	T10, T0			\
 	ADCXQ	T8, T1			\
-	MULXQ	M1+16(SB), T8, T4	\
+	MULXQ	M1+56(SB), T8, T4	\
 	ADOXQ	T8, T1			\
 	ADCXQ	T4, T3			\
-	MULXQ	M1+24(SB), T10, T4	\
+	MULXQ	M1+64(SB), T10, T4	\
 	ADCXQ	T4, T6			\
-	MULXQ	M1+32(SB), T8, T4	\
+	MULXQ	M1+72(SB), T8, T4	\
 	ADCXQ	T4, T5			\
-	MULXQ	M1+40(SB), T9, T4	\
+	MULXQ	M1+80(SB), T9, T4	\
 	ADCXQ	T4, T2			\
-	MULXQ	M1+48(SB), DX, T4	\
+	MULXQ	M1+88(SB), DX, T4	\
 	ADCXQ	AX, T4			\
 					\
 	ADOXQ	T10, T3			\
@@ -1527,41 +1518,41 @@ TEXT ·fp751Mul(SB), $96-24
 
 #define mul256x448bmi2(M0, M1, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) \
 	MOVQ	0+M0, DX		\
-	MULXQ	M1+0(SB), T1, T0	\
-	MULXQ	M1+8(SB), T3, T2	\
+	MULXQ	M1+40(SB), T1, T0	\
+	MULXQ	M1+48(SB), T3, T2	\
 	MOVQ	T1, 0+C			\	// C0_final
 	XORQ	AX, AX			\
-	MULXQ	M1+16(SB), T5, T4	\
+	MULXQ	M1+56(SB), T5, T4	\
 	ADDQ	T3, T0			\
 	ADCQ	T5, T2			\
-	MULXQ	M1+24(SB), T3, T1	\
+	MULXQ	M1+64(SB), T3, T1	\
 	ADCQ	T3, T4			\
-	MULXQ	M1+32(SB), T6, T5	\
+	MULXQ	M1+72(SB), T6, T5	\
 	ADCQ	T6, T1			\
-	MULXQ	M1+40(SB), T7, T3	\
+	MULXQ	M1+80(SB), T7, T3	\
 	ADCQ	T7, T5			\
-	MULXQ	M1+48(SB), T8, T6	\
+	MULXQ	M1+88(SB), T8, T6	\
 	ADCQ	T8, T3			\
 	ADCQ	AX, T6			\
 					\
 	MOVQ	8+M0, DX		\
-	MULXQ	M1+0(SB), T7, T8	\
+	MULXQ	M1+40(SB), T7, T8	\
 	ADDQ	T7, T0			\
 	MOVQ	T0, 8+C			\	// C1_final
 	ADCQ	T8, T2			\
-	MULXQ	M1+8(SB), T8, T7	\
+	MULXQ	M1+48(SB), T8, T7	\
 	MOVQ	T8, 32+C		\
 	ADCQ	T7, T4			\
-	MULXQ	M1+16(SB), T8, T0	\
+	MULXQ	M1+56(SB), T8, T0	\
 	MOVQ	T8, 40+C		\
 	ADCQ	T1, T0			\
-	MULXQ	M1+24(SB), T7, T1	\
+	MULXQ	M1+64(SB), T7, T1	\
 	ADCQ	T5, T1			\
-	MULXQ	M1+32(SB), T8, T5	\
+	MULXQ	M1+72(SB), T8, T5	\
 	ADCQ	T5, T3			\
-	MULXQ	M1+40(SB), T9, T5	\
+	MULXQ	M1+80(SB), T9, T5	\
 	ADCQ	T5, T6			\
-	MULXQ	M1+48(SB), DX, T5	\
+	MULXQ	M1+88(SB), DX, T5	\
 	ADCQ	AX, T5			\
 					\
 	XORQ	AX, AX			\
@@ -1574,23 +1565,23 @@ TEXT ·fp751Mul(SB), $96-24
 	ADCQ	AX, T5			\
 					\
 	MOVQ	16+M0, DX		\
-	MULXQ	M1+0(SB), T7, T8	\
+	MULXQ	M1+40(SB), T7, T8	\
 	ADDQ	T7, T2			\
 	MOVQ	T2, 16+C		\	// C2_final
 	ADCQ	T8, T4			\
-	MULXQ	M1+8(SB), T7, T8	\
+	MULXQ	M1+48(SB), T7, T8	\
 	MOVQ	T7, 32+C		\
 	ADCQ	T8, T0			\
-	MULXQ	M1+16(SB), T8, T2	\
+	MULXQ	M1+56(SB), T8, T2	\
 	MOVQ	T8, 40+C		\
 	ADCQ	T2, T1			\
-	MULXQ	M1+24(SB), T7, T2	\
+	MULXQ	M1+64(SB), T7, T2	\
 	ADCQ	T2, T3			\
-	MULXQ	M1+32(SB), T8, T2	\
+	MULXQ	M1+72(SB), T8, T2	\
 	ADCQ	T2, T6			\
-	MULXQ	M1+40(SB), T9, T2	\
+	MULXQ	M1+80(SB), T9, T2	\
 	ADCQ	T2, T5			\
-	MULXQ	M1+48(SB), DX, T2	\
+	MULXQ	M1+88(SB), DX, T2	\
 	ADCQ	AX, T2			\
 					\
 	XORQ	AX, AX			\
@@ -1603,22 +1594,22 @@ TEXT ·fp751Mul(SB), $96-24
 	ADCQ	AX, T2			\
 					\
 	MOVQ	24+M0, DX		\
-	MULXQ	M1+0(SB), T7, T8	\
+	MULXQ	M1+40(SB), T7, T8	\
 	ADDQ	T4, T7			\
 	ADCQ	T8, T0			\
-	MULXQ	M1+8(SB), T10, T8	\
+	MULXQ	M1+48(SB), T10, T8	\
 	MOVQ	T10, 32+C		\
 	ADCQ	T8, T1			\
-	MULXQ	M1+16(SB), T8, T4	\
+	MULXQ	M1+56(SB), T8, T4	\
 	MOVQ	T8, 40+C		\
 	ADCQ	T4, T3			\
-	MULXQ	M1+24(SB), T10, T4	\
+	MULXQ	M1+64(SB), T10, T4	\
 	ADCQ	T4, T6			\
-	MULXQ	M1+32(SB), T8, T4	\
+	MULXQ	M1+72(SB), T8, T4	\
 	ADCQ	T4, T5			\
-	MULXQ	M1+40(SB), T9, T4	\
+	MULXQ	M1+80(SB), T9, T4	\
 	ADCQ	T4, T2			\
-	MULXQ	M1+48(SB), DX, T4	\
+	MULXQ	M1+88(SB), DX, T4	\
 	ADCQ	AX, T4			\
 					\
 	XORQ	AX, AX			\
@@ -1752,17 +1743,17 @@ TEXT ·fp751MontgomeryReduceBMI2ADX(SB), $0-16
 	MOVQ x+8(FP), REG_P1
 
 	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2adx(0(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+	mul256x448bmi2adx(0(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
 
 	fp751MontgomeryReduceCommonPart1(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
 
 	// a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2adx(32(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+	mul256x448bmi2adx(32(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
 
 	fp751MontgomeryReduceCommonPart2(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
 
 	// a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2adx(64(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+	mul256x448bmi2adx(64(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
 
 	fp751MontgomeryReduceCommonPart3(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
 
@@ -1773,17 +1764,17 @@ TEXT ·fp751MontgomeryReduceBMI2(SB), $0-16
 	MOVQ x+8(FP), REG_P1
 
 	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2(0(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+	mul256x448bmi2(0(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
 
 	fp751MontgomeryReduceCommonPart1(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
 
 	// a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2(32(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+	mul256x448bmi2(32(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
 
 	fp751MontgomeryReduceCommonPart2(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
 
 	// a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2(64(REG_P1), P751P1_NZ<>, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
+	mul256x448bmi2(64(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
 
 	fp751MontgomeryReduceCommonPart3(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
 
