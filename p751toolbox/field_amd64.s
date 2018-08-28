@@ -1417,6 +1417,11 @@ TEXT ·fp751Mul(SB), $96-24
 
 	RET
 
+// This multiplies a 256-bit number pointed to by M0 with p751+1.
+// It is assumed that M1 points to p751+1 stored as a 768-bit Fp751Element.
+// C points to the place to store the result and should be at least 192 bits.
+// This should only be used when the BMI2 and ADX instruction set extensions
+// are available.
 #define mul256x448bmi2adx(M0, M1, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) \
 	MOVQ	0+M0, DX		\
 	MULXQ	M1+40(SB), T1, T0	\
@@ -1516,6 +1521,11 @@ TEXT ·fp751Mul(SB), $96-24
 	ADOXQ	DX, T2			\
 	ADOXQ	AX, T4
 
+// This multiplies a 256-bit number pointed to by M0 with p751+1.
+// It is assumed that M1 points to p751+1 stored as a 768-bit Fp751Element.
+// C points to the place to store the result and should be at least 192 bits.
+// This should only be used when the BMI2 instruction set extension is
+// available.
 #define mul256x448bmi2(M0, M1, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) \
 	MOVQ	0+M0, DX		\
 	MULXQ	M1+40(SB), T1, T0	\
@@ -1738,6 +1748,9 @@ TEXT ·fp751Mul(SB), $96-24
 	MOVQ	T5, 80+C		\
 	MOVQ	T6, 88+C
 
+// This implements the Montgomery reduction algorithm described in
+// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf.
+// This assumes that the BMI2 and ADX instruction set extensions are available.
 TEXT ·fp751MontgomeryReduceBMI2ADX(SB), $0-16
 	MOVQ z+0(FP), REG_P2
 	MOVQ x+8(FP), REG_P1
@@ -1759,6 +1772,9 @@ TEXT ·fp751MontgomeryReduceBMI2ADX(SB), $0-16
 
 	RET
 
+// This implements the Montgomery reduction algorithm described in
+// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf.
+// This assumes that the BMI2 instruction set extension is available.
 TEXT ·fp751MontgomeryReduceBMI2(SB), $0-16
 	MOVQ z+0(FP), REG_P2
 	MOVQ x+8(FP), REG_P1
@@ -1780,6 +1796,8 @@ TEXT ·fp751MontgomeryReduceBMI2(SB), $0-16
 
 	RET
 
+// This implements the straightforward Montgomery reduction algorithm without
+// using specific instruction set extensions.
 TEXT ·fp751MontgomeryReduceFallback(SB), $0-16
 
 	MOVQ z+0(FP), REG_P2

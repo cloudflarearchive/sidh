@@ -36,8 +36,10 @@ func fp751X2SubLazy(z, x, y *fp751X2)
 //go:noescape
 func fp751Mul(z *fp751X2, x, y *Fp751Element)
 
-// Perform Montgomery reduction: set z = x R^{-1} (mod 2*p).
-// Destroys the input value.
+// Function pointer that should point to one of the
+// fp751MontgomeryReduce implementations below.
+// When set, it performs Montgomery reduction: set z = x R^{-1} (mod 2*p).
+// It may destroy the input value.
 var fp751MontgomeryReduce func(z *Fp751Element, x *fp751X2)
 
 //go:noescape
@@ -53,7 +55,8 @@ func fp751MontgomeryReduceFallback(z *Fp751Element, x *fp751X2)
 //go:noescape
 func fp751StrongReduce(x *Fp751Element)
 
-// Choose the fastest variant depending on CPU capabilities.
+// On initialization, set the fp751MontgomeryReduce function pointer to the
+// fastest implementation depending on CPU capabilities.
 func init() {
 	if cpu.X86.HasBMI2 {
 		if cpu.X86.HasADX {
