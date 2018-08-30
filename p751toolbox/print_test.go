@@ -38,10 +38,6 @@ func (point ProjectivePoint) String() string {
 	return fmt.Sprintf("X:\n%sZ:\n%s", point.X.String(), point.Z.String())
 }
 
-func (point ProjectivePrimeFieldPoint) String() string {
-	return fmt.Sprintf("X:\n%sZ:\n%s", point.X.String(), point.Z.String())
-}
-
 func (point Fp751Element) PrintHex() {
 	fmt.Printf("\t")
 	for i := 0; i < fp751NumWords/2; i++ {
