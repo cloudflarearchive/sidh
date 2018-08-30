@@ -105,16 +105,6 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) *Extensi
 	return dest
 }
 
-// Set dest = -x
-//
-// Allowed to overlap dest with x.
-//
-// Returns dest to allow chaining operations.
-func (dest *ExtensionFieldElement) Neg(x *ExtensionFieldElement) *ExtensionFieldElement {
-	dest.Sub(&zeroExtensionField, x)
-	return dest
-}
-
 // Set dest = 1/x
 //
 // Allowed to overlap dest with x.
@@ -277,35 +267,6 @@ var onePrimeField = PrimeFieldElement{
 	A: Fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
 }
 
-// Set dest = 0.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Zero() *PrimeFieldElement {
-	*dest = zeroPrimeField
-	return dest
-}
-
-// Set dest = 1.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) One() *PrimeFieldElement {
-	*dest = onePrimeField
-	return dest
-}
-
-// Set dest to x.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) SetUint64(x uint64) *PrimeFieldElement {
-	var xRR fp751X2
-	dest.A = Fp751Element{}                 // = 0
-	dest.A[0] = x                           // = x
-	fp751Mul(&xRR, &dest.A, &montgomeryRsq) // = x*R*R
-	fp751MontgomeryReduce(&dest.A, &xRR)    // = x*R mod p
-
-	return dest
-}
-
 // Set dest = lhs * rhs.
 //
 // Allowed to overlap lhs or rhs with dest.
@@ -348,65 +309,6 @@ func (dest *PrimeFieldElement) Square(x *PrimeFieldElement) *PrimeFieldElement {
 	var ab fp751X2
 	fp751Mul(&ab, a, b)                 // = a*b*R*R
 	fp751MontgomeryReduce(&dest.A, &ab) // = a*b*R mod p
-
-	return dest
-}
-
-// Set dest = -x
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Neg(x *PrimeFieldElement) *PrimeFieldElement {
-	dest.Sub(&zeroPrimeField, x)
-	return dest
-}
-
-// Set dest = lhs + rhs.
-//
-// Allowed to overlap lhs or rhs with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Add(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
-	fp751AddReduced(&dest.A, &lhs.A, &rhs.A)
-
-	return dest
-}
-
-// Set dest = lhs - rhs.
-//
-// Allowed to overlap lhs or rhs with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Sub(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
-	fp751SubReduced(&dest.A, &lhs.A, &rhs.A)
-
-	return dest
-}
-
-// Returns true if lhs = rhs.  Takes variable time.
-func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
-	return lhs.A.vartimeEq(rhs.A)
-}
-
-// If choice = 1u8, set (x,y) = (y,x). If choice = 0u8, set (x,y) = (x,y).
-//
-// Returns dest to allow chaining operations.
-func PrimeFieldConditionalSwap(x, y *PrimeFieldElement, choice uint8) {
-	fp751ConditionalSwap(&x.A, &y.A, choice)
-}
-
-// Set dest = sqrt(x), if x is a square.  If x is nonsquare dest is undefined.
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Sqrt(x *PrimeFieldElement) *PrimeFieldElement {
-	tmp_x := *x // Copy x in case dest == x
-	// Since x is assumed to be square, x = y^2
-	dest.P34(x)            // dest = (y^2)^((p-3)/4) = y^((p-3)/2)
-	dest.Mul(dest, &tmp_x) // dest = y^2 * y^((p-3)/2) = y^((p+1)/2)
-	// Now dest^2 = y^(p+1) = y^2 = x, so dest = sqrt(x)
 
 	return dest
 }

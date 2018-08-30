@@ -149,12 +149,6 @@ func (cparams *ProjectiveCurveParameters) RecoverCurveCoefficients4(coefEq *Curv
 	return
 }
 
-func (point *ProjectivePoint) FromAffinePrimeField(x *PrimeFieldElement) {
-	point.X.A = x.A
-	point.X.B = zeroExtensionField.B
-	point.Z = oneExtensionField
-}
-
 func (point *ProjectivePoint) FromAffine(x *ExtensionFieldElement) {
 	point.X = *x
 	point.Z = oneExtensionField
