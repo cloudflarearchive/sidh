@@ -35,6 +35,10 @@ func radix64ToBigInt(x []uint64) *big.Int {
 	return val
 }
 
+func VartimeEq(x,y *PrimeFieldElement) bool {
+	return x.A.vartimeEq(y.A)
+}
+
 func (x *PrimeFieldElement) toBigInt() *big.Int {
 	// Convert from Montgomery form
 	return x.A.toBigIntFromMontgomeryForm()
@@ -249,52 +253,6 @@ func TestExtensionFieldElementBatch3Inv(t *testing.T) {
 //------------------------------------------------------------------------------
 // Prime Field
 //------------------------------------------------------------------------------
-
-func TestPrimeFieldElementSetUint64VersusBigInt(t *testing.T) {
-	setUint64RoundTrips := func(x uint64) bool {
-		z := new(PrimeFieldElement).SetUint64(x).toBigInt().Uint64()
-		return x == z
-	}
-
-	if err := quick.Check(setUint64RoundTrips, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestPrimeFieldElementAddVersusBigInt(t *testing.T) {
-	addMatchesBigInt := func(x, y PrimeFieldElement) bool {
-		z := new(PrimeFieldElement)
-		z.Add(&x, &y)
-
-		check := new(big.Int)
-		check.Add(x.toBigInt(), y.toBigInt())
-		check.Mod(check, cln16prime)
-
-		return check.Cmp(z.toBigInt()) == 0
-	}
-
-	if err := quick.Check(addMatchesBigInt, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestPrimeFieldElementSubVersusBigInt(t *testing.T) {
-	subMatchesBigInt := func(x, y PrimeFieldElement) bool {
-		z := new(PrimeFieldElement)
-		z.Sub(&x, &y)
-
-		check := new(big.Int)
-		check.Sub(x.toBigInt(), y.toBigInt())
-		check.Mod(check, cln16prime)
-
-		return check.Cmp(z.toBigInt()) == 0
-	}
-
-	if err := quick.Check(subMatchesBigInt, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
 func TestPrimeFieldElementInv(t *testing.T) {
 	inverseIsCorrect := func(x PrimeFieldElement) bool {
 		z := new(PrimeFieldElement)
@@ -303,7 +261,7 @@ func TestPrimeFieldElementInv(t *testing.T) {
 		// Now z = (1/x), so (z * x) * x == x
 		z.Mul(z, &x).Mul(z, &x)
 
-		return z.VartimeEq(&x)
+		return VartimeEq(z, &x)
 	}
 
 	// This is more expensive; run fewer tests
@@ -313,26 +271,6 @@ func TestPrimeFieldElementInv(t *testing.T) {
 	}
 }
 
-func TestPrimeFieldElementSqrt(t *testing.T) {
-	inverseIsCorrect := func(x PrimeFieldElement) bool {
-		// Construct y = x^2 so we're sure y is square.
-		y := new(PrimeFieldElement)
-		y.Square(&x)
-
-		z := new(PrimeFieldElement)
-		z.Sqrt(y)
-
-		// Now z = sqrt(y), so z^2 == y
-		z.Square(z)
-		return z.VartimeEq(y)
-	}
-
-	// This is more expensive; run fewer tests
-	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
-	if err := quick.Check(inverseIsCorrect, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
 
 func TestPrimeFieldElementMulVersusBigInt(t *testing.T) {
 	mulMatchesBigInt := func(x, y PrimeFieldElement) bool {
@@ -367,26 +305,6 @@ func TestPrimeFieldElementP34VersusBigInt(t *testing.T) {
 	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
 	if err := quick.Check(p34MatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
-	}
-}
-
-func TestFp751ElementConditionalSwap(t *testing.T) {
-	var one = Fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-	var two = Fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
-
-	var x = one
-	var y = two
-
-	fp751ConditionalSwap(&x, &y, 0)
-
-	if !(x == one && y == two) {
-		t.Error("Found", x, "expected", one)
-	}
-
-	fp751ConditionalSwap(&x, &y, 1)
-
-	if !(x == two && y == one) {
-		t.Error("Found", x, "expected", two)
 	}
 }
 
@@ -461,39 +379,12 @@ func BenchmarkPrimeFieldElementInv(b *testing.B) {
 	}
 }
 
-func BenchmarkPrimeFieldElementSqrt(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Sqrt(z)
-	}
-}
-
 func BenchmarkPrimeFieldElementSquare(b *testing.B) {
 	z := &PrimeFieldElement{A: bench_x}
 	w := new(PrimeFieldElement)
 
 	for n := 0; n < b.N; n++ {
 		w.Square(z)
-	}
-}
-
-func BenchmarkPrimeFieldElementAdd(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Add(z, z)
-	}
-}
-
-func BenchmarkPrimeFieldElementSub(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Sub(z, z)
 	}
 }
 
