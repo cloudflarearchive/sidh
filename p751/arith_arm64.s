@@ -448,1270 +448,382 @@ TEXT ·fp751X2SubLazy(SB), NOSPLIT, $0-24
 
 	RET
 
-TEXT ·fp751Mul(SB), $0-24
+// Expects that X0*Y0 is already in Z0(low),Z3(high) and X0*Y1 in Z1(low),Z2(high)
+// Z0 is not actually touched
+// Result of (X0-X2) * (Y0-Y2) will be in Z0-Z5
+// Inputs remain intact
+#define mul192x192comba(X0, X1, X2, Y0, Y1, Y2, Z0, Z1, Z2, Z3, Z4, Z5, T0, T1, T2, T3) \
+	MUL	X1, Y0, T2	\
+	UMULH	X1, Y0, T3	\
+				\
+	ADDS	Z3, Z1		\
+	ADCS	ZR, Z2		\
+	ADC	ZR, ZR, Z3	\
+				\
+	MUL	X0, Y2, T0	\
+	UMULH	X0, Y2, T1	\
+				\
+	ADDS	T2, Z1		\
+	ADCS	T3, Z2		\
+	ADC	ZR, Z3		\
+				\
+	MUL	X1, Y1, T2	\
+	UMULH	X1, Y1, T3	\
+				\
+	ADDS	T0, Z2		\
+	ADCS	T1, Z3		\
+	ADC	ZR, ZR, Z4	\
+				\
+	MUL	X2, Y0, T0	\
+	UMULH	X2, Y0, T1	\
+				\
+	ADDS	T2, Z2		\
+	ADCS	T3, Z3		\
+	ADC	ZR, Z4		\
+				\
+	MUL	X1, Y2, T2	\
+	UMULH	X1, Y2, T3	\
+				\
+	ADDS	T0, Z2		\
+	ADCS	T1, Z3		\
+	ADC	ZR, Z4		\
+				\
+	MUL	X2, Y1, T0	\
+	UMULH	X2, Y1, T1	\
+				\
+	ADDS	T2, Z3		\
+	ADCS	T3, Z4		\
+	ADC	ZR, ZR, Z5	\
+				\
+	MUL	X2, Y2, T2	\
+	UMULH	X2, Y2, T3	\
+				\
+	ADDS	T0, Z3		\
+	ADCS	T1, Z4		\
+	ADC	ZR, Z5		\
+				\
+	ADDS	T2, Z4		\
+	ADC	T3, Z5
+
+// Expects that X points to (X4-X6), Y to (Y4-Y6)
+// Result of (X0-X5) * (Y0-Y5) will be in (0(Z), 8(Z), 16(Z), T0-T8)
+// Inputs get overwritten
+#define mul384x384karatsuba(X, Y, Z, X0, X1, X2, X3, X4, X5, Y0, Y1, Y2, Y3, Y4, Y5, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10)\
+	ADDS	X0, X3		\	// xH + xL, destroys xH
+	ADCS	X1, X4		\
+	ADCS	X2, X5		\
+	ADC	ZR, ZR, T10	\
+				\
+	ADDS	Y0, Y3		\	// yH + yL, destroys yH
+	ADCS	Y1, Y4		\
+	ADCS	Y2, Y5		\
+	ADC	ZR, ZR, T6	\
+				\
+	SUB	T10, ZR, T7	\
+	SUB	T6, ZR, T8	\
+	AND	T6, T10		\	// combined carry
+				\
+	AND	T7, Y3, T0	\	// masked(yH + yL)
+	AND	T7, Y4, T1	\
+	AND	T7, Y5, T2	\
+				\
+	AND	T8, X3, T3	\	// masked(xH + xL)
+	AND	T8, X4, T4	\
+	AND	T8, X5, T5	\
+				\
+	ADDS	T3, T0		\
+	ADCS	T4, T1		\
+	STP	(T0, T1), 0+Z	\
+				\
+	MUL	X3, Y3, T0	\
+	MUL	X3, Y4, T1	\
+				\
+	ADCS	T5, T2		\
+	MOVD	T2, 16+Z	\
+				\
+	UMULH	X3, Y4, T2	\
+	UMULH	X3, Y3, T3	\
+				\
+	ADC	ZR, T10		\
+				\	// (xH + xL) * (yH + yL)
+	mul192x192comba(X3, X4, X5, Y3, Y4, Y5, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)\
+				\
+	MUL	X0, Y0, X3	\
+	LDP	0+Z, (T6, T7)	\
+	MOVD	16+Z, T8	\
+				\
+	UMULH	X0, Y0, Y3	\
+	ADDS	T6, T3		\
+	ADCS	T7, T4		\
+	MUL	X0, Y1, X4	\
+	ADCS	T8, T5		\
+	ADC	ZR, T10		\
+	UMULH	X0, Y1, X5	\
+				\	// xL * yL
+	mul192x192comba(X0, X1, X2, Y0, Y1, Y2, X3, X4, X5, Y3, Y4, Y5, T6, T7, T8, T9)\
+				\
+	STP	(X3, X4), 0+Z	\
+	MOVD	X5, 16+Z	\
+				\
+	SUBS	X3, T0		\	// (xH + xL) * (yH + yL) - xL * yL
+	SBCS	X4, T1		\
+	LDP	0+X, (X3, X4)	\
+	SBCS	X5, T2		\
+	MOVD	16+X, X5	\
+	SBCS	Y3, T3		\
+	SBCS	Y4, T4		\
+	SBCS	Y5, T5		\
+	SBC	ZR, T10		\
+				\
+	ADDS	Y3, T0		\	// ((xH + xL) * (yH + yL) - xL * yL) * 2^192 + xL * yL
+	ADCS	Y4, T1		\
+	LDP	0+Y, (Y3, Y4)	\
+	MUL	X3, Y3, X0	\
+	ADCS	Y5, T2		\
+	UMULH	X3, Y3, Y0	\
+	MOVD	16+Y, Y5	\
+	MUL	X3, Y4, X1	\
+	ADCS	ZR, T3		\
+	UMULH	X3, Y4, X2	\
+	ADCS	ZR, T4		\
+	ADCS	ZR, T5		\
+	ADC	ZR, T10		\
+				\	// xH * yH, overwrite xLow, yLow
+	mul192x192comba(X3, X4, X5, Y3, Y4, Y5, X0, X1, X2, Y0, Y1, Y2, T6, T7, T8, T9)\
+				\
+	SUBS	X0, T0		\	// ((xH + xL) * (yH + yL) - xL * yL - xH * yH)
+	SBCS	X1, T1		\
+	SBCS	X2, T2		\
+	SBCS	Y0, T3		\
+	SBCS	Y1, T4		\
+	SBCS	Y2, T5		\
+	SBC	ZR, T10		\
+				\
+	ADDS	X0, T3		\
+	ADCS	X1, T4		\
+	ADCS	X2, T5		\
+	ADCS	T10, Y0, T6	\
+	ADCS	ZR, Y1, T7	\
+	ADC	ZR, Y2, T8
+
+
+TEXT ·fp751Mul(SB), NOSPLIT, $0-24
 	MOVD	z+0(FP), R2
 	MOVD	x+8(FP), R0
 	MOVD	y+16(FP), R1
 
+	// Load xL in R3-R8, xH in R9-R14
+	// (xH + xL) in R3-R8, destroys xH
 	LDP	0(R0), (R3, R4)
-	LDP	0(R1), (R5, R6)
-	MUL	R3, R5, R19
-	UMULH	R3, R5, R17
-	// z0 is now in R19
-
-	// x0 * y1
-	MUL	R3, R6, R13
-	UMULH	R3, R6, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R14, ZR, R16
-	ADCS	ZR, ZR, R15
-
-	// y0 * x1
-	MUL	R5, R4, R13
-	UMULH	R5, R4, R14
-
-	// Load y2, y3
-	LDP	16(R1), (R9, R10)
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// Store z0, z1
-	STP	(R19, R17), 0(R2)
-
-	// x0 * y2
-	MUL	R3, R9, R13
-	UMULH	R3, R9, R14
-
-	// Load x2, x3
-	LDP	16(R0), (R7, R8)
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	ZR, ZR, R19
-
-	// x1 * y1
-	MUL	R4, R6, R13
-	UMULH	R4, R6, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x2 * y0
-	MUL	R7, R5, R13
-	UMULH	R7, R5, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-	// z2 is now in R16
-
-	// x0 * y3
-	MUL	R3, R10, R13
-	UMULH	R3, R10, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	ZR, ZR, R17
-
-	// x1 * y2
-	MUL	R4, R9, R13
-	UMULH	R4, R9, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x2 * y1
-	MUL	R7, R6, R13
-	UMULH	R7, R6, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x3 * y0
-	MUL	R8, R5, R13
-	UMULH	R8, R5, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// Store z2, z3
-	STP	(R16, R15), 16(R2)
-
-	// x1 * y3
-	MUL	R4, R10, R13
-	UMULH	R4, R10, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	ZR, ZR, R16
-
-	// x2 * y2
-	MUL	R7, R9, R13
-	UMULH	R7, R9, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x3 * y1
-	MUL	R8, R6, R13
-	UMULH	R8, R6, R14
-
-	// load x4, x5
-	LDP	32(R0), (R11, R12)
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x4 * y0
-	MUL	R11, R5, R13
-	UMULH	R11, R5, R14
-
-	// Load y4, y5
-	LDP	32(R1), (R20, R21)
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x0 * y4
-	MUL	R3, R20, R13
-	UMULH	R3, R20, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-	// z4 is now in R19
-
-	// x0 * y5
-	MUL	R3, R21, R13
-	UMULH	R3, R21, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	ZR, ZR, R15
-
-	// x1 * y4
-	MUL	R4, R20, R13
-	UMULH	R4, R20, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x2 * y3
-	MUL	R7, R10, R13
-	UMULH	R7, R10, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x3 * y2
-	MUL	R8, R9, R13
-	UMULH	R8, R9, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x4 * y1
-	MUL	R11, R6, R13
-	UMULH	R11, R6, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x5 * y0
-	MUL	R12, R5, R13
-	UMULH	R12, R5, R14
-
-	// Load x6, x7
-	LDP	48(R0), (R22, R23)
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// Store z4, z5
-	STP	(R19, R17), 32(R2)
-
-	// x6 * y0
-	MUL	R22, R5, R13
-	UMULH	R22, R5, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	ZR, ZR, R19
-
-	// x5 * y1
-	MUL	R12, R6, R13
-	UMULH	R12, R6, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x4 * y2
-	MUL	R11, R9, R13
-	UMULH	R11, R9, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x3 * y3
-	MUL	R8, R10, R13
-	UMULH	R8, R10, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x2 * y4
-	MUL	R7, R20, R13
-	UMULH	R7, R20, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x1 * y5
-	MUL	R4, R21, R13
-	UMULH	R4, R21, R14
-
-	// Load y6, y7
-	LDP	48(R1), (R24, R25)
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x0 * y6
-	MUL	R3, R24, R13
-	UMULH	R3, R24, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-	// z6 is now in R16
-
-	// x0 * y7
-	MUL	R3, R25, R13
-	UMULH	R3, R25, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	ZR, ZR, R17
-
-	// x1 * y6
-	MUL	R4, R24, R13
-	UMULH	R4, R24, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x2 * y5
-	MUL	R7, R21, R13
-	UMULH	R7, R21, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x3 * y4
-	MUL	R8, R20, R13
-	UMULH	R8, R20, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x4 * y3
-	MUL	R11, R10, R13
-	UMULH	R11, R10, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x5 * y2
-	MUL	R12, R9, R13
-	UMULH	R12, R9, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x6 * y1
-	MUL	R22, R6, R13
-	UMULH	R22, R6, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x7 * y0
-	MUL	R23, R5, R13
-	UMULH	R23, R5, R14
-
-	// Load x8, x9
-	LDP	64(R0), (R26, R27)
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// Store z6, z7
-	STP	(R16, R15), 48(R2)
-
-	// x8 * y0
-	MUL	R26, R5, R13
-	UMULH	R26, R5, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	ZR, ZR, R16
-
-	// x7 * y1
-	MUL	R23, R6, R13
-	UMULH	R23, R6, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x6 * y2
-	MUL	R22, R9, R13
-	UMULH	R22, R9, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x5 * y3
-	MUL	R12, R10, R13
-	UMULH	R12, R10, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x4 * y4
-	MUL	R11, R20, R13
-	UMULH	R11, R20, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x3 * y5
-	MUL	R8, R21, R13
-	UMULH	R8, R21, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x2 * y6
-	MUL	R7, R24, R13
-	UMULH	R7, R24, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x1 * y7
-	MUL	R4, R25, R13
-	UMULH	R4, R25, R14
-
-	// Load y8, y9; unload y0
-	LDP	64(R1), (R29, R5)
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-
-	// x0 * y8
-	MUL	R3, R29, R13
-	UMULH	R3, R29, R14
-
-	ADDS	R19, R13, R19
-	ADCS	R17, R14, R17
-	ADCS	R16, ZR, R16
-	// z8 is now in R19
-
-	// x0 * y9
-	MUL	R3, R5, R13
-	UMULH	R3, R5, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	ZR, ZR, R15
-
-	// x1 * y8
-	MUL	R4, R29, R13
-	UMULH	R4, R29, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x2 * y7
-	MUL	R7, R25, R13
-	UMULH	R7, R25, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x3 * y6
-	MUL	R8, R24, R13
-	UMULH	R8, R24, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x4 * y5
-	MUL	R11, R21, R13
-	UMULH	R11, R21, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x5 * y4
-	MUL	R12, R20, R13
-	UMULH	R12, R20, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x6 * y3
-	MUL	R22, R10, R13
-	UMULH	R22, R10, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x7 * y2
-	MUL	R23, R9, R13
-	UMULH	R23, R9, R14
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x8 * y1
-	MUL	R26, R6, R13
-	UMULH	R26, R6, R14
-
-	// Load y0, unload x0
-	MOVD	0(R1), R3
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// x9 * y0
-	MUL	R27, R3, R13
-	UMULH	R27, R3, R14
-
-	// Load x10, unload x1
-	MOVD	80(R0), R4
-
-	ADDS	R17, R13, R17
-	ADCS	R16, R14, R16
-	ADCS	R15, ZR, R15
-
-	// Store z8, z9
-	STP	(R19, R17), 64(R2)
-
-	// x10 * y0
-	MUL	R4, R3, R13
-	UMULH	R4, R3, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	ZR, ZR, R19
-
-	// x9 * y1
-	MUL	R27, R6, R13
-	UMULH	R27, R6, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x8 * y2
-	MUL	R26, R9, R13
-	UMULH	R26, R9, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x7 * y3
-	MUL	R23, R10, R13
-	UMULH	R23, R10, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x6 * y4
-	MUL	R22, R20, R13
-	UMULH	R22, R20, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x5 * y5
-	MUL	R12, R21, R13
-	UMULH	R12, R21, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x4 * y6
-	MUL	R11, R24, R13
-	UMULH	R11, R24, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x3 * y7
-	MUL	R8, R25, R13
-	UMULH	R8, R25, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x2 * y8
-	MUL	R7, R29, R13
-	UMULH	R7, R29, R14
-
-	// Load x0, x1; unload y0, y1
-	LDP	0(R0), (R3, R6)
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x1 * y9
-	MUL	R6, R5, R13
-	UMULH	R6, R5, R14
-
-	// Load y10, y11; unload x9, x10
-	LDP	80(R1), (R27, R4)
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-
-	// x0 * y10
-	MUL	R3, R27, R13
-	UMULH	R3, R27, R14
-
-	ADDS	R16, R13, R16
-	ADCS	R15, R14, R15
-	ADCS	R19, ZR, R19
-	// z10 is now in R16
-
-	// x0 * y11
-	MUL	R3, R4, R13
-	UMULH	R3, R4, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	ZR, ZR, R17
-
-	// x1 * y10
-	MUL	R6, R27, R13
-	UMULH	R6, R27, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x2 * y9
-	MUL	R7, R5, R13
-	UMULH	R7, R5, R14
-
-	ADDS	R15, R13, R15
-	ADCS	R19, R14, R19
-	ADCS	R17, ZR, R17
-
-	// x3 * y8
-	MUL	R8, R29, R13
-	UMULH	R8, R29, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x4 * y7
-	MUL	R11, R25, R13
-	UMULH	R11, R25, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x5 * y6
-	MUL	R12, R24, R13
-	UMULH	R12, R24, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x6 * y5
-	MUL	R22, R21, R13
-	UMULH	R22, R21, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x7 * y4
-	MUL	R23, R20, R13
-	UMULH	R23, R20, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x8 * y3
-	MUL	R26, R10, R13
-	UMULH	R26, R10, R14
-
-	// Load x9, unload y9
-	MOVD	72(R0), R5
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x9 * y2
-	MUL	R5, R9, R13
-
-	// Load x10, x11; unload y10, y11
-	LDP	80(R0), (R27, R4)
-
-	UMULH	R5, R9, R14
-
-	// Load y0, y1; unload x0, x1
-	LDP	0(R1), (R3, R6)
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x10 * y1
-	MUL	R27, R6, R13
-	UMULH	R27, R6, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x11 * y0
-	MUL	R4, R3, R13
-	UMULH	R4, R3, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// Store z10, z11
-	STP	(R16, R15), 80(R2)
-
-	// x11 * y1
-	MUL	R4, R6, R13
-	UMULH	R4, R6, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, ZR, R16
-
-	// x10 * y2
-	MUL	R27, R9, R13
-	UMULH	R27, R9, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x9 * y3
-	MUL	R5, R10, R13
-	UMULH	R5, R10, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x8 * y4
-	MUL	R26, R20, R13
-	UMULH	R26, R20, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x7 * y5
-	MUL	R23, R21, R13
-	UMULH	R23, R21, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x6 * y6
-	MUL	R22, R24, R13
-	UMULH	R22, R24, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x5 * y7
-	MUL	R12, R25, R13
-	UMULH	R12, R25, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x4 * y8
-	MUL	R11, R29, R13
-	UMULH	R11, R29, R14
-
-	// Load y9, unload x9
-	MOVD	72(R1), R5
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x3 * y9
-	MUL	R8, R5, R13
-	UMULH	R8, R5, R14
-
-	// Load y10, y11; unload x10, x11
-	LDP	80(R1), (R27, R4)
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// Load x0, x1; unload y0, y1
-	LDP	0(R0), (R3, R6)
-
-	// x2 * y10
-	MUL	R7, R27, R13
-	UMULH	R7, R27, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x1 * y11
-	MUL	R6, R4, R13
-	UMULH	R6, R4, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-	// z12 is now in R19
-
-	// x2 * y11
-	MUL	R7, R4, R13
-	UMULH	R7, R4, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, ZR, R15
-
-	// x3 * y10
-	MUL	R8, R27, R13
-	UMULH	R8, R27, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x4 * y9
-	MUL	R11, R5, R13
-	UMULH	R11, R5, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x5 * y8
-	MUL	R12, R29, R13
-	UMULH	R12, R29, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x6 * y7
-	MUL	R22, R25, R13
-	UMULH	R22, R25, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x7 * y6
-	MUL	R23, R24, R13
-	UMULH	R23, R24, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x8 * y5
-	MUL	R26, R21, R13
-	UMULH	R26, R21, R14
-
-	// Load x9, unload y9
-	MOVD	72(R0), R5
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x9 * y4
-	MUL	R5, R20, R13
-	UMULH	R5, R20, R14
-
-	// Load x10, x11; unload x0, x1
-	LDP	80(R0), (R3, R6)
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x10 * y3
-	MUL	R3, R10, R13
-	UMULH	R3, R10, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x11 * y2
-	MUL	R6, R9, R13
-	UMULH	R6, R9, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// Store z12, z13
-	STP	(R19, R17), 96(R2)
-
-	// x11 * y3
-	MUL	R6, R10, R13
-	UMULH	R6, R10, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, ZR, R19
-
-	// x10 * y4
-	MUL	R3, R20, R13
-	UMULH	R3, R20, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x9 * y5
-	MUL	R5, R21, R13
-	UMULH	R5, R21, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x8 * y6
-	MUL	R26, R24, R13
-	UMULH	R26, R24, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x7 * y7
-	MUL	R23, R25, R13
-	UMULH	R23, R25, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x6 * y8
-	MUL	R22, R29, R13
-	UMULH	R22, R29, R14
-
-	// Load y9, unload x2
-	MOVD	72(R1), R7
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x5 * y9
-	MUL	R12, R7, R13
-	UMULH	R12, R7, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x4 * y10
-	MUL	R11, R27, R13
-	UMULH	R11, R27, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x3 * y11
-	MUL	R8, R4, R13
-	UMULH	R8, R4, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-	// z14 is now in R16
-
-	// x4 * y11
-	MUL	R11, R4, R13
-	UMULH	R11, R4, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, ZR, R17
-
-	// x5 * y10
-	MUL	R12, R27, R13
-	UMULH	R12, R27, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x6 * y9
-	MUL	R22, R7, R13
-	UMULH	R22, R7, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x7 * y8
-	MUL	R23, R29, R13
-	UMULH	R23, R29, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x8 * y7
-	MUL	R26, R25, R13
-	UMULH	R26, R25, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x9 * y6
-	MUL	R5, R24, R13
-	UMULH	R5, R24, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x10 * y5
-	MUL	R3, R21, R13
-	UMULH	R3, R21, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x11 * y4
-	MUL	R6, R20, R13
-	UMULH	R6, R20, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-	// z15 is now in R15
-
-	// Store z14, z15
-	STP	(R16, R15), 112(R2)
-
-	// x11 * y5
-	MUL	R6, R21, R13
-	UMULH	R6, R21, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, ZR, R16
-
-	// x10 * y6
-	MUL	R3, R24, R13
-	UMULH	R3, R24, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x9 * y7
-	MUL	R5, R25, R13
-	UMULH	R5, R25, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x8 * y8
-	MUL	R26, R29, R13
-	UMULH	R26, R29, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x7 * y9
-	MUL	R23, R7, R13
-	UMULH	R23, R7, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x6 * y10
-	MUL	R22, R27, R13
-	UMULH	R22, R27, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x5 * y11
-	MUL	R12, R4, R13
-	UMULH	R12, R4, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-	// z16 is now in R19
-
-	// x6 * y11
-	MUL	R22, R4, R13
-	UMULH	R22, R4, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, ZR, R15
-
-	// x7 * y10
-	MUL	R23, R27, R13
-	UMULH	R23, R27, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x8 * y9
-	MUL	R26, R7, R13
-	UMULH	R26, R7, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x9 * y8
-	MUL	R5, R29, R13
-	UMULH	R5, R29, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x10 * y7
-	MUL	R3, R25, R13
-	UMULH	R3, R25, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// x11 * y6
-	MUL	R6, R24, R13
-	UMULH	R6, R24, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// Store z16, z17
-	STP	(R19, R17), 128(R2)
-
-	// x11 * y7
-	MUL	R6, R25, R13
-	UMULH	R6, R25, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, ZR, R19
-
-	// x10 * y8
-	MUL	R3, R29, R13
-	UMULH	R3, R29, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x9 * y9
-	MUL	R5, R7, R13
-	UMULH	R5, R7, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x8 * y10
-	MUL	R26, R27, R13
-	UMULH	R26, R27, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-
-	// x7 * y11
-	MUL	R23, R4, R13
-	UMULH	R23, R4, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-	ADCS	ZR, R19, R19
-	// z18 is now in R16
-
-	// x8 * y11
-	MUL	R26, R4, R13
-	UMULH	R26, R4, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, ZR, R17
-
-	// x9 * y10
-	MUL	R5, R27, R13
-	UMULH	R5, R27, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x10 * y9
-	MUL	R3, R7, R13
-	UMULH	R3, R7, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// x11 * y8
-	MUL	R6, R29, R13
-	UMULH	R6, R29, R14
-
-	ADDS	R13, R15, R15
-	ADCS	R14, R19, R19
-	ADCS	ZR, R17, R17
-
-	// Store z18, z19
-	STP	(R16, R15), 144(R2)
-
-	// x11 * y9
-	MUL	R6, R7, R13
-	UMULH	R6, R7, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, ZR, R16
-
-	// x10 * y10
-	MUL	R3, R27, R13
-	UMULH	R3, R27, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-
-	// x9 * y11
-	MUL	R5, R4, R13
-	UMULH	R5, R4, R14
-
-	ADDS	R13, R19, R19
-	ADCS	R14, R17, R17
-	ADCS	ZR, R16, R16
-	// z20 is now in R19
-
-	// x10 * y11
-	MUL	R3, R4, R13
-	UMULH	R3, R4, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, ZR, R15
-
-	// x11 * y10
-	MUL	R6, R27, R13
-	UMULH	R6, R27, R14
-
-	ADDS	R13, R17, R17
-	ADCS	R14, R16, R16
-	ADCS	ZR, R15, R15
-
-	// Store z20, z21
-	STP	(R19, R17), 160(R2)
-
-	// x11 * y11
-	MUL	R6, R4, R13
-	UMULH	R6, R4, R14
-
-	ADDS	R13, R16, R16
-	ADCS	R14, R15, R15
-
-	// Store z22, z23
-	STP	(R16, R15), 176(R2)
+	LDP	48(R0), (R9, R10)
+	ADDS	R9, R3
+	ADCS	R10, R4
+	LDP	16(R0), (R5, R6)
+	LDP	64(R0), (R11, R12)
+	ADCS	R11, R5
+	ADCS	R12, R6
+	LDP	32(R0), (R7, R8)
+	LDP	80(R0), (R13, R14)
+	ADCS	R13, R7
+	ADCS	R14, R8
+	ADC	ZR, ZR, R22
+
+	// Load yL in R9-R14, yH in R15-21
+	// (yH + yL) in R9-R14, destroys yH
+	LDP	0(R1), (R9, R10)
+	LDP	48(R1), (R15, R16)
+	ADDS	R15, R9
+	ADCS	R16, R10
+	LDP	16(R1), (R11, R12)
+	LDP	64(R1), (R17, R19)
+	ADCS	R17, R11
+	ADCS	R19, R12
+	LDP	32(R1), (R13, R14)
+	LDP	80(R1), (R20, R21)
+	ADCS	R20, R13
+	ADCS	R21, R14
+	ADC	ZR, ZR, R23
+
+	// Compute masks and combined carry
+	SUB	R22, ZR, R24
+	SUB	R23, ZR, R25
+	AND	R23, R22
+
+	// Store xH, yH in z so mul384x384karatsuba can retrieve them from memory
+	// It doesn't have enough registers
+	// Meanwhile computed masked(xH + xL) in R15-R21
+	STP	(R6, R7), 0(R2)
+	AND	R25, R3, R15
+	AND	R25, R4, R16
+	STP	(R8, R12), 16(R2)
+	AND	R25, R5, R17
+	AND	R25, R6, R19
+	STP	(R13, R14), 32(R2)
+	AND	R25, R7, R20
+	AND	R25, R8, R21
+
+	// Masked(xH + xL) + masked(yH + yL) in R15-R21
+	// Store intermediate values in z
+	AND	R24, R9, R25
+	AND	R24, R10, R26
+	ADDS	R25, R15
+	ADCS	R26, R16
+	STP	(R15, R16), 96(R2)
+	AND	R24, R11, R25
+	AND	R24, R12, R26
+	ADCS	R25, R17
+	ADCS	R26, R19
+	STP	(R17, R19), 112(R2)
+	AND	R24, R13, R25
+	AND	R24, R14, R26
+	ADCS	R25, R20
+	ADCS	R26, R21
+	STP	(R20, R21), 128(R2)
+	// Store carry in R29 so it can remain there
+	ADC	ZR, R22, R29
+
+	// (xH + xL) * (yH + yL)
+	mul384x384karatsuba(0(R2), 24(R2), 48(R2), R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R19, R20, R21, R22, R23, R24, R25, R26)
+
+	// Load masked(xH + xL) + masked(yH + yL) and add that to its top half
+	// Store the result back in z
+	STP	(R15, R16), 72(R2)
+	LDP	96(R2), (R3, R4)
+	ADDS	R3, R19
+	STP	(R17, R19), 88(R2)
+	ADCS	R4, R20
+	LDP	112(R2), (R5, R6)
+	ADCS	R5, R21
+	STP	(R20, R21), 104(R2)
+	ADCS	R6, R22
+	LDP	128(R2), (R7, R8)
+	ADCS	R7, R23
+	STP	(R22, R23), 120(R2)
+	ADCS	R8, R24
+	MOVD	R24, 136(R2)
+	ADC	ZR, R29
+
+	// Load xL, yL
+	LDP	0(R0), (R3, R4)
+	LDP	16(R0), (R5, R6)
+	LDP	32(R0), (R7, R8)
+	LDP	0(R1), (R9, R10)
+	LDP	16(R1), (R11, R12)
+	LDP	32(R1), (R13, R14)
+
+	// xL * yL
+	mul384x384karatsuba(24(R0), 24(R1), 0(R2), R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R19, R20, R21, R22, R23, R24, R25, R26)
+
+	// (xH + xL) * (yH + yL) - xL * yL in R3-R14
+	LDP	0(R2), (R12, R13)
+	LDP	48(R2), (R3, R4)
+	SUBS	R12, R3
+	LDP	64(R2), (R5, R6)
+	MOVD	16(R2), R14
+	SBCS	R13, R4
+	SBCS	R14, R5
+	LDP	80(R2), (R7, R8)
+	SBCS	R15, R6
+	SBCS	R16, R7
+	LDP	96(R2), (R9, R10)
+	SBCS	R17, R8
+	SBCS	R19, R9
+	LDP	112(R2), (R11, R12)
+	SBCS	R20, R10
+	SBCS	R21, R11
+	LDP	128(R2), (R13, R14)
+	SBCS	R22, R12
+	SBCS	R23, R13
+	SBCS	R24, R14
+	SBC	ZR, R29
+
+	STP	(R15, R16), 24(R2)
+	MOVD	R17, 40(R2)
+
+	// ((xH + xL) * (yH + yL) - xL * yL) * 2^384 + xL * yL and store back in z
+	ADDS	R19, R3
+	ADCS	R20, R4
+	STP	(R3, R4), 48(R2)
+	ADCS	R21, R5
+	ADCS	R22, R6
+	STP	(R5, R6), 64(R2)
+	ADCS	R23, R7
+	ADCS	R24, R8
+	STP	(R7, R8), 80(R2)
+	ADCS	ZR, R9
+	ADCS	ZR, R10
+	STP	(R9, R10), 96(R2)
+	ADCS	ZR, R11
+	ADCS	ZR, R12
+	STP	(R11, R12), 112(R2)
+	ADCS	ZR, R13
+	ADCS	ZR, R14
+	STP	(R13, R14), 128(R2)
+	ADC	ZR, R29
+
+	// Load xH, yH
+	LDP	48(R0), (R3, R4)
+	LDP	64(R0), (R5, R6)
+	LDP	80(R0), (R7, R8)
+	LDP	48(R1), (R9, R10)
+	LDP	64(R1), (R11, R12)
+	LDP	80(R1), (R13, R14)
+
+	// xH * yH
+	mul384x384karatsuba(72(R0), 72(R1), 144(R2), R3, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13, R14, R15, R16, R17, R19, R20, R21, R22, R23, R24, R25, R26)
+
+	LDP	144(R2), (R12, R13)
+	MOVD	160(R2), R14
+
+	// (xH + xL) * (yH + yL) - xL * yL - xH * yH in R3-R14
+	// Store lower half in z, that's done
+	LDP	48(R2), (R3, R4)
+	SUBS	R12, R3
+	LDP	64(R2), (R5, R6)
+	SBCS	R13, R4
+	SBCS	R14, R5
+	LDP	80(R2), (R7, R8)
+	SBCS	R15, R6
+	SBCS	R16, R7
+	LDP	96(R2), (R9, R10)
+	SBCS	R17, R8
+	SBCS	R19, R9
+	LDP	112(R2), (R11, R12)
+	SBCS	R20, R10
+	SBCS	R21, R11
+	LDP	128(R2), (R13, R14)
+	SBCS	R22, R12
+	SBCS	R23, R13
+	STP	(R3, R4), 48(R2)
+	SBCS	R24, R14
+	STP	(R5, R6), 64(R2)
+	SBC	ZR, R29
+	STP	(R7, R8), 80(R2)
+
+	// (xH * yH) * 2^768 + ((xH + xL) * (yH + yL) - xL * yL - xH * yH) * 2^384 + xL * yL
+	// Store remaining limbs in z
+	LDP	144(R2), (R3, R4)
+	MOVD	160(R2), R5
+
+	ADDS	R3, R9
+	ADCS	R4, R10
+	STP	(R9, R10), 96(R2)
+	ADCS	R5, R11
+	ADCS	R15, R12
+	STP	(R11, R12), 112(R2)
+	ADCS	R16, R13
+	ADCS	R17, R14
+	STP	(R13, R14), 128(R2)
+
+	ADCS	R29, R19
+	ADCS	ZR, R20
+	STP	(R19, R20), 144(R2)
+	ADCS	ZR, R21
+	ADCS	ZR, R22
+	STP	(R21, R22), 160(R2)
+	ADCS	ZR, R23
+	ADC	ZR, R24
+	STP	(R23, R24), 176(R2)
 
 	RET
 
@@ -1766,7 +878,7 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADC	ZR, R25
 
 	MUL	R4, R14, R22
-	LDP	·p751p1+72(SB), (R18, R19)
+	LDP	·p751p1+72(SB), (R29, R19)
 	UMULH	R4, R14, R23
 	ADDS	R22, R26
 	ADCS	R23, R24
@@ -1808,9 +920,9 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADC	ZR, R26
 
 	// x9 iteration
-	MUL	R2, R18, R22
+	MUL	R2, R29, R22
 	MOVD	72(R1), R21
-	UMULH	R2, R18, R23
+	UMULH	R2, R29, R23
 	ADDS	R22, R25
 	ADCS	R23, R26
 	ADC	ZR, ZR, R24
@@ -1851,8 +963,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R24
 	ADC	ZR, ZR, R25
 
-	MUL	R3, R18, R22
-	UMULH	R3, R18, R23
+	MUL	R3, R29, R22
+	UMULH	R3, R29, R23
 	ADDS	R22, R26
 	ADCS	R23, R24
 	ADC	ZR, R25
@@ -1899,8 +1011,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R25
 	ADC	ZR, R26
 
-	MUL	R4, R18, R22
-	UMULH	R4, R18, R23
+	MUL	R4, R29, R22
+	UMULH	R4, R29, R23
 	ADDS	R22, R24
 	ADCS	R23, R25
 	ADC	ZR, R26
@@ -1947,8 +1059,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R26
 	ADC	ZR, R24
 
-	MUL	R5, R18, R22
-	UMULH	R5, R18, R23
+	MUL	R5, R29, R22
+	UMULH	R5, R29, R23
 	ADDS	R22, R25
 	ADCS	R23, R26
 	ADC	ZR, R24
@@ -1995,8 +1107,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R24
 	ADC	ZR, R25
 
-	MUL	R6, R18, R22
-	UMULH	R6, R18, R23
+	MUL	R6, R29, R22
+	UMULH	R6, R29, R23
 	ADDS	R22, R26
 	ADCS	R23, R24
 	ADC	ZR, R25
@@ -2044,8 +1156,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R25
 	ADC	ZR, R26
 
-	MUL	R7, R18, R22
-	UMULH	R7, R18, R23
+	MUL	R7, R29, R22
+	UMULH	R7, R29, R23
 	ADDS	R22, R24
 	ADCS	R23, R25
 	ADC	ZR, R26
@@ -2092,8 +1204,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R26
 	ADC	ZR, R24
 
-	MUL	R8, R18, R22
-	UMULH	R8, R18, R23
+	MUL	R8, R29, R22
+	UMULH	R8, R29, R23
 	ADDS	R22, R25
 	ADCS	R23, R26
 	ADC	ZR, R24
@@ -2141,8 +1253,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R24
 	ADC	ZR, R25
 
-	MUL	R9, R18, R22
-	UMULH	R9, R18, R23
+	MUL	R9, R29, R22
+	UMULH	R9, R29, R23
 	ADDS	R22, R26
 	ADCS	R23, R24
 	ADC	ZR, R25
@@ -2189,8 +1301,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R25
 	ADC	ZR, R26
 
-	MUL	R10, R18, R22
-	UMULH	R10, R18, R23
+	MUL	R10, R29, R22
+	UMULH	R10, R29, R23
 	ADDS	R22, R24
 	ADCS	R23, R25
 	ADC	ZR, R26
@@ -2232,8 +1344,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R26
 	ADC	ZR, R24
 
-	MUL	R11, R18, R22
-	UMULH	R11, R18, R23
+	MUL	R11, R29, R22
+	UMULH	R11, R29, R23
 	ADDS	R22, R25
 	ADCS	R23, R26
 	ADC	ZR, R24
@@ -2268,8 +1380,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R24
 	ADC	ZR, R25
 
-	MUL	R12, R18, R22
-	UMULH	R12, R18, R23
+	MUL	R12, R29, R22
+	UMULH	R12, R29, R23
 	ADDS	R22, R26
 	ADCS	R23, R24
 	ADC	ZR, R25
@@ -2299,8 +1411,8 @@ TEXT ·fp751MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R23, R25
 	ADC	ZR, R26
 
-	MUL	R13, R18, R22
-	UMULH	R13, R18, R23
+	MUL	R13, R29, R22
+	UMULH	R13, R29, R23
 	ADDS	R22, R24
 	ADCS	R23, R25
 	ADC	ZR, R26
