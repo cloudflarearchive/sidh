@@ -8,6 +8,7 @@ matrix:
   fast_finish: true
 
 script:
+  - make test
   - make bench
   - make cover
   - NOASM=1 make cover-sidh
