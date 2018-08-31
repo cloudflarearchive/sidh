@@ -253,25 +253,6 @@ func TestExtensionFieldElementBatch3Inv(t *testing.T) {
 //------------------------------------------------------------------------------
 // Prime Field
 //------------------------------------------------------------------------------
-func TestPrimeFieldElementInv(t *testing.T) {
-	inverseIsCorrect := func(x PrimeFieldElement) bool {
-		z := new(PrimeFieldElement)
-		z.Inv(&x)
-
-		// Now z = (1/x), so (z * x) * x == x
-		z.Mul(z, &x).Mul(z, &x)
-
-		return VartimeEq(z, &x)
-	}
-
-	// This is more expensive; run fewer tests
-	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
-	if err := quick.Check(inverseIsCorrect, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-
 func TestPrimeFieldElementMulVersusBigInt(t *testing.T) {
 	mulMatchesBigInt := func(x, y PrimeFieldElement) bool {
 		z := new(PrimeFieldElement)
@@ -367,15 +348,6 @@ func BenchmarkPrimeFieldElementMul(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		w.Mul(z, z)
-	}
-}
-
-func BenchmarkPrimeFieldElementInv(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Inv(z)
 	}
 }
 
