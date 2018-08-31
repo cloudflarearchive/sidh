@@ -132,18 +132,21 @@ func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) *ExtensionField
 	fp751MontgomeryReduce(&asq_plus_bsq.A, &asq) // = (a^2 + b^2)*R mod p
 	// Now asq_plus_bsq = a^2 + b^2
 
-	var asq_plus_bsq_inv PrimeFieldElement
-	asq_plus_bsq_inv.Inv(&asq_plus_bsq)
-	c := &asq_plus_bsq_inv.A
+	// Invert asq_plus_bsq
+	inv := asq_plus_bsq
+	inv.Mul(&asq_plus_bsq, &asq_plus_bsq)
+	inv.P34(&inv)
+	inv.Mul(&inv, &inv)
+	inv.Mul(&inv, &asq_plus_bsq)
 
 	var ac fp751X2
-	fp751Mul(&ac, a, c)
+	fp751Mul(&ac, a, &inv.A)
 	fp751MontgomeryReduce(&dest.A, &ac)
 
 	var minus_b Fp751Element
 	fp751SubReduced(&minus_b, &minus_b, b)
 	var minus_bc fp751X2
-	fp751Mul(&minus_bc, &minus_b, c)
+	fp751Mul(&minus_bc, &minus_b, &inv.A)
 	fp751MontgomeryReduce(&dest.B, &minus_bc)
 
 	return dest
@@ -293,21 +296,6 @@ func (dest *PrimeFieldElement) Pow2k(x *PrimeFieldElement, k uint8) *PrimeFieldE
 	for i := uint8(1); i < k; i++ {
 		dest.Mul(dest, dest)
 	}
-
-	return dest
-}
-
-// Set dest = 1/x.
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Inv(x *PrimeFieldElement) *PrimeFieldElement {
-	tmp_x := *x            // Copy x in case dest == x
-	dest.Mul(x, x)         // dest = x^2
-	dest.P34(dest)         // dest = (x^2)^((p-3)/4) = x^((p-3)/2)
-	dest.Mul(dest, dest)   // dest = x^(p-3)
-	dest.Mul(dest, &tmp_x) // dest = x^(p-2)
 
 	return dest
 }
