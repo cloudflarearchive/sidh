@@ -379,15 +379,6 @@ func BenchmarkPrimeFieldElementInv(b *testing.B) {
 	}
 }
 
-func BenchmarkPrimeFieldElementSquare(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Square(z)
-	}
-}
-
 // --- field operation functions
 
 func BenchmarkFp751Multiply(b *testing.B) {
