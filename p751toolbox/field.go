@@ -289,26 +289,10 @@ func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) *PrimeFieldEleme
 //
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) Pow2k(x *PrimeFieldElement, k uint8) *PrimeFieldElement {
-	dest.Square(x)
+	dest.Mul(x, x)
 	for i := uint8(1); i < k; i++ {
-		dest.Square(dest)
+		dest.Mul(dest, dest)
 	}
-
-	return dest
-}
-
-// Set dest = x^2
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Square(x *PrimeFieldElement) *PrimeFieldElement {
-	a := &x.A // = a*R
-	b := &x.A // = b*R
-
-	var ab fp751X2
-	fp751Mul(&ab, a, b)                 // = a*b*R*R
-	fp751MontgomeryReduce(&dest.A, &ab) // = a*b*R mod p
 
 	return dest
 }
@@ -320,9 +304,9 @@ func (dest *PrimeFieldElement) Square(x *PrimeFieldElement) *PrimeFieldElement {
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) Inv(x *PrimeFieldElement) *PrimeFieldElement {
 	tmp_x := *x            // Copy x in case dest == x
-	dest.Square(x)         // dest = x^2
+	dest.Mul(x, x)         // dest = x^2
 	dest.P34(dest)         // dest = (x^2)^((p-3)/4) = x^((p-3)/2)
-	dest.Square(dest)      // dest = x^(p-3)
+	dest.Mul(dest, dest)   // dest = x^(p-3)
 	dest.Mul(dest, &tmp_x) // dest = x^(p-2)
 
 	return dest
@@ -350,7 +334,7 @@ func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) *PrimeFieldElement {
 	// Build a lookup table of odd multiples of x.
 	lookup := [16]PrimeFieldElement{}
 	xx := &PrimeFieldElement{}
-	xx.Square(x) // Set xx = x^2
+	xx.Mul(x, x) // Set xx = x^2
 	lookup[0] = *x
 	for i := 1; i < 16; i++ {
 		lookup[i].Mul(&lookup[i-1], xx)
