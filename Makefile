@@ -38,6 +38,9 @@ copy-target-%:
 
 prep_targets: build_env $(addprefix copy-target-, $(TARGETS))
 
+install-%: prep_targets
+	GOPATH=$(GOPATH_LOCAL) go install $(OPTS) $(GOPATH_DIR)/$*
+
 test-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) go test $(OPTS) $(GOPATH_DIR)/$*
 
@@ -50,6 +53,7 @@ cover-%: prep_targets
 	cat coverage_$*.txt >> coverage.txt
 	rm coverage_$*.txt
 
-test: $(addprefix test-, $(TARGETS))
-bench: $(addprefix bench-, $(TARGETS))
-cover: $(addprefix cover-, $(TARGETS))
+bench:   $(addprefix bench-,   $(TARGETS))
+cover:   $(addprefix cover-,   $(TARGETS))
+install: $(addprefix install-, $(TARGETS))
+test:    $(addprefix test-,    $(TARGETS))
