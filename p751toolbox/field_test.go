@@ -39,9 +39,9 @@ func VartimeEq(x,y *PrimeFieldElement) bool {
 	return x.A.vartimeEq(y.A)
 }
 
-func (x *PrimeFieldElement) toBigInt() *big.Int {
+func (x *Fp751Element) toBigInt() *big.Int {
 	// Convert from Montgomery form
-	return x.A.toBigIntFromMontgomeryForm()
+	return x.toBigIntFromMontgomeryForm()
 }
 
 func (x *Fp751Element) toBigIntFromMontgomeryForm() *big.Int {
@@ -68,8 +68,8 @@ func TestPrimeFieldElementToBigInt(t *testing.T) {
 	// sage: assert(xR < 2*p)
 	// sage: (xR / R) % p
 	xBig, _ := new(big.Int).SetString("4469946751055876387821312289373600189787971305258234719850789711074696941114031433609871105823930699680637820852699269802003300352597419024286385747737509380032982821081644521634652750355306547718505685107272222083450567982240", 10)
-	if xBig.Cmp(x.toBigInt()) != 0 {
-		t.Error("Expected", xBig, "found", x.toBigInt())
+	if xBig.Cmp(x.A.toBigInt()) != 0 {
+		t.Error("Expected", xBig, "found", x.A.toBigInt())
 	}
 }
 
@@ -125,7 +125,6 @@ func TestOneExtensionFieldToBytes(t *testing.T) {
 
 	x.One()
 	x.ToBytes(xBytes[:])
-
 	if xBytes[0] != 1 {
 		t.Error("Expected 1, got", xBytes[0])
 	}
@@ -259,10 +258,10 @@ func TestPrimeFieldElementMulVersusBigInt(t *testing.T) {
 		z.Mul(&x, &y)
 
 		check := new(big.Int)
-		check.Mul(x.toBigInt(), y.toBigInt())
+		check.Mul(x.A.toBigInt(), y.A.toBigInt())
 		check.Mod(check, cln16prime)
 
-		return check.Cmp(z.toBigInt()) == 0
+		return check.Cmp(z.A.toBigInt()) == 0
 	}
 
 	if err := quick.Check(mulMatchesBigInt, quickCheckConfig); err != nil {
@@ -276,10 +275,10 @@ func TestPrimeFieldElementP34VersusBigInt(t *testing.T) {
 		z := new(PrimeFieldElement)
 		z.P34(&x)
 
-		check := x.toBigInt()
+		check := x.A.toBigInt()
 		check.Exp(check, p34, cln16prime)
 
-		return check.Cmp(z.toBigInt()) == 0
+		return check.Cmp(z.A.toBigInt()) == 0
 	}
 
 	// This is more expensive; run fewer tests
