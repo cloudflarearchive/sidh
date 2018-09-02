@@ -236,8 +236,20 @@ func (x *ExtensionFieldElement) ToBytes(output []byte) {
 	if len(output) < 188 {
 		panic("output byte slice too short, need 188 bytes")
 	}
-	x.A.toBytesFromMontgomeryForm(output[0:94])
-	x.B.toBytesFromMontgomeryForm(output[94:188])
+
+	var a,b Fp751Element
+	FromMontgomery(x, &a, &b)
+
+	// convert to bytes in little endian form. 8*12 = 96, but we drop the last two bytes
+	//  since p is 751 < 752=94*8 bits.
+	for i := 0; i < 94; i++ {
+		// set i = j*8 + k
+		j := i / 8
+		k := uint64(i % 8)
+
+		output[i] = byte(a[j] >> (8 * k))
+		output[i+94] = byte(b[j] >> (8 * k))
+	}
 }
 
 // Read 188 bytes into the given ExtensionFieldElement.
@@ -247,8 +259,49 @@ func (x *ExtensionFieldElement) FromBytes(input []byte) {
 	if len(input) < 188 {
 		panic("input byte slice too short, need 188 bytes")
 	}
-	x.A.montgomeryFormFromBytes(input[:94])
-	x.B.montgomeryFormFromBytes(input[94:188])
+
+	for i:=0; i<94; i++ {
+		j := i / 8
+		k := uint64(i % 8)
+		x.A[j] |= uint64(input[i]) << (8 * k)
+		x.B[j] |= uint64(input[i+94]) << (8 * k)
+	}
+
+	ToMontgomery(x)
+}
+
+// Converts values in x.A and x.B to Montgomery domain
+// x.A = x.A * R mod p
+// x.B = x.B * R mod p
+func ToMontgomery(x *ExtensionFieldElement) {
+	var aRR fp751X2
+
+	// convert to montgomery domain
+	fp751Mul(&aRR, &x.A, &montgomeryRsq)   // = a*R*R
+	fp751MontgomeryReduce(&x.A, &aRR)      // = a*R mod p
+	fp751Mul(&aRR, &x.B, &montgomeryRsq)
+	fp751MontgomeryReduce(&x.B, &aRR)
+}
+
+// Converts values in x.A and x.B from Montgomery domain
+// a = x.A mod p
+// b = x.B mod p
+//
+// After returning from the call x is not modified.
+func FromMontgomery(x *ExtensionFieldElement, a,b *Fp751Element) {
+	var aR fp751X2
+
+	// convert from montgomery domain
+	copy(aR[:], x.A[:])
+	fp751MontgomeryReduce(a, &aR) 	 // = a mod p in [0, 2p)
+	fp751StrongReduce(a)          	 // = a mod p in [0, p)
+
+	for i:=range(aR) {
+		aR[i] = 0
+	}
+	copy(aR[:], x.B[:])
+	fp751MontgomeryReduce(b, &aR)
+	fp751StrongReduce(b)
 }
 
 //------------------------------------------------------------------------------
@@ -371,50 +424,4 @@ func (x Fp751Element) vartimeEq(y Fp751Element) bool {
 	}
 
 	return eq
-}
-
-// Read an Fp751Element from little-endian bytes and convert to Montgomery form.
-//
-// The input byte slice must be at least 94 bytes long.
-func (x *Fp751Element) montgomeryFormFromBytes(input []byte) {
-	if len(input) < 94 {
-		panic("input byte slice too short")
-	}
-
-	var a Fp751Element
-	for i := 0; i < 94; i++ {
-		// set i = j*8 + k
-		j := i / 8
-		k := uint64(i % 8)
-		a[j] |= uint64(input[i]) << (8 * k)
-	}
-
-	var aRR fp751X2
-	fp751Mul(&aRR, &a, &montgomeryRsq) // = a*R*R
-	fp751MontgomeryReduce(x, &aRR)     // = a*R mod p
-}
-
-// Given an Fp751Element in Montgomery form, convert to little-endian bytes.
-//
-// The output byte slice must be at least 94 bytes long.
-func (x *Fp751Element) toBytesFromMontgomeryForm(output []byte) {
-	if len(output) < 94 {
-		panic("output byte slice too short")
-	}
-
-	var a Fp751Element
-	var aR fp751X2
-	copy(aR[:], x[:])              // = a*R
-	fp751MontgomeryReduce(&a, &aR) // = a mod p in [0, 2p)
-	fp751StrongReduce(&a)          // = a mod p in [0, p)
-
-	// 8*12 = 96, but we drop the last two bytes since p is 751 < 752=94*8 bits.
-	for i := 0; i < 94; i++ {
-		// set i = j*8 + k
-		j := i / 8
-		k := uint64(i % 8)
-		// Need parens because Go's operator precedence would interpret
-		// a[j] >> 8*k as (a[j] >> 8) * k
-		output[i] = byte(a[j] >> (8 * k))
-	}
 }
