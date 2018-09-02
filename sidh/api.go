@@ -164,19 +164,14 @@ func (prv *PrivateKey) Generate(rand io.Reader) error {
 	return err
 }
 
-// Generates public key corresponding to prv. KeyVariant of generated public key
-// is same as PrivateKey. Fails only if prv was wrongly initialized.
-// Constant time for properly initialzied PrivateKey
-func GeneratePublicKey(prv *PrivateKey) (*PublicKey, error) {
-	if prv == nil {
-		return nil, errors.New("sidh: invalid arguments")
-	}
-
+// Generates public key.
+//
+// Constant time.
+func (prv *PrivateKey) GeneratePublicKey() (*PublicKey) {
 	if (prv.keyVariant & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
-		return publicKeyGenA(prv), nil
-	} else {
-		return publicKeyGenB(prv), nil
+		return publicKeyGenA(prv)
 	}
+	return publicKeyGenB(prv)
 }
 
 // Computes a shared secret which is a j-invariant. Function requires that pub has

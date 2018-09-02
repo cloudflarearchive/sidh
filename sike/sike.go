@@ -71,7 +71,7 @@ func Encrypt(rng io.Reader, pub *PublicKey, ptext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	pkA, _ := GeneratePublicKey(skA) // Never fails
+	pkA := skA.GeneratePublicKey()
 	return encrypt(skA, pkA, pub, ptext)
 }
 
@@ -152,7 +152,7 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 		return nil, nil, err
 	}
 
-	pkA, _ := GeneratePublicKey(skA) // Never fails
+	pkA := skA.GeneratePublicKey()
 	ctext, err = encrypt(skA, pkA, pub, ptext)
 	if err != nil {
 		return nil, nil, err
@@ -197,7 +197,7 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 	skA.Import(r)
 
 	// Never fails
-	pkA, _ := GeneratePublicKey(skA)
+	pkA := skA.GeneratePublicKey()
 	c0 := pkA.Export()
 
 	h = cshake.NewCShake256(nil, H)

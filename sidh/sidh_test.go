@@ -93,10 +93,8 @@ func testKeygen(s *SidhParams, t *testing.T) {
 	expPubA := convToPub(PkA, KeyVariant_SIDH_A)
 	expPubB := convToPub(PkB, KeyVariant_SIDH_B)
 
-	pubA, err := GeneratePublicKey(alicePrivate)
-	checkErr(t, err, "public key A generation failed")
-	pubB, err := GeneratePublicKey(bobPrivate)
-	checkErr(t, err, "public key B generation failed")
+	pubA := alicePrivate.GeneratePublicKey()
+	pubB := bobPrivate.GeneratePublicKey()
 
 	if !bytes.Equal(pubA.Export(), expPubA.Export()) {
 		t.Fatalf("unexpected value of public key A")
@@ -119,11 +117,8 @@ func testRoundtrip(s *SidhParams, t *testing.T) {
 	checkErr(t, err, "key generation failed")
 
 	// Generate public keys
-	pubA, err := GeneratePublicKey(prvA)
-	checkErr(t, err, "")
-
-	pubB, err := GeneratePublicKey(prvB)
-	checkErr(t, err, "")
+	pubA := prvA.GeneratePublicKey()
+	pubB := prvB.GeneratePublicKey()
 
 	// Derive shared secret
 	s1, err := DeriveSecret(prvB, pubA)
@@ -317,7 +312,7 @@ func BenchmarkAliceKeyGenPub(b *testing.B) {
 	prv := NewPrivateKey(params.Id, KeyVariant_SIDH_A)
 	prv.Generate(rand.Reader)
 	for n := 0; n < b.N; n++ {
-		GeneratePublicKey(prv)
+		prv.GeneratePublicKey()
 	}
 }
 
@@ -325,7 +320,7 @@ func BenchmarkBobKeyGenPub(b *testing.B) {
 	prv := NewPrivateKey(params.Id, KeyVariant_SIDH_B)
 	prv.Generate(rand.Reader)
 	for n := 0; n < b.N; n++ {
-		GeneratePublicKey(prv)
+		prv.GeneratePublicKey()
 	}
 }
 
