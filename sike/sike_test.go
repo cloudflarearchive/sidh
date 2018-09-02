@@ -77,7 +77,7 @@ func TestPKEKeyGeneration(t *testing.T) {
 	sk := NewPrivateKey(params.Id, KeyVariant_SIKE)
 	err = sk.Generate(rand.Reader)
 	checkErr(t, err, "PEK key generation")
-	pk, _ := GeneratePublicKey(sk)
+	pk := sk.GeneratePublicKey()
 
 	// Try to encrypt
 	ct, err := Encrypt(rand.Reader, pk, msg[:])
@@ -99,7 +99,7 @@ func TestNegativePKE(t *testing.T) {
 	err = sk.Generate(rand.Reader)
 	checkErr(t, err, "key generation")
 
-	pk, _ := GeneratePublicKey(sk)
+	pk := sk.GeneratePublicKey()
 
 	ct, err := Encrypt(rand.Reader, pk, msg[:39])
 	if err == nil {
@@ -152,7 +152,7 @@ func TestKEMKeyGeneration(t *testing.T) {
 	// Generate key
 	sk := NewPrivateKey(params.Id, KeyVariant_SIKE)
 	checkErr(t, sk.Generate(rand.Reader), "error: key generation")
-	pk, _ := GeneratePublicKey(sk)
+	pk := sk.GeneratePublicKey()
 
 	// calculated shared secret
 	ct, ss_e, err := Encapsulate(rand.Reader, pk)
@@ -168,7 +168,7 @@ func TestKEMKeyGeneration(t *testing.T) {
 func TestNegativeKEM(t *testing.T) {
 	sk := NewPrivateKey(params.Id, KeyVariant_SIKE)
 	checkErr(t, sk.Generate(rand.Reader), "error: key generation")
-	pk, _ := GeneratePublicKey(sk)
+	pk := sk.GeneratePublicKey()
 
 	ct, ss_e, err := Encapsulate(rand.Reader, pk)
 	checkErr(t, err, "pre-requisite for a test failed")
@@ -201,7 +201,7 @@ func TestNegativeKEM(t *testing.T) {
 func TestNegativeKEMSameWrongResult(t *testing.T) {
 	sk := NewPrivateKey(params.Id, KeyVariant_SIKE)
 	checkErr(t, sk.Generate(rand.Reader), "error: key generation")
-	pk, _ := GeneratePublicKey(sk)
+	pk := sk.GeneratePublicKey()
 
 	ct, encSs, err := Encapsulate(rand.Reader, pk)
 	checkErr(t, err, "pre-requisite for a test failed")
@@ -261,7 +261,7 @@ func testKeygen(pk, sk []byte) bool {
 	}
 
 	// Generate public key
-	pubKey, _ := GeneratePublicKey(prvKey)
+	pubKey := prvKey.GeneratePublicKey()
 	return bytes.Equal(pubKey.Export(), pk)
 }
 
