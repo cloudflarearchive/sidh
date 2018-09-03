@@ -5,6 +5,8 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"testing"
+
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
 const (
