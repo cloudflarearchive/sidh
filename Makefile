@@ -4,7 +4,7 @@ PRJ_DIR      = $(abspath $(dir $(MK_FILE_PATH)))
 GOPATH_LOCAL = $(PRJ_DIR)/build
 GOPATH_DIR   = github.com/cloudflare/p751sidh
 CSHAKE_PKG   ?= github.com/henrydcase/nobs/hash/sha3
-TARGETS      = p751toolbox sidh sike
+TARGETS      = p751 sidh sike
 GO           ?= go
 GOARCH       ?=
 OPTS_GCCGO   ?= -compiler gccgo -O2 -g
@@ -25,6 +25,7 @@ ifeq ($(V),1)
 	BENCH_OPTS += -gcflags=-m     # Show results from inlining
 endif
 
+all: test
 clean:
 	rm -rf $(GOPATH_LOCAL)
 	rm -rf coverage*.txt
@@ -32,6 +33,7 @@ clean:
 build_env:
 	GOPATH=$(GOPATH_LOCAL) $(GO) get $(CSHAKE_PKG)
 	mkdir -p $(GOPATH_LOCAL)/src/$(GOPATH_DIR)
+	cp -rf internal $(GOPATH_LOCAL)/src/$(GOPATH_DIR)
 	cp -rf etc $(GOPATH_LOCAL)/src/$(GOPATH_DIR)
 
 copy-target-%:
@@ -46,7 +48,7 @@ test-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
 
 bench-%: prep_targets
-	cd $*; GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(BENCH_OPTS)
+	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$* $(BENCH_OPTS)
 
 cover-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) $(GO) test \

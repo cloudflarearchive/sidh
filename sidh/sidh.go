@@ -4,9 +4,7 @@ import (
 	"errors"
 	"io"
 
-	// TODO: This is needed by ExtensionFieldElement struct, which itself
-	// 		 depends on implementation of p751.
-	. "github.com/cloudflare/p751sidh/p751toolbox"
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
 // -----------------------------------------------------------------------------
@@ -19,9 +17,10 @@ func traverseTreePublicKeyA(curve *ProjectiveCurveParameters, xR, phiP, phiQ, ph
 	var points = make([]ProjectivePoint, 0, 8)
 	var indices = make([]int, 0, 8)
 	var i, sidx int
+	var op = CurveOperations{Params: pub.params}
 
-	cparam := curve.CalcCurveParamsEquiv4()
-	phi := NewIsogeny4()
+	cparam := op.CalcCurveParamsEquiv4(curve)
+	phi := Newisogeny4(op.Params.Op)
 	strat := pub.params.A.IsogenyStrategy
 	stratSz := len(strat)
 
@@ -32,7 +31,7 @@ func traverseTreePublicKeyA(curve *ProjectiveCurveParameters, xR, phiP, phiQ, ph
 
 			k := strat[sidx]
 			sidx++
-			xR.Pow2k(&cparam, xR, 2*k)
+			op.Pow2k(xR, &cparam, 2*k)
 			i += int(k)
 		}
 
@@ -57,9 +56,10 @@ func traverseTreeSharedKeyA(curve *ProjectiveCurveParameters, xR *ProjectivePoin
 	var points = make([]ProjectivePoint, 0, 8)
 	var indices = make([]int, 0, 8)
 	var i, sidx int
+	var op = CurveOperations{Params: pub.params}
 
-	cparam := curve.CalcCurveParamsEquiv4()
-	phi := NewIsogeny4()
+	cparam := op.CalcCurveParamsEquiv4(curve)
+	phi := Newisogeny4(op.Params.Op)
 	strat := pub.params.A.IsogenyStrategy
 	stratSz := len(strat)
 
@@ -70,7 +70,7 @@ func traverseTreeSharedKeyA(curve *ProjectiveCurveParameters, xR *ProjectivePoin
 
 			k := strat[sidx]
 			sidx++
-			xR.Pow2k(&cparam, xR, 2*k)
+			op.Pow2k(xR, &cparam, 2*k)
 			i += int(k)
 		}
 
@@ -91,9 +91,10 @@ func traverseTreePublicKeyB(curve *ProjectiveCurveParameters, xR, phiP, phiQ, ph
 	var points = make([]ProjectivePoint, 0, 8)
 	var indices = make([]int, 0, 8)
 	var i, sidx int
+	var op = CurveOperations{Params: pub.params}
 
-	cparam := curve.CalcCurveParamsEquiv3()
-	phi := NewIsogeny3()
+	cparam := op.CalcCurveParamsEquiv3(curve)
+	phi := Newisogeny3(op.Params.Op)
 	strat := pub.params.B.IsogenyStrategy
 	stratSz := len(strat)
 
@@ -104,7 +105,7 @@ func traverseTreePublicKeyB(curve *ProjectiveCurveParameters, xR, phiP, phiQ, ph
 
 			k := strat[sidx]
 			sidx++
-			xR.Pow3k(&cparam, xR, k)
+			op.Pow3k(xR, &cparam, k)
 			i += int(k)
 		}
 
@@ -129,9 +130,10 @@ func traverseTreeSharedKeyB(curve *ProjectiveCurveParameters, xR *ProjectivePoin
 	var points = make([]ProjectivePoint, 0, 8)
 	var indices = make([]int, 0, 8)
 	var i, sidx int
+	var op = CurveOperations{Params: pub.params}
 
-	cparam := curve.CalcCurveParamsEquiv3()
-	phi := NewIsogeny3()
+	cparam := op.CalcCurveParamsEquiv3(curve)
+	phi := Newisogeny3(op.Params.Op)
 	strat := pub.params.B.IsogenyStrategy
 	stratSz := len(strat)
 
@@ -142,7 +144,7 @@ func traverseTreeSharedKeyB(curve *ProjectiveCurveParameters, xR *ProjectivePoin
 
 			k := strat[sidx]
 			sidx++
-			xR.Pow3k(&cparam, xR, k)
+			op.Pow3k(xR, &cparam, k)
 			i += int(k)
 		}
 
@@ -224,29 +226,30 @@ func (prv *PrivateKey) generatePrivateKeyB(rand io.Reader) error {
 func publicKeyGenA(prv *PrivateKey) (pub *PublicKey) {
 	var xPA, xQA, xRA ProjectivePoint
 	var xPB, xQB, xRB, xR ProjectivePoint
-	var invZP, invZQ, invZR ExtensionFieldElement
+	var invZP, invZQ, invZR Fp2Element
 	var tmp ProjectiveCurveParameters
-	var phi = NewIsogeny4()
+
 	pub = NewPublicKey(prv.params.Id, KeyVariant_SIDH_A)
+	var op = CurveOperations{Params: pub.params}
+	var phi = Newisogeny4(op.Params.Op)
 
 	// Load points for A
-	xPA.FromAffine(&prv.params.A.Affine_P)
-	xQA.FromAffine(&prv.params.A.Affine_Q)
-	xRA.FromAffine(&prv.params.A.Affine_R)
+	xPA = ProjectivePoint{X: prv.params.A.Affine_P, Z: prv.params.OneFp2}
+	xQA = ProjectivePoint{X: prv.params.A.Affine_Q, Z: prv.params.OneFp2}
+	xRA = ProjectivePoint{X: prv.params.A.Affine_R, Z: prv.params.OneFp2}
 
 	// Load points for B
-	xRB.FromAffine(&prv.params.B.Affine_R)
-	xQB.FromAffine(&prv.params.B.Affine_Q)
-	xPB.FromAffine(&prv.params.B.Affine_P)
+	xRB = ProjectivePoint{X: prv.params.B.Affine_R, Z: prv.params.OneFp2}
+	xQB = ProjectivePoint{X: prv.params.B.Affine_Q, Z: prv.params.OneFp2}
+	xPB = ProjectivePoint{X: prv.params.B.Affine_P, Z: prv.params.OneFp2}
 
 	// Find isogeny kernel
-	tmp.A.Zero()
-	tmp.C.One()
-	xR = RightToLeftLadder(&tmp, &xPA, &xQA, &xRA, prv.params.A.SecretBitLen, prv.Scalar)
+	tmp.C = pub.params.OneFp2
+	xR = op.ScalarMul3Pt(&tmp, &xPA, &xQA, &xRA, prv.params.A.SecretBitLen, prv.Scalar)
 
 	// Reset params object and travers isogeny tree
-	tmp.A.Zero()
-	tmp.C.One()
+	tmp.C = pub.params.OneFp2
+	tmp.A.Zeroize()
 	traverseTreePublicKeyA(&tmp, &xR, &xPB, &xQB, &xRB, pub)
 
 	// Secret isogeny
@@ -254,11 +257,11 @@ func publicKeyGenA(prv *PrivateKey) (pub *PublicKey) {
 	xPA = phi.EvaluatePoint(&xPB)
 	xQA = phi.EvaluatePoint(&xQB)
 	xRA = phi.EvaluatePoint(&xRB)
-	ExtensionFieldBatch3Inv(&xPA.Z, &xQA.Z, &xRA.Z, &invZP, &invZQ, &invZR)
+	op.Fp2Batch3Inv(&xPA.Z, &xQA.Z, &xRA.Z, &invZP, &invZQ, &invZR)
 
-	pub.affine_xP.Mul(&xPA.X, &invZP)
-	pub.affine_xQ.Mul(&xQA.X, &invZQ)
-	pub.affine_xQmP.Mul(&xRA.X, &invZR)
+	op.Params.Op.Mul(&pub.affine_xP, &xPA.X, &invZP)
+	op.Params.Op.Mul(&pub.affine_xQ, &xQA.X, &invZQ)
+	op.Params.Op.Mul(&pub.affine_xQmP, &xRA.X, &invZR)
 	return
 }
 
@@ -266,38 +269,39 @@ func publicKeyGenA(prv *PrivateKey) (pub *PublicKey) {
 func publicKeyGenB(prv *PrivateKey) (pub *PublicKey) {
 	var xPB, xQB, xRB, xR ProjectivePoint
 	var xPA, xQA, xRA ProjectivePoint
-	var invZP, invZQ, invZR ExtensionFieldElement
+	var invZP, invZQ, invZR Fp2Element
 	var tmp ProjectiveCurveParameters
-	var phi = NewIsogeny3()
+
 	pub = NewPublicKey(prv.params.Id, prv.keyVariant)
+	var op = CurveOperations{Params: pub.params}
+	var phi = Newisogeny3(op.Params.Op)
 
 	// Load points for B
-	xRB.FromAffine(&prv.params.B.Affine_R)
-	xQB.FromAffine(&prv.params.B.Affine_Q)
-	xPB.FromAffine(&prv.params.B.Affine_P)
+	xRB = ProjectivePoint{X: prv.params.B.Affine_R, Z: prv.params.OneFp2}
+	xQB = ProjectivePoint{X: prv.params.B.Affine_Q, Z: prv.params.OneFp2}
+	xPB = ProjectivePoint{X: prv.params.B.Affine_P, Z: prv.params.OneFp2}
 
 	// Load points for A
-	xPA.FromAffine(&prv.params.A.Affine_P)
-	xQA.FromAffine(&prv.params.A.Affine_Q)
-	xRA.FromAffine(&prv.params.A.Affine_R)
+	xPA = ProjectivePoint{X: prv.params.A.Affine_P, Z: prv.params.OneFp2}
+	xQA = ProjectivePoint{X: prv.params.A.Affine_Q, Z: prv.params.OneFp2}
+	xRA = ProjectivePoint{X: prv.params.A.Affine_R, Z: prv.params.OneFp2}
 
-	tmp.A.Zero()
-	tmp.C.One()
-	xR = RightToLeftLadder(&tmp, &xPB, &xQB, &xRB, prv.params.B.SecretBitLen, prv.Scalar)
+	tmp.C = pub.params.OneFp2
+	xR = op.ScalarMul3Pt(&tmp, &xPB, &xQB, &xRB, prv.params.B.SecretBitLen, prv.Scalar)
 
-	tmp.A.Zero()
-	tmp.C.One()
+	tmp.C = pub.params.OneFp2
+	tmp.A.Zeroize()
 	traverseTreePublicKeyB(&tmp, &xR, &xPA, &xQA, &xRA, pub)
 
 	phi.GenerateCurve(&xR)
 	xPB = phi.EvaluatePoint(&xPA)
 	xQB = phi.EvaluatePoint(&xQA)
 	xRB = phi.EvaluatePoint(&xRA)
-	ExtensionFieldBatch3Inv(&xPB.Z, &xQB.Z, &xRB.Z, &invZP, &invZQ, &invZR)
+	op.Fp2Batch3Inv(&xPB.Z, &xQB.Z, &xRB.Z, &invZP, &invZQ, &invZR)
 
-	pub.affine_xP.Mul(&xPB.X, &invZP)
-	pub.affine_xQ.Mul(&xQB.X, &invZQ)
-	pub.affine_xQmP.Mul(&xRB.X, &invZR)
+	op.Params.Op.Mul(&pub.affine_xP, &xPB.X, &invZP)
+	op.Params.Op.Mul(&pub.affine_xQ, &xQB.X, &invZQ)
+	op.Params.Op.Mul(&pub.affine_xQmP, &xRB.X, &invZR)
 	return
 }
 
@@ -311,25 +315,26 @@ func deriveSecretA(prv *PrivateKey, pub *PublicKey) []byte {
 	var cparam ProjectiveCurveParameters
 	var xP, xQ, xQmP ProjectivePoint
 	var xR ProjectivePoint
-	var phi = NewIsogeny4()
+	var op = CurveOperations{Params: prv.params}
+	var phi = Newisogeny4(op.Params.Op)
 
 	// Recover curve coefficients
-	cparam.RecoverCoordinateA(&pub.affine_xP, &pub.affine_xQ, &pub.affine_xQmP)
-	cparam.C.One()
+	cparam.C = pub.params.OneFp2
+	op.RecoverCoordinateA(&cparam, &pub.affine_xP, &pub.affine_xQ, &pub.affine_xQmP)
 
 	// Find kernel of the morphism
-	xP.FromAffine(&pub.affine_xP)
-	xQ.FromAffine(&pub.affine_xQ)
-	xQmP.FromAffine(&pub.affine_xQmP)
-	xR = RightToLeftLadder(&cparam, &xP, &xQ, &xQmP, pub.params.A.SecretBitLen, prv.Scalar)
+	xP = ProjectivePoint{X: pub.affine_xP, Z: pub.params.OneFp2}
+	xQ = ProjectivePoint{X: pub.affine_xQ, Z: pub.params.OneFp2}
+	xQmP = ProjectivePoint{X: pub.affine_xQmP, Z: pub.params.OneFp2}
+	xR = op.ScalarMul3Pt(&cparam, &xP, &xQ, &xQmP, pub.params.A.SecretBitLen, prv.Scalar)
 
 	// Traverse isogeny tree
 	traverseTreeSharedKeyA(&cparam, &xR, pub)
 
 	// Calculate j-invariant on isogeneus curve
 	c := phi.GenerateCurve(&xR)
-	cparam.RecoverCurveCoefficients4(&c)
-	cparam.Jinvariant(sharedSecret)
+	op.RecoverCurveCoefficients4(&cparam, &c)
+	op.Jinvariant(&cparam, sharedSecret)
 	return sharedSecret
 }
 
@@ -339,24 +344,25 @@ func deriveSecretB(prv *PrivateKey, pub *PublicKey) []byte {
 	var xP, xQ, xQmP ProjectivePoint
 	var xR ProjectivePoint
 	var cparam ProjectiveCurveParameters
-	var phi = NewIsogeny3()
+	var op = CurveOperations{Params: prv.params}
+	var phi = Newisogeny3(op.Params.Op)
 
 	// Recover curve coefficients
-	cparam.RecoverCoordinateA(&pub.affine_xP, &pub.affine_xQ, &pub.affine_xQmP)
-	cparam.C.One()
+	cparam.C = pub.params.OneFp2
+	op.RecoverCoordinateA(&cparam, &pub.affine_xP, &pub.affine_xQ, &pub.affine_xQmP)
 
 	// Find kernel of the morphism
-	xP.FromAffine(&pub.affine_xP)
-	xQ.FromAffine(&pub.affine_xQ)
-	xQmP.FromAffine(&pub.affine_xQmP)
-	xR = RightToLeftLadder(&cparam, &xP, &xQ, &xQmP, pub.params.B.SecretBitLen, prv.Scalar)
+	xP = ProjectivePoint{X: pub.affine_xP, Z: pub.params.OneFp2}
+	xQ = ProjectivePoint{X: pub.affine_xQ, Z: pub.params.OneFp2}
+	xQmP = ProjectivePoint{X: pub.affine_xQmP, Z: pub.params.OneFp2}
+	xR = op.ScalarMul3Pt(&cparam, &xP, &xQ, &xQmP, pub.params.B.SecretBitLen, prv.Scalar)
 
 	// Traverse isogeny tree
 	traverseTreeSharedKeyB(&cparam, &xR, pub)
 
 	// Calculate j-invariant on isogeneus curve
 	c := phi.GenerateCurve(&xR)
-	cparam.RecoverCurveCoefficients3(&c)
-	cparam.Jinvariant(sharedSecret)
+	op.RecoverCurveCoefficients3(&cparam, &c)
+	op.Jinvariant(&cparam, sharedSecret)
 	return sharedSecret
 }

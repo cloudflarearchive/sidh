@@ -2,13 +2,9 @@ package sidh
 
 import (
 	"errors"
-	. "github.com/cloudflare/p751sidh/p751toolbox"
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 	"io"
 )
-
-// I keep it bool in order to be able to apply logical NOT
-type KeyVariant uint
-type PrimeFieldId uint
 
 // Id's correspond to bitlength of the prime field characteristic
 // Currently FP_751 is the only one supported by this implementation
@@ -43,9 +39,9 @@ type key struct {
 // Defines operations on public key
 type PublicKey struct {
 	key
-	affine_xP   ExtensionFieldElement
-	affine_xQ   ExtensionFieldElement
-	affine_xQmP ExtensionFieldElement
+	affine_xP   Fp2Element
+	affine_xQ   Fp2Element
+	affine_xQmP Fp2Element
 }
 
 // Defines operations on private key
@@ -91,9 +87,11 @@ func (pub *PublicKey) Import(input []byte) error {
 	if len(input) != pub.Size() {
 		return errors.New("sidh: input to short")
 	}
-	pub.affine_xP.FromBytes(input[0:pub.params.SharedSecretSize])
-	pub.affine_xQ.FromBytes(input[pub.params.SharedSecretSize : 2*pub.params.SharedSecretSize])
-	pub.affine_xQmP.FromBytes(input[2*pub.params.SharedSecretSize : 3*pub.params.SharedSecretSize])
+	op := CurveOperations{Params: pub.params}
+	ssSz := pub.params.SharedSecretSize
+	op.Fp2FromBytes(&pub.affine_xP, input[0:ssSz])
+	op.Fp2FromBytes(&pub.affine_xQ, input[ssSz:2*ssSz])
+	op.Fp2FromBytes(&pub.affine_xQmP, input[2*ssSz:3*ssSz])
 	return nil
 }
 
@@ -101,9 +99,11 @@ func (pub *PublicKey) Import(input []byte) error {
 // returned byte string is filled with zeros.
 func (pub *PublicKey) Export() []byte {
 	output := make([]byte, pub.params.PublicKeySize)
-	pub.affine_xP.ToBytes(output[0:pub.params.SharedSecretSize])
-	pub.affine_xQ.ToBytes(output[pub.params.SharedSecretSize : 2*pub.params.SharedSecretSize])
-	pub.affine_xQmP.ToBytes(output[2*pub.params.SharedSecretSize : 3*pub.params.SharedSecretSize])
+	op := CurveOperations{Params: pub.params}
+	ssSz := pub.params.SharedSecretSize
+	op.Fp2ToBytes(output[0:ssSz], &pub.affine_xP)
+	op.Fp2ToBytes(output[ssSz:2*ssSz], &pub.affine_xQ)
+	op.Fp2ToBytes(output[2*ssSz:3*ssSz], &pub.affine_xQmP)
 	return output
 }
 
