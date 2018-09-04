@@ -231,19 +231,13 @@ func publicKeyGenA(prv *PrivateKey) (pub *PublicKey) {
 
 	// Load points for A
 	xPA.FromAffine(&prv.params.A.Affine_P)
-	xPA.Z.One()
 	xQA.FromAffine(&prv.params.A.Affine_Q)
-	xQA.Z.One()
 	xRA.FromAffine(&prv.params.A.Affine_R)
-	xRA.Z.One()
 
 	// Load points for B
 	xRB.FromAffine(&prv.params.B.Affine_R)
-	xRB.Z.One()
 	xQB.FromAffine(&prv.params.B.Affine_Q)
-	xQB.Z.One()
 	xPB.FromAffine(&prv.params.B.Affine_P)
-	xPB.Z.One()
 
 	// Find isogeny kernel
 	tmp.A.Zero()
@@ -279,19 +273,13 @@ func publicKeyGenB(prv *PrivateKey) (pub *PublicKey) {
 
 	// Load points for B
 	xRB.FromAffine(&prv.params.B.Affine_R)
-	xRB.Z.One()
 	xQB.FromAffine(&prv.params.B.Affine_Q)
-	xQB.Z.One()
 	xPB.FromAffine(&prv.params.B.Affine_P)
-	xPB.Z.One()
 
 	// Load points for A
 	xPA.FromAffine(&prv.params.A.Affine_P)
-	xPA.Z.One()
 	xQA.FromAffine(&prv.params.A.Affine_Q)
-	xQA.Z.One()
 	xRA.FromAffine(&prv.params.A.Affine_R)
-	xRA.Z.One()
 
 	tmp.A.Zero()
 	tmp.C.One()
