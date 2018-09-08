@@ -1,6 +1,7 @@
 package sidh
 
 import (
+	p503 "github.com/cloudflare/p751sidh/p503"
 	p751 "github.com/cloudflare/p751sidh/p751"
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
@@ -18,6 +19,35 @@ func Params(id PrimeFieldId) *SidhParams {
 }
 
 func init() {
+	p503 := SidhParams{
+		Id:               FP_503,
+		PublicKeySize:    p503.P503_PublicKeySize,
+		SharedSecretSize: p503.P503_SharedSecretSize,
+		A: DomainParams{
+			Affine_P:        p503.P503_affine_PA,
+			Affine_Q:        p503.P503_affine_QA,
+			Affine_R:        p503.P503_affine_RA,
+			SecretBitLen:    p503.P503_SecretBitLenA,
+			SecretByteLen:   uint((p503.P503_SecretBitLenA+7)/8),
+			IsogenyStrategy: p503.P503_AliceIsogenyStrategy[:],
+		},
+		B: DomainParams{
+			Affine_P:        p503.P503_affine_PB,
+			Affine_Q:        p503.P503_affine_QB,
+			Affine_R:        p503.P503_affine_RB,
+			SecretBitLen:    p503.P503_SecretBitLenB,
+			SecretByteLen:   uint((p503.P503_SecretBitLenB+7)/8),
+			IsogenyStrategy: p503.P503_BobIsogenyStrategy[:],
+		},
+		OneFp2:  p503.P503_OneFp2,
+		HalfFp2: p503.P503_HalfFp2,
+		MsgLen: 24,
+		// SIKEp751 provides 128 bit of classical security ([SIKE], 5.1)
+		KemSize:    16,
+		Bytelen: p503.P503_Bytelen,
+		Op: p503.FieldOperations(),
+	}
+
 	p751 := SidhParams{
 		Id:               FP_751,
 		PublicKeySize:    p751.P751_PublicKeySize,
@@ -47,5 +77,6 @@ func init() {
 		Op: p751.FieldOperations(),
 	}
 
+	sidhParams[FP_503] = p503
 	sidhParams[FP_751] = p751
 }

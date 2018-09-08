@@ -1,10 +1,10 @@
-// +build noasm arm64 arm
+// +build noasm !amd64
 
 package p503
 
 import (
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
 	. "github.com/cloudflare/p751sidh/internal/arith"
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
 // Compute z = x + y (mod p).
@@ -48,7 +48,7 @@ func fp503SubReduced(z, x, y *FpElement) {
 }
 
 // Conditionally swaps bits in x and y in constant time.
-// mask indicates bits to be swaped (set bits are swapped)
+// mask indicates bits to be swapped (set bits are swapped)
 // For details see "Hackers Delight, 2.20"
 //
 // Implementation doesn't actually depend on a prime field.
@@ -64,7 +64,7 @@ func fp503ConditionalSwap(x, y *FpElement, mask uint8) {
 }
 
 // Perform Montgomery reduction: set z = x R^{-1} (mod 2*p)
-// with R=2^768. Destroys the input value.
+// with R=2^512. Destroys the input value.
 func fp503MontgomeryReduce(z *FpElement, x *FpElementX2) {
 	var carry, t, u, v uint64
 	var uv Uint128
