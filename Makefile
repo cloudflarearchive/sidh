@@ -5,7 +5,7 @@ GOPATH_LOCAL = $(PRJ_DIR)/build
 GOPATH_DIR   = github.com/cloudflare/p751sidh
 CSHAKE_PKG   ?= github.com/henrydcase/nobs/hash/sha3
 CPU_PKG      = golang.org/x/sys/cpu
-TARGETS      = p751 sidh sike
+TARGETS      = p503 p751 sidh sike
 GO           ?= go
 GOARCH       ?=
 OPTS_GCCGO   ?= -compiler gccgo -O2 -g
@@ -50,7 +50,7 @@ test-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
 
 bench-%: prep_targets
-	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$* $(BENCH_OPTS)
+	GOMAXPROCS=1 GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$* $(BENCH_OPTS)
 
 cover-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) $(GO) test \

@@ -9,6 +9,7 @@ func TestFourIsogenyVersusSage(t *testing.T) {
 	var xR, xP4, resPhiXr, expPhiXr ProjectivePoint
 	var phi = Newisogeny4(kFieldOps)
 
+	// TODO: The sage code needs to be aligned to SIDHv3
 	// sage: p = 2^372 * 3^239 - 1; Fp = GF(p)
 	// sage: R.<x> = Fp[]
 	// sage: Fp2 = Fp.extension(x^2 + 1, 'i')
