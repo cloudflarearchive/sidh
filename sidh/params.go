@@ -20,24 +20,23 @@ func Params(id PrimeFieldId) *SidhParams {
 func init() {
 	p751 := SidhParams{
 		Id:               FP_751,
-		SecretKeySize:    p751.P751_SecretKeySize,
 		PublicKeySize:    p751.P751_PublicKeySize,
 		SharedSecretSize: p751.P751_SharedSecretSize,
 		A: DomainParams{
 			Affine_P:        p751.P751_affine_PA,
 			Affine_Q:        p751.P751_affine_QA,
 			Affine_R:        p751.P751_affine_RA,
-			SecretBitLen:    p751.P751_SecretBitLenA,
-			MaskBytes:       []byte{p751.P751_MaskAliceByte1, p751.P751_MaskAliceByte2, p751.P751_MaskAliceByte3},
 			IsogenyStrategy: p751.P751_AliceIsogenyStrategy[:],
+			SecretBitLen:    p751.P751_SecretBitLenA,
+			SecretByteLen:   uint((p751.P751_SecretBitLenA+7)/8),
 		},
 		B: DomainParams{
 			Affine_P:        p751.P751_affine_PB,
 			Affine_Q:        p751.P751_affine_QB,
 			Affine_R:        p751.P751_affine_RB,
-			SecretBitLen:    p751.P751_SecretBitLenB,
-			MaskBytes:       []byte{p751.P751_MaskBobByte},
 			IsogenyStrategy: p751.P751_BobIsogenyStrategy[:],
+			SecretBitLen:    p751.P751_SecretBitLenB,
+			SecretByteLen:   uint((p751.P751_SecretBitLenB+7)/8),
 		},
 		OneFp2:  p751.P751_OneFp2,
 		HalfFp2: p751.P751_HalfFp2,
