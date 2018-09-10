@@ -15,12 +15,6 @@ const (
 	P751_SecretBitLenA = 372
 	// Size of secret key for 3-torsion group, corresponds to log_2(3^e3)
 	P751_SecretBitLenB = 379
-	// Corresponds to (8 - e2 % 8). Used for ensuring bitlength equal to e2
-	P751_MaskAliceByte1 = 0x00
-	P751_MaskAliceByte2 = 0x0f
-	P751_MaskAliceByte3 = 0xfe
-	// Corresponds to (8 - e3 % 8). Used for ensuring bitlength equal to e3
-	P751_MaskBobByte = 0x03
 	// Sample rate to obtain a value in [0,3^238]
 	P751_SampleRate = 102
 	// P751 bytelen ceil(751/8)

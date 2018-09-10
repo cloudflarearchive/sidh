@@ -126,7 +126,7 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 	// Buffer for random, secret message
 	var ptext = make([]byte, params.MsgLen)
 	// r = G(ptext||pub)
-	var r = make([]byte, params.SecretKeySize)
+	var r = make([]byte, params.A.SecretByteLen)
 	// Resulting shared secret
 	secret = make([]byte, params.KemSize)
 
@@ -141,9 +141,8 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 	h.Write(pub.Export())
 	h.Read(r)
 
-	// cSHAKE256 implementation is byte oriented. Ensure bitlength is less then to E2
-	r[len(r)-1] &= params.A.MaskBytes[0]
-	r[len(r)-2] &= params.A.MaskBytes[1] // clear high bits, so scalar < 2*732
+	// cSHAKE256 implementation is byte oriented. Ensure bitlength is not bigger then to 2^e2-1
+	r[len(r)-1] &= (1 << (params.A.SecretBitLen % 8)) - 1
 
 	// (c0 || c1) = Enc(pkA, ptext; r)
 	skA := NewPrivateKey(params.Id, KeyVariant_SIDH_A)
@@ -173,7 +172,7 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 // Constant time for properly initialized input.
 func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) {
 	var params = pub.Params()
-	var r = make([]byte, params.SecretKeySize)
+	var r = make([]byte, params.A.SecretByteLen)
 	// Resulting shared secret
 	var secret = make([]byte, params.KemSize)
 	var skA = NewPrivateKey(params.Id, KeyVariant_SIDH_A)
@@ -189,9 +188,8 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 	h.Write(pub.Export())
 	h.Read(r)
 
-	// cSHAKE256 implementation is byte oriented: Ensure bitlength is equal to E2
-	r[len(r)-1] &= params.A.MaskBytes[0]
-	r[len(r)-2] &= params.A.MaskBytes[1] // clear high bits, so scalar < 2*732
+	// cSHAKE256 implementation is byte oriented: Ensure bitlength is not bigger than 2^e2-1
+	r[len(r)-1] &= (1 << (params.A.SecretBitLen % 8)) - 1
 
 	// Never fails
 	skA.Import(r)
