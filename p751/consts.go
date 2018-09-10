@@ -3,10 +3,6 @@ package p751
 import . "github.com/cloudflare/p751sidh/internal/isogeny"
 
 const (
-	// The secret key size, in bytes. Secret key is actually different for
-	// torsion group 2 and 3. For 2-torsion group, last byte of secret key
-	// is always set to 0.
-	P751_SecretKeySize = 48
 	// SIDH public key byte size
 	P751_PublicKeySize = 564
 	// SIDH shared secret byte size.
@@ -15,8 +11,6 @@ const (
 	P751_SecretBitLenA = 372
 	// Size of secret key for 3-torsion group, corresponds to log_2(3^e3)
 	P751_SecretBitLenB = 379
-	// Sample rate to obtain a value in [0,3^238]
-	P751_SampleRate = 102
 	// P751 bytelen ceil(751/8)
 	P751_Bytelen = 94
 	// Size of a compuatation strategy for 2-torsion group
