@@ -9,8 +9,8 @@ const (
 	P751_SharedSecretSize = 188
 	// Max size of secret key for 2-torsion group, corresponds to 2^e2
 	P751_SecretBitLenA = 372
-	// Size of secret key for 3-torsion group, corresponds to log_2(3^e3)
-	P751_SecretBitLenB = 379
+	// Size of secret key for 3-torsion group, corresponds to floor(log_2(3^e3))
+	P751_SecretBitLenB = 378
 	// P751 bytelen ceil(751/8)
 	P751_Bytelen = 94
 	// Size of a compuatation strategy for 2-torsion group
