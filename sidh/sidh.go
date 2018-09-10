@@ -1,9 +1,6 @@
 package sidh
 
 import (
-	"errors"
-	"io"
-
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
@@ -157,69 +154,6 @@ func traverseTreeSharedKeyB(curve *ProjectiveCurveParameters, xR *ProjectivePoin
 		*xR, points = points[len(points)-1], points[:len(points)-1]
 		i, indices = int(indices[len(indices)-1]), indices[:len(indices)-1]
 	}
-}
-
-// -----------------------------------------------------------------------------
-// Key generation functions
-//
-
-// Generate a private key for "Alice".  Note that because this library does not
-// implement SIDH validation, each keypair must be used for at most one
-// shared secret computation.
-func (prv *PrivateKey) generatePrivateKeyA(rand io.Reader) error {
-	_, err := io.ReadFull(rand, prv.Scalar)
-	if err != nil {
-		return err
-	}
-
-	// Bit-twiddle to ensure scalar is in 2*[0,2^371):
-	prv.Scalar[prv.params.SecretKeySize-1] = prv.params.A.MaskBytes[0]
-	prv.Scalar[prv.params.SecretKeySize-2] &= prv.params.A.MaskBytes[1] // clear high bits, so scalar < 2^372
-	prv.Scalar[0] &= prv.params.A.MaskBytes[2]                          // clear low bit, so scalar is even
-
-	// We actually want scalar in 2*(0,2^371), but the above procedure
-	// generates 0 with probability 2^(-371), which isn't worth checking
-	// for.
-	return nil
-}
-
-// Generate a private key for "Bob".  Note that because this library does not
-// implement SIDH validation, each keypair must be used for at most one
-// shared secret computation.
-func (prv *PrivateKey) generatePrivateKeyB(rand io.Reader) error {
-	// Perform rejection sampling to obtain a random value in [0,3^238]:
-	var ok uint8
-	for i := uint(0); i < prv.params.SampleRate; i++ {
-		_, err := io.ReadFull(rand, prv.Scalar)
-		if err != nil {
-			return err
-		}
-		// Mask the high bits to obtain a uniform value in [0,2^378):
-		// TODO: simply run it in loop, if rand distribution is uniform you surelly get non 0
-		//       if not - better die, keep looping, hang, whatever, but don't generate secure key
-		prv.Scalar[prv.params.SecretKeySize-1] &= prv.params.B.MaskBytes[0]
-
-		// Accept if scalar < 3^238 (this happens w/ prob ~0.5828)
-		// TODO this is specific to P751
-		ok = checkLessThanThree238(prv.Scalar)
-		if ok == 0 {
-			break
-		}
-	}
-	// ok is nonzero if all sampleRate trials failed.
-	// This happens with probability 0.41719...^102 < 2^(-128), i.e., never
-	if ok != 0 {
-		// In case this happens user should retry. In practice it is highly
-		// improbable (< 2^-128).
-		return errors.New("sidh: private key generation failed")
-	}
-
-	// Multiply by 3 to get a scalar in 3*[0,3^238):
-	multiplyByThree(prv.Scalar)
-	// We actually want scalar in 2*(0,2^371), but the above procedure
-	// generates 0 with probability 2^(-371), which isn't worth checking
-	// for.
-	return nil
 }
 
 // Generate a public key in the 2-torsion group
