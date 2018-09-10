@@ -25,20 +25,18 @@ type Fp2Element struct {
 type DomainParams struct {
     // P, Q and R=P-Q base points
     Affine_P, Affine_Q, Affine_R Fp2Element
-    // Max size of secret key for x-torsion group
-    SecretBitLen uint
-    // MaskBytes
-    MaskBytes []byte
     // Size of a compuatation strategy for x-torsion group
     IsogenyStrategy []uint32
+    // Max size of secret key for x-torsion group
+    SecretBitLen uint
+    // Max size of secret key for x-torsion group
+    SecretByteLen uint
 }
 
 type SidhParams struct {
     Id PrimeFieldId
     // Bytelen of P
     Bytelen int
-    // The secret key size, in bytes.
-    SecretKeySize int
     // The public key size, in bytes.
     PublicKeySize int
     // The shared secret size, in bytes.

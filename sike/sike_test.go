@@ -312,7 +312,7 @@ func TestSIKE_KAT(t *testing.T) {
 		// sk (secret key in test vector is concatenation of
 		// MSG + SECRET_BOB_KEY + PUBLIC_BOB_KEY. We use only MSG+SECRET_BOB_KEY
 		sk := readAndCheckLine(r)
-		sk = sk[:params.MsgLen+uint(params.SecretKeySize)]
+		sk = sk[:params.MsgLen+uint(params.B.SecretByteLen)]
 		// ct
 		ct := readAndCheckLine(r)
 		// ss
