@@ -43,8 +43,6 @@ type SidhParams struct {
     SharedSecretSize uint
     // 2- and 3-torsion group parameter definitions
     A, B DomainParams
-    // Sample rate to obtain a value in [0,3^238]
-    SampleRate uint
     // Precomputed identity element in the Fp2 in Montgomery domain
     OneFp2 Fp2Element
     // Precomputed 1/2 in the Fp2 in Montgomery domain
