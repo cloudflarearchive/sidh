@@ -43,7 +43,6 @@ func init() {
 		MsgLen: 32,
 		// SIKEp751 provides 192 bit of classical security ([SIKE], 5.1)
 		KemSize:    24,
-		SampleRate: p751.P751_SampleRate,
 		Bytelen: p751.P751_Bytelen,
 		Op: p751.FieldOperations(),
 	}
