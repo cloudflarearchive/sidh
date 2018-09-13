@@ -4,6 +4,7 @@ PRJ_DIR      = $(abspath $(dir $(MK_FILE_PATH)))
 GOPATH_LOCAL = $(PRJ_DIR)/build
 GOPATH_DIR   = github.com/cloudflare/p751sidh
 CSHAKE_PKG   ?= github.com/henrydcase/nobs/hash/sha3
+CPU_PKG      = golang.org/x/sys/cpu
 TARGETS      = p751toolbox sidh sike
 GO           ?= go
 GOARCH       ?=
@@ -30,7 +31,7 @@ clean:
 	rm -rf coverage*.txt
 
 build_env:
-	GOPATH=$(GOPATH_LOCAL) $(GO) get $(CSHAKE_PKG)
+	GOPATH=$(GOPATH_LOCAL) $(GO) get $(CSHAKE_PKG) $(CPU_PKG)
 	mkdir -p $(GOPATH_LOCAL)/src/$(GOPATH_DIR)
 	cp -rf etc $(GOPATH_LOCAL)/src/$(GOPATH_DIR)
 
@@ -59,3 +60,4 @@ bench:   $(addprefix bench-,   $(TARGETS))
 cover:   $(addprefix cover-,   $(TARGETS))
 install: $(addprefix install-, $(TARGETS))
 test:    $(addprefix test-,    $(TARGETS))
+

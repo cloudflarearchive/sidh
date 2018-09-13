@@ -2,6 +2,10 @@
 
 package p751toolbox
 
+import (
+	"golang.org/x/sys/cpu"
+)
+
 // If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
 // If choice is neither 0 nor 1 then behaviour is undefined.
 // This function executes in constant time.
@@ -32,11 +36,35 @@ func fp751X2SubLazy(z, x, y *fp751X2)
 //go:noescape
 func fp751Mul(z *fp751X2, x, y *Fp751Element)
 
-// Perform Montgomery reduction: set z = x R^{-1} (mod 2*p).
-// Destroys the input value.
+// Function pointer that should point to one of the
+// fp751MontgomeryReduce implementations below.
+// When set, it performs Montgomery reduction: set z = x R^{-1} (mod 2*p).
+// It may destroy the input value.
+var fp751MontgomeryReduce func(z *Fp751Element, x *fp751X2)
+
 //go:noescape
-func fp751MontgomeryReduce(z *Fp751Element, x *fp751X2)
+func fp751MontgomeryReduceBMI2ADX(z *Fp751Element, x *fp751X2)
+
+//go:noescape
+func fp751MontgomeryReduceBMI2(z *Fp751Element, x *fp751X2)
+
+//go:noescape
+func fp751MontgomeryReduceFallback(z *Fp751Element, x *fp751X2)
 
 // Reduce a field element in [0, 2*p) to one in [0,p).
 //go:noescape
 func fp751StrongReduce(x *Fp751Element)
+
+// On initialization, set the fp751MontgomeryReduce function pointer to the
+// fastest implementation depending on CPU capabilities.
+func init() {
+	if cpu.X86.HasBMI2 {
+		if cpu.X86.HasADX {
+			fp751MontgomeryReduce = fp751MontgomeryReduceBMI2ADX
+		} else {
+			fp751MontgomeryReduce = fp751MontgomeryReduceBMI2
+		}
+	} else {
+		fp751MontgomeryReduce = fp751MontgomeryReduceFallback
+	}
+}
