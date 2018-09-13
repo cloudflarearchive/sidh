@@ -5,6 +5,7 @@ GOPATH_LOCAL = $(PRJ_DIR)/build
 GOPATH_DIR   = github.com/cloudflare/p751sidh
 CSHAKE_PKG   ?= github.com/henrydcase/nobs/hash/sha3
 TARGETS      = p751toolbox sidh sike
+GO           ?= go
 GOARCH       ?=
 OPTS_GCCGO   ?= -compiler gccgo -O2 -g
 OPTS         ?=
@@ -29,7 +30,7 @@ clean:
 	rm -rf coverage*.txt
 
 build_env:
-	GOPATH=$(GOPATH_LOCAL) go get $(CSHAKE_PKG)
+	GOPATH=$(GOPATH_LOCAL) $(GO) get $(CSHAKE_PKG)
 	mkdir -p $(GOPATH_LOCAL)/src/$(GOPATH_DIR)
 	cp -rf etc $(GOPATH_LOCAL)/src/$(GOPATH_DIR)
 
@@ -39,16 +40,16 @@ copy-target-%:
 prep_targets: build_env $(addprefix copy-target-, $(TARGETS))
 
 install-%: prep_targets
-	GOPATH=$(GOPATH_LOCAL) go install $(OPTS) $(GOPATH_DIR)/$*
+	GOPATH=$(GOPATH_LOCAL) $(GO) install $(OPTS) $(GOPATH_DIR)/$*
 
 test-%: prep_targets
-	GOPATH=$(GOPATH_LOCAL) go test $(OPTS) $(GOPATH_DIR)/$*
+	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
 
 bench-%: prep_targets
-	cd $*; GOPATH=$(GOPATH_LOCAL) go test $(OPTS) $(BENCH_OPTS)
+	cd $*; GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(BENCH_OPTS)
 
 cover-%: prep_targets
-	GOPATH=$(GOPATH_LOCAL) go test \
+	GOPATH=$(GOPATH_LOCAL) $(GO) test \
 		-race -coverprofile=coverage_$*.txt -covermode=atomic $(OPTS) $(GOPATH_DIR)/$*
 	cat coverage_$*.txt >> coverage.txt
 	rm coverage_$*.txt
