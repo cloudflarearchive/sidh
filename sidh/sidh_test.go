@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/hex"
+	"math/big"
 	"testing"
+
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
 const (
 	// PrA - Alice's Private Key: 2*randint(0,2^371)
 	PrA = "C09957CC83045FB4C3726384D784476ACB6FFD92E5B15B3C2D451BA063F1BD4CED8FBCF682A98DD0954D3" +
-		"7BCAF730E00"
+		"7BCAF730E"
 	// PrB - Bob's Private Key: 3*randint(0,3^238)
 	PrB = "393E8510E78A16D2DC1AACA9C9D17E7E78DB630881D8599C7040D05BB5557ECAE8165C45D5366ECB37B00" +
 		"969740AF201"
@@ -186,7 +189,7 @@ func TestRoundtripP751(t *testing.T) {
 
 func TestKeyAgreementP751_AliceEvenNumber(t *testing.T) {
 	// even alice
-	prE := "C09957CC83045FB4C3726384D784476ACB6FFD92E5B15B3C2D451BA063F1BD4CED8FBCF682A98DD0954D37BCAF730F00"
+	prE := "C09957CC83045FB4C3726384D784476ACB6FFD92E5B15B3C2D451BA063F1BD4CED8FBCF682A98DD0954D37BCAF730F"
 	pkE := "8A2DE6FD963C475F7829B689C8B8306FC0917A39EBBC35CA171546269A85698FEC0379E2E1A3C567BE1B8EF5639F81F304889737E6CC444DBED4579DB204DC8C7928F5CBB1ECDD682A1B5C48C0DAF34208C06BF201BE4E6063B1BFDC42413B0537F8E76BEE645C1A24118301BAB17EB8D6E0F283BCB16EFB833E4BB3463953C93165A0DDAC55B385059F27FF7228486D0A733812C81C792BE9EC3A16A5DB0EB099EEA76AC0E59612251A3AD19F7CC567DA2AEBD7733171F48E471D17648692355164E27B515D2A47D7BA34B3B48A047BE7C09C4ABEE2FCC9ACA7396C8A8C9E73E29533FC7369094DFA7988778E55E53F309922C6E233F8F9C7936C3D29CEA640406FCA06450AA1978FF39F227BF06B1E072F1763447C6F513B23CDF3B0EC0379070AEE5A02D9AD8E0EB023461D631F4A9643A4C79921334945F6B33DDFC11D9703BD06B047B4DA404AB12EFD2C3A49E5C42D10DA063352748B21DE41C32A5693FE1C0DCAB111F4990CD58BECADB1892EE7A7E99C9DB4DA4E69C96E57138B99038BC9B877ECE75914EFB98DD08B9E4A2DCCB948A8F7D2F26678A9952BA0EFAB1E9CF6E51B557480DEC2BA30DE0FE4AFE30A6B30765EE75EF64F678316D81C72755AD2CFA0B8C7706B07BFA52FBC3DB84EF9E79796C0089305B1E13C78660779E0FF2A13820CE141104F976B1678990F85B2D3D2B89CD5BC4DD52603A5D24D3EFEDA44BAA0F38CDB75A220AF45EAB70F2799875D435CE50FC6315EDD4BB7AA7260AFD7CD0561B69B4FA3A817904322661C3108DA24"
 	testKeyAgreement(Params(FP_751), t, pkE, PkB, prE, PrB)
 }
@@ -219,64 +222,41 @@ func TestImportExport(t *testing.T) {
 	}
 }
 
-func TestMultiplyByThree(t *testing.T) {
-	// sage: repr((3^238 -1).digits(256))
-	var three238minus1 = [48]byte{
-		248, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66, 212, 191, 53, 59, 115, 56, 207,
-		215, 148, 207, 41, 130, 248, 214, 42, 124, 12, 153, 108, 197, 99, 199, 34, 66, 143,
-		126, 168, 88, 184, 245, 234, 37, 181, 198, 201, 84, 2}
-	// sage: repr((3*(3^238 -1)).digits(256))
-	var threeTimesThree238minus1 = [48]byte{
-		232, 142, 138, 135, 159, 84, 104, 201, 62, 110, 199, 124, 63, 161, 177, 89, 169, 109,
-		135, 190, 110, 125, 134, 233, 132, 128, 116, 37, 203, 69, 80, 43, 86, 104, 198, 173,
-		123, 249, 9, 41, 225, 192, 113, 31, 84, 93, 254, 6}
+func testPrivateKeyBelowMax(t testing.TB, id PrimeFieldId) {
+	params := Params(id)
+	for variant,keySz:=range(
+		map[KeyVariant]*DomainParams {
+			KeyVariant_SIDH_A: &params.A,
+			KeyVariant_SIDH_B: &params.B}){
 
-	multiplyByThree(three238minus1[:])
+		func(v KeyVariant, dp *DomainParams) {
+			var blen = int(dp.SecretByteLen)
+			var prv = NewPrivateKey(id, v)
 
-	for i := 0; i < 48; i++ {
-		if three238minus1[i] != threeTimesThree238minus1[i] {
-			t.Error("Digit", i, "error: found", three238minus1[i],
-				"expected", threeTimesThree238minus1[i])
-		}
-	}
-}
+			// Calculate either (2^e2 - 1) or (2^s - 1); where s=ceil(log_2(3^e3)))
+			maxSecertVal := big.NewInt(int64(dp.SecretBitLen))
+			maxSecertVal.Exp(big.NewInt(int64(2)), maxSecertVal, nil)
+			maxSecertVal.Sub(maxSecertVal, big.NewInt(1))
 
-func TestCheckLessThanThree238(t *testing.T) {
-	var three238minus1 = [48]byte{
-		248, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66, 212, 191, 53, 59, 115,
-		56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12, 153, 108, 197, 99,
-		199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198, 201, 84, 2}
-	var three238 = [48]byte{
-		249, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66, 212, 191, 53, 59, 115,
-		56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12, 153, 108, 197, 99, 199,
-		34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198, 201, 84, 2}
-	var three238plus1 = [48]byte{250, 132, 131, 130, 138, 113, 205, 237, 20, 122, 66,
-		212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12,
-		153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198,
-		201, 84, 2}
-	// makes second 64-bit digits bigger than in three238. checks if carries are correctly propagated
-	var three238plus2power65 = [48]byte{249, 132, 131, 130, 138, 113, 205, 237, 22, 122,
-		66, 212, 191, 53, 59, 115, 56, 207, 215, 148, 207, 41, 130, 248, 214, 42, 124, 12,
-		153, 108, 197, 99, 199, 34, 66, 143, 126, 168, 88, 184, 245, 234, 37, 181, 198,
-		201, 84, 2}
+			// Do same test 1000 times
+			for i:=0; i<1000; i++ {
+				err := prv.Generate(rand.Reader)
+				checkErr(t, err, "Private key generation")
 
-	var result uint8
-
-	result = checkLessThanThree238(three238minus1[:])
-	if result != 0 {
-		t.Error("expected 0, got", result)
-	}
-	result = checkLessThanThree238(three238[:])
-	if result != 1 {
-		t.Error("expected nonzero, got", result)
-	}
-	result = checkLessThanThree238(three238plus1[:])
-	if result != 1 {
-		t.Error("expected nonzero, got", result)
-	}
-	result = checkLessThanThree238(three238plus2power65[:])
-	if result != 1 {
-		t.Error("expected nonzero, got", result)
+				// Convert to big-endian, as that's what expected by (*Int)SetBytes()
+				secretBytes := prv.Export()
+				for i:=0; i<int(blen/2); i++ {
+					tmp := secretBytes[i] ^ secretBytes[blen-i-1]
+					secretBytes[i] = tmp ^ secretBytes[i]
+					secretBytes[blen-i-1] = tmp ^ secretBytes[blen-i-1]
+				}
+				prvBig := new(big.Int).SetBytes(secretBytes)
+				// Check if generated key is bigger then acceptable
+				if prvBig.Cmp(maxSecertVal) == 1 {
+					t.Error("Generated private key is wrong")
+				}
+			}
+		}(variant,keySz)
 	}
 }
 

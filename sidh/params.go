@@ -1,36 +1,9 @@
 package sidh
 
-import . "github.com/cloudflare/p751sidh/p751toolbox"
-
-type DomainParams struct {
-	// P, Q and R=P-Q base points
-	Affine_P, Affine_Q, Affine_R ExtensionFieldElement
-	// Max size of secret key for x-torsion group
-	SecretBitLen uint
-	// MaskBytes
-	MaskBytes []byte
-	// Size of a compuatation strategy for x-torsion group
-	IsogenyStrategy []uint32
-}
-
-type SidhParams struct {
-	Id PrimeFieldId
-	// The secret key size, in bytes.
-	SecretKeySize int
-	// The public key size, in bytes.
-	PublicKeySize int
-	// The shared secret size, in bytes.
-	SharedSecretSize uint
-	// 2- and 3-torsion group parameter definitions
-	A, B DomainParams
-	// Sample rate to obtain a value in [0,3^238]
-	SampleRate uint
-	// Length of SIKE secret message. Must be one of {24,32,40},
-	// depending on size of prime field used (see [SIKE], 1.4 and 5.1)
-	MsgLen uint
-	// Length of SIKE ephemeral KEM key (see [SIKE], 1.4 and 5.1)
-	KemSize uint
-}
+import (
+	p751 "github.com/cloudflare/p751sidh/p751"
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
+)
 
 // Keeps mapping: SIDH prime field ID to domain parameters
 var sidhParams = make(map[PrimeFieldId]SidhParams)
@@ -47,29 +20,31 @@ func Params(id PrimeFieldId) *SidhParams {
 func init() {
 	p751 := SidhParams{
 		Id:               FP_751,
-		SecretKeySize:    P751_SecretKeySize,
-		PublicKeySize:    P751_PublicKeySize,
-		SharedSecretSize: P751_SharedSecretSize,
+		PublicKeySize:    p751.P751_PublicKeySize,
+		SharedSecretSize: p751.P751_SharedSecretSize,
 		A: DomainParams{
-			Affine_P:        P751_affine_PA,
-			Affine_Q:        P751_affine_QA,
-			Affine_R:        P751_affine_RA,
-			SecretBitLen:    P751_SecretBitLenA,
-			MaskBytes:       []byte{P751_MaskAliceByte1, P751_MaskAliceByte2, P751_MaskAliceByte3},
-			IsogenyStrategy: P751_AliceIsogenyStrategy[:],
+			Affine_P:        p751.P751_affine_PA,
+			Affine_Q:        p751.P751_affine_QA,
+			Affine_R:        p751.P751_affine_RA,
+			IsogenyStrategy: p751.P751_AliceIsogenyStrategy[:],
+			SecretBitLen:    p751.P751_SecretBitLenA,
+			SecretByteLen:   uint((p751.P751_SecretBitLenA+7)/8),
 		},
 		B: DomainParams{
-			Affine_P:        P751_affine_PB,
-			Affine_Q:        P751_affine_QB,
-			Affine_R:        P751_affine_RB,
-			SecretBitLen:    P751_SecretBitLenB,
-			MaskBytes:       []byte{P751_MaskBobByte},
-			IsogenyStrategy: P751_BobIsogenyStrategy[:],
+			Affine_P:        p751.P751_affine_PB,
+			Affine_Q:        p751.P751_affine_QB,
+			Affine_R:        p751.P751_affine_RB,
+			IsogenyStrategy: p751.P751_BobIsogenyStrategy[:],
+			SecretBitLen:    p751.P751_SecretBitLenB,
+			SecretByteLen:   uint((p751.P751_SecretBitLenB+7)/8),
 		},
+		OneFp2:  p751.P751_OneFp2,
+		HalfFp2: p751.P751_HalfFp2,
 		MsgLen: 32,
 		// SIKEp751 provides 192 bit of classical security ([SIKE], 5.1)
 		KemSize:    24,
-		SampleRate: P751_SampleRate,
+		Bytelen: p751.P751_Bytelen,
+		Op: p751.FieldOperations(),
 	}
 
 	sidhParams[FP_751] = p751

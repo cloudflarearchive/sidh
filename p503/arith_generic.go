@@ -1,6 +1,10 @@
 // +build noasm arm64 arm
 
-package p751toolbox
+package p503
+
+import (
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
+)
 
 // helper used for uint128 representation
 type uint128 struct {
@@ -66,41 +70,42 @@ func mul64(a, b uint64) (res uint128) {
 }
 
 // Compute z = x + y (mod p).
-func fp751AddReduced(z, x, y *Fp751Element) {
+func fp503AddReduced(z, x, y *FpElement) {
 	var carry uint64
 
-	// z=x+y % p751
-	for i := 0; i < fp751NumWords; i++ {
+	// z=x+y % p503
+	for i := 0; i < NumWords; i++ {
 		z[i], carry = addc64(carry, x[i], y[i])
 	}
 
-	// z = z - p751x2
+	// z = z - p503x2
 	carry = 0
-	for i := 0; i < fp751NumWords; i++ {
-		z[i], carry = subc64(carry, z[i], p751x2[i])
+	for i := 0; i < NumWords; i++ {
+		z[i], carry = subc64(carry, z[i], p503x2[i])
 	}
 
-	// z = z + p751x2
+	// if z<0 add p503x2 back
 	mask := uint64(0 - carry)
 	carry = 0
-	for i := 0; i < fp751NumWords; i++ {
-		z[i], carry = addc64(carry, z[i], p751x2[i]&mask)
+	for i := 0; i < NumWords; i++ {
+		z[i], carry = addc64(carry, z[i], p503x2[i]&mask)
 	}
 }
 
 // Compute z = x - y (mod p).
-func fp751SubReduced(z, x, y *Fp751Element) {
+func fp503SubReduced(z, x, y *FpElement) {
 	var borrow uint64
 
-	for i := 0; i < fp751NumWords; i++ {
+	// z = z - p503x2
+	for i := 0; i < NumWords; i++ {
 		z[i], borrow = subc64(borrow, x[i], y[i])
 	}
 
+	// if z<0 add p503x2 back
 	mask := uint64(0 - borrow)
 	borrow = 0
-
-	for i := 0; i < fp751NumWords; i++ {
-		z[i], borrow = addc64(borrow, z[i], p751x2[i]&mask)
+	for i := 0; i < NumWords; i++ {
+		z[i], borrow = addc64(borrow, z[i], p503x2[i]&mask)
 	}
 }
 
@@ -109,11 +114,11 @@ func fp751SubReduced(z, x, y *Fp751Element) {
 // For details see "Hackers Delight, 2.20"
 //
 // Implementation doesn't actually depend on a prime field.
-func fp751ConditionalSwap(x, y *Fp751Element, mask uint8) {
+func fp503ConditionalSwap(x, y *FpElement, mask uint8) {
 	var tmp, mask64 uint64
 
 	mask64 = 0 - uint64(mask)
-	for i := 0; i < len(x); i++ {
+	for i := 0; i < NumWords; i++ {
 		tmp = mask64 & (x[i] ^ y[i])
 		x[i] = tmp ^ x[i]
 		y[i] = tmp ^ y[i]
@@ -122,17 +127,17 @@ func fp751ConditionalSwap(x, y *Fp751Element, mask uint8) {
 
 // Perform Montgomery reduction: set z = x R^{-1} (mod 2*p)
 // with R=2^768. Destroys the input value.
-func fp751MontgomeryReduce(z *Fp751Element, x *fp751X2) {
+func fp503MontgomeryReduce(z *FpElement, x *FpElementX2) {
 	var carry, t, u, v uint64
 	var uv uint128
 	var count int
 
-	count = 5 // number of 0 digits in the least significat part of p751 + 1
+	count = 3 // number of 0 digits in the least significat part of p503 + 1
 
-	for i := 0; i < fp751NumWords; i++ {
+	for i := 0; i < NumWords; i++ {
 		for j := 0; j < i; j++ {
 			if j < (i - count + 1) {
-				uv = mul64(z[j], p751p1[i-j])
+				uv = mul64(z[j], p503p1[i-j])
 				v, carry = addc64(0, uv.L, v)
 				u, carry = addc64(carry, uv.H, u)
 				t += carry
@@ -148,13 +153,13 @@ func fp751MontgomeryReduce(z *Fp751Element, x *fp751X2) {
 		t = 0
 	}
 
-	for i := fp751NumWords; i < 2*fp751NumWords-1; i++ {
+	for i := NumWords; i < 2*NumWords-1; i++ {
 		if count > 0 {
 			count--
 		}
-		for j := i - fp751NumWords + 1; j < fp751NumWords; j++ {
-			if j < (fp751NumWords - count) {
-				uv = mul64(z[j], p751p1[i-j])
+		for j := i - NumWords + 1; j < NumWords; j++ {
+			if j < (NumWords - count) {
+				uv = mul64(z[j], p503p1[i-j])
 				v, carry = addc64(0, uv.L, v)
 				u, carry = addc64(carry, uv.H, u)
 				t += carry
@@ -164,22 +169,22 @@ func fp751MontgomeryReduce(z *Fp751Element, x *fp751X2) {
 		u, carry = addc64(carry, u, 0)
 
 		t += carry
-		z[i-fp751NumWords] = v
+		z[i-NumWords] = v
 		v = u
 		u = t
 		t = 0
 	}
-	v, carry = addc64(0, v, x[2*fp751NumWords-1])
-	z[fp751NumWords-1] = v
+	v, carry = addc64(0, v, x[2*NumWords-1])
+	z[NumWords-1] = v
 }
 
 // Compute z = x * y.
-func fp751Mul(z *fp751X2, x, y *Fp751Element) {
+func fp503Mul(z *FpElementX2, x, y *FpElement) {
 	var u, v, t uint64
 	var carry uint64
 	var uv uint128
 
-	for i := uint64(0); i < fp751NumWords; i++ {
+	for i := uint64(0); i < NumWords; i++ {
 		for j := uint64(0); j <= i; j++ {
 			uv = mul64(x[j], y[i-j])
 			v, carry = addc64(0, uv.L, v)
@@ -192,8 +197,8 @@ func fp751Mul(z *fp751X2, x, y *Fp751Element) {
 		t = 0
 	}
 
-	for i := fp751NumWords; i < (2*fp751NumWords)-1; i++ {
-		for j := i - fp751NumWords + 1; j < fp751NumWords; j++ {
+	for i := NumWords; i < (2*NumWords)-1; i++ {
+		for j := i - NumWords + 1; j < NumWords; j++ {
 			uv = mul64(x[j], y[i-j])
 			v, carry = addc64(0, uv.L, v)
 			u, carry = addc64(carry, uv.H, u)
@@ -204,51 +209,51 @@ func fp751Mul(z *fp751X2, x, y *Fp751Element) {
 		u = t
 		t = 0
 	}
-	z[2*fp751NumWords-1] = v
+	z[2*NumWords-1] = v
 }
 
 // Compute z = x + y, without reducing mod p.
-func fp751AddLazy(z, x, y *Fp751Element) {
+func fp503AddLazy(z, x, y *FpElement) {
 	var carry uint64
-	for i := 0; i < fp751NumWords; i++ {
+	for i := 0; i < NumWords; i++ {
 		z[i], carry = addc64(carry, x[i], y[i])
 	}
 }
 
 // Compute z = x + y, without reducing mod p.
-func fp751X2AddLazy(z, x, y *fp751X2) {
+func fp503X2AddLazy(z, x, y *FpElementX2) {
 	var carry uint64
-	for i := 0; i < 2*fp751NumWords; i++ {
+	for i := 0; i < 2*NumWords; i++ {
 		z[i], carry = addc64(carry, x[i], y[i])
 	}
 }
 
 // Reduce a field element in [0, 2*p) to one in [0,p).
-func fp751StrongReduce(x *Fp751Element) {
+func fp503StrongReduce(x *FpElement) {
 	var borrow, mask uint64
-	for i := 0; i < fp751NumWords; i++ {
-		x[i], borrow = subc64(borrow, x[i], p751[i])
+	for i := 0; i < NumWords; i++ {
+		x[i], borrow = subc64(borrow, x[i], p503[i])
 	}
 
 	// Sets all bits if borrow = 1
 	mask = 0 - borrow
 	borrow = 0
-	for i := 0; i < fp751NumWords; i++ {
-		x[i], borrow = addc64(borrow, x[i], p751[i]&mask)
+	for i := 0; i < NumWords; i++ {
+		x[i], borrow = addc64(borrow, x[i], p503[i]&mask)
 	}
 }
 
 // Compute z = x - y, without reducing mod p.
-func fp751X2SubLazy(z, x, y *fp751X2) {
+func fp503X2SubLazy(z, x, y *FpElementX2) {
 	var borrow, mask uint64
-	for i := 0; i < len(z); i++ {
+	for i := 0; i < 2*NumWords; i++ {
 		z[i], borrow = subc64(borrow, x[i], y[i])
 	}
 
 	// Sets all bits if borrow = 1
 	mask = 0 - borrow
 	borrow = 0
-	for i := fp751NumWords; i < len(z); i++ {
-		z[i], borrow = addc64(borrow, z[i], p751[i-fp751NumWords]&mask)
+	for i := NumWords; i < 2*NumWords; i++ {
+		z[i], borrow = addc64(borrow, z[i], p503[i-NumWords]&mask)
 	}
 }

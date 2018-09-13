@@ -1,11 +1,12 @@
 // +build amd64,!noasm
 
-package p751toolbox
+package p751
 
 import (
 	"golang.org/x/sys/cpu"
 	"testing"
 	"testing/quick"
+    . "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
 func TestFp751MontgomeryReduce(t *testing.T) {
@@ -23,9 +24,9 @@ func TestFp751MontgomeryReduce(t *testing.T) {
 
 	// Also check that the BMI2 implementation produces the same results
 	// as the fallback implementation.
-	compareMontgomeryReduce := func(x, y PrimeFieldElement) bool {
-		var z, zbackup fp751X2
-		var zred1, zred2 Fp751Element
+	compareMontgomeryReduce := func(x, y primeFieldElement) bool {
+		var z, zbackup FpElementX2
+		var zred1, zred2 FpElement
 
 		fp751Mul(&z, &x.A, &y.A)
 		zbackup = z
@@ -52,9 +53,9 @@ func TestFp751MontgomeryReduce(t *testing.T) {
 	// Check that the BMI2ADX implementation produces the same results as
 	// the BMI2 implementation. By transitivity, it should also produce the
 	// same results as the fallback implementation.
-	compareMontgomeryReduce = func(x, y PrimeFieldElement) bool {
-		var z, zbackup fp751X2
-		var zred1, zred2 Fp751Element
+	compareMontgomeryReduce = func(x, y primeFieldElement) bool {
+		var z, zbackup FpElementX2
+		var zred1, zred2 FpElement
 
 		fp751Mul(&z, &x.A, &y.A)
 		zbackup = z

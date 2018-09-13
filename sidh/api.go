@@ -2,13 +2,9 @@ package sidh
 
 import (
 	"errors"
-	. "github.com/cloudflare/p751sidh/p751toolbox"
 	"io"
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
-
-// I keep it bool in order to be able to apply logical NOT
-type KeyVariant uint
-type PrimeFieldId uint
 
 // Id's correspond to bitlength of the prime field characteristic
 // Currently FP_751 is the only one supported by this implementation
@@ -43,9 +39,9 @@ type key struct {
 // Defines operations on public key
 type PublicKey struct {
 	key
-	affine_xP   ExtensionFieldElement
-	affine_xQ   ExtensionFieldElement
-	affine_xQmP ExtensionFieldElement
+	affine_xP   Fp2Element
+	affine_xQ   Fp2Element
+	affine_xQmP Fp2Element
 }
 
 // Defines operations on private key
@@ -71,7 +67,11 @@ func (key *key) Variant() KeyVariant {
 // Usage of this function guarantees that the object is correctly initialized.
 func NewPrivateKey(id PrimeFieldId, v KeyVariant) *PrivateKey {
 	prv := &PrivateKey{key: key{params: Params(id), keyVariant: v}}
-	prv.Scalar = make([]byte, prv.params.SecretKeySize)
+	if (v & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
+		prv.Scalar = make([]byte, prv.params.A.SecretByteLen)
+	} else {
+		prv.Scalar = make([]byte, prv.params.B.SecretByteLen)
+	}
 	if v == KeyVariant_SIKE {
 		prv.S = make([]byte, prv.params.MsgLen)
 	}
@@ -91,9 +91,11 @@ func (pub *PublicKey) Import(input []byte) error {
 	if len(input) != pub.Size() {
 		return errors.New("sidh: input to short")
 	}
-	pub.affine_xP.FromBytes(input[0:pub.params.SharedSecretSize])
-	pub.affine_xQ.FromBytes(input[pub.params.SharedSecretSize : 2*pub.params.SharedSecretSize])
-	pub.affine_xQmP.FromBytes(input[2*pub.params.SharedSecretSize : 3*pub.params.SharedSecretSize])
+	op := CurveOperations{Params: pub.params}
+	ssSz := pub.params.SharedSecretSize
+	op.Fp2FromBytes(&pub.affine_xP, input[0:ssSz])
+	op.Fp2FromBytes(&pub.affine_xQ, input[ssSz:2*ssSz])
+	op.Fp2FromBytes(&pub.affine_xQmP, input[2*ssSz:3*ssSz])
 	return nil
 }
 
@@ -101,9 +103,11 @@ func (pub *PublicKey) Import(input []byte) error {
 // returned byte string is filled with zeros.
 func (pub *PublicKey) Export() []byte {
 	output := make([]byte, pub.params.PublicKeySize)
-	pub.affine_xP.ToBytes(output[0:pub.params.SharedSecretSize])
-	pub.affine_xQ.ToBytes(output[pub.params.SharedSecretSize : 2*pub.params.SharedSecretSize])
-	pub.affine_xQmP.ToBytes(output[2*pub.params.SharedSecretSize : 3*pub.params.SharedSecretSize])
+	op := CurveOperations{Params: pub.params}
+	ssSz := pub.params.SharedSecretSize
+	op.Fp2ToBytes(output[0:ssSz], &pub.affine_xP)
+	op.Fp2ToBytes(output[ssSz:2*ssSz], &pub.affine_xQ)
+	op.Fp2ToBytes(output[2*ssSz:3*ssSz], &pub.affine_xQmP)
 	return output
 }
 
@@ -123,7 +127,7 @@ func (prv *PrivateKey) Export() []byte {
 
 // Size returns size of the private key in bytes
 func (prv *PrivateKey) Size() int {
-	tmp := prv.params.SecretKeySize
+	tmp := len(prv.Scalar)
 	if prv.Variant() == KeyVariant_SIKE {
 		tmp += int(prv.params.MsgLen)
 	}
@@ -138,29 +142,48 @@ func (prv *PrivateKey) Import(input []byte) error {
 	if len(input) != prv.Size() {
 		return errors.New("sidh: input to short")
 	}
-	if len(prv.Scalar) != prv.params.SecretKeySize {
-		return errors.New("sidh: object wrongly initialized")
-	}
 	copy(prv.S, input[:len(prv.S)])
 	copy(prv.Scalar, input[len(prv.S):])
 	return nil
 }
 
-// Generates random private key for SIDH or SIKE. Returns error
-// in case user provided RNG or memory initialization fails.
+// Generates random private key for SIDH or SIKE. Generated value is
+// formed as little-endian integer from key-space <2^(e2-1)..2^e2 - 1>
+// for KeyVariant_A or <2^(s-1)..2^s - 1>, where s = floor(log_2(3^e3)),
+// for KeyVariant_B.
+//
+// Returns error in case user provided RNG fails.
 func (prv *PrivateKey) Generate(rand io.Reader) error {
 	var err error
+	var dp *DomainParams
 
 	if (prv.keyVariant & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
-		err = prv.generatePrivateKeyA(rand)
+		dp = &prv.params.A
 	} else {
-		err = prv.generatePrivateKeyB(rand)
+		dp = &prv.params.B
 	}
 
+	//err = prv.generatePrivateKey(rand)
 	if prv.keyVariant == KeyVariant_SIKE && err == nil {
 		_, err = io.ReadFull(rand, prv.S)
 	}
 
+	// Private key generation takes advantage of the fact that keyspace for secret
+	// key is (0, 2^x - 1), for some possitivite value of 'x' (see SIKE, 1.3.8).
+	// It means that all bytes in the secret key, but the last one, can take any
+	// value between <0x00,0xFF>. Similarily for the last byte, but generation
+	// needs to chop off some bits, to make sure generated value is an element of
+	// a key-space.
+	_, err = io.ReadFull(rand, prv.Scalar)
+	if err != nil {
+		return err
+	}
+	prv.Scalar[len(prv.Scalar)-1] &= (1 << (dp.SecretBitLen % 8)) - 1
+	// Make sure scalar is SecretBitLen long. SIKE spec says that key
+	// space starts from 0, but I'm not confortable with having low
+	// value scalars used for private keys. It is still secrure as per
+	// table 5.1 in [SIKE].
+	prv.Scalar[len(prv.Scalar)-1] |= 1 << ((dp.SecretBitLen % 8) - 1)
 	return err
 }
 
