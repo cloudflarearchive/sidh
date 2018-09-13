@@ -43,6 +43,7 @@ install-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) $(GO) install $(OPTS) $(GOPATH_DIR)/$*
 
 test-%: prep_targets
+	GOPATH=$(GOPATH_LOCAL) $(GO) vet $(GOPATH_DIR)/$*
 	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
 
 bench-%: prep_targets
