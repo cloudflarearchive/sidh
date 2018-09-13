@@ -28,15 +28,6 @@ type ProjectivePoint struct {
 	Z ExtensionFieldElement
 }
 
-// A point on the projective line P^1(F_p).
-//
-// This represents a point on the (Kummer line) of the prime-field subgroup of
-// the base curve E_0(F_p), defined by E_0 : y^2 = x^3 + x.
-type ProjectivePrimeFieldPoint struct {
-	X PrimeFieldElement
-	Z PrimeFieldElement
-}
-
 func (params *ProjectiveCurveParameters) FromAffine(a *ExtensionFieldElement) {
 	params.A = *a
 	params.C.One()
@@ -158,30 +149,13 @@ func (cparams *ProjectiveCurveParameters) RecoverCurveCoefficients4(coefEq *Curv
 	return
 }
 
-func (point *ProjectivePoint) FromAffinePrimeField(x *PrimeFieldElement) {
-	point.X.A = x.A
-	point.X.B = zeroExtensionField.B
-	point.Z = oneExtensionField
-}
-
 func (point *ProjectivePoint) FromAffine(x *ExtensionFieldElement) {
 	point.X = *x
 	point.Z = oneExtensionField
 }
 
-func (point *ProjectivePrimeFieldPoint) FromAffine(x *PrimeFieldElement) {
-	point.X = *x
-	point.Z = onePrimeField
-}
-
 func (point *ProjectivePoint) ToAffine() *ExtensionFieldElement {
 	affine_x := new(ExtensionFieldElement)
-	affine_x.Inv(&point.Z).Mul(affine_x, &point.X)
-	return affine_x
-}
-
-func (point *ProjectivePrimeFieldPoint) ToAffine() *PrimeFieldElement {
-	affine_x := new(PrimeFieldElement)
 	affine_x.Inv(&point.Z).Mul(affine_x, &point.X)
 	return affine_x
 }
@@ -193,21 +167,9 @@ func (lhs *ProjectivePoint) VartimeEq(rhs *ProjectivePoint) bool {
 	return t0.VartimeEq(&t1)
 }
 
-func (lhs *ProjectivePrimeFieldPoint) VartimeEq(rhs *ProjectivePrimeFieldPoint) bool {
-	var t0, t1 PrimeFieldElement
-	t0.Mul(&lhs.X, &rhs.Z)
-	t1.Mul(&lhs.Z, &rhs.X)
-	return t0.VartimeEq(&t1)
-}
-
 func ProjectivePointConditionalSwap(xP, xQ *ProjectivePoint, choice uint8) {
 	ExtensionFieldConditionalSwap(&xP.X, &xQ.X, choice)
 	ExtensionFieldConditionalSwap(&xP.Z, &xQ.Z, choice)
-}
-
-func ProjectivePrimeFieldPointConditionalSwap(xP, xQ *ProjectivePrimeFieldPoint, choice uint8) {
-	PrimeFieldConditionalSwap(&xP.X, &xQ.X, choice)
-	PrimeFieldConditionalSwap(&xP.Z, &xQ.Z, choice)
 }
 
 // Combined coordinate doubling and differential addition. Takes projective points

@@ -105,16 +105,6 @@ func (dest *ExtensionFieldElement) Mul(lhs, rhs *ExtensionFieldElement) *Extensi
 	return dest
 }
 
-// Set dest = -x
-//
-// Allowed to overlap dest with x.
-//
-// Returns dest to allow chaining operations.
-func (dest *ExtensionFieldElement) Neg(x *ExtensionFieldElement) *ExtensionFieldElement {
-	dest.Sub(&zeroExtensionField, x)
-	return dest
-}
-
 // Set dest = 1/x
 //
 // Allowed to overlap dest with x.
@@ -142,18 +132,21 @@ func (dest *ExtensionFieldElement) Inv(x *ExtensionFieldElement) *ExtensionField
 	fp751MontgomeryReduce(&asq_plus_bsq.A, &asq) // = (a^2 + b^2)*R mod p
 	// Now asq_plus_bsq = a^2 + b^2
 
-	var asq_plus_bsq_inv PrimeFieldElement
-	asq_plus_bsq_inv.Inv(&asq_plus_bsq)
-	c := &asq_plus_bsq_inv.A
+	// Invert asq_plus_bsq
+	inv := asq_plus_bsq
+	inv.Mul(&asq_plus_bsq, &asq_plus_bsq)
+	inv.P34(&inv)
+	inv.Mul(&inv, &inv)
+	inv.Mul(&inv, &asq_plus_bsq)
 
 	var ac fp751X2
-	fp751Mul(&ac, a, c)
+	fp751Mul(&ac, a, &inv.A)
 	fp751MontgomeryReduce(&dest.A, &ac)
 
 	var minus_b Fp751Element
 	fp751SubReduced(&minus_b, &minus_b, b)
 	var minus_bc fp751X2
-	fp751Mul(&minus_bc, &minus_b, c)
+	fp751Mul(&minus_bc, &minus_b, &inv.A)
 	fp751MontgomeryReduce(&dest.B, &minus_bc)
 
 	return dest
@@ -243,8 +236,20 @@ func (x *ExtensionFieldElement) ToBytes(output []byte) {
 	if len(output) < 188 {
 		panic("output byte slice too short, need 188 bytes")
 	}
-	x.A.toBytesFromMontgomeryForm(output[0:94])
-	x.B.toBytesFromMontgomeryForm(output[94:188])
+
+	var a,b Fp751Element
+	FromMontgomery(x, &a, &b)
+
+	// convert to bytes in little endian form. 8*12 = 96, but we drop the last two bytes
+	//  since p is 751 < 752=94*8 bits.
+	for i := 0; i < 94; i++ {
+		// set i = j*8 + k
+		j := i / 8
+		k := uint64(i % 8)
+
+		output[i] = byte(a[j] >> (8 * k))
+		output[i+94] = byte(b[j] >> (8 * k))
+	}
 }
 
 // Read 188 bytes into the given ExtensionFieldElement.
@@ -254,8 +259,49 @@ func (x *ExtensionFieldElement) FromBytes(input []byte) {
 	if len(input) < 188 {
 		panic("input byte slice too short, need 188 bytes")
 	}
-	x.A.montgomeryFormFromBytes(input[:94])
-	x.B.montgomeryFormFromBytes(input[94:188])
+
+	for i:=0; i<94; i++ {
+		j := i / 8
+		k := uint64(i % 8)
+		x.A[j] |= uint64(input[i]) << (8 * k)
+		x.B[j] |= uint64(input[i+94]) << (8 * k)
+	}
+
+	ToMontgomery(x)
+}
+
+// Converts values in x.A and x.B to Montgomery domain
+// x.A = x.A * R mod p
+// x.B = x.B * R mod p
+func ToMontgomery(x *ExtensionFieldElement) {
+	var aRR fp751X2
+
+	// convert to montgomery domain
+	fp751Mul(&aRR, &x.A, &montgomeryRsq)   // = a*R*R
+	fp751MontgomeryReduce(&x.A, &aRR)      // = a*R mod p
+	fp751Mul(&aRR, &x.B, &montgomeryRsq)
+	fp751MontgomeryReduce(&x.B, &aRR)
+}
+
+// Converts values in x.A and x.B from Montgomery domain
+// a = x.A mod p
+// b = x.B mod p
+//
+// After returning from the call x is not modified.
+func FromMontgomery(x *ExtensionFieldElement, a,b *Fp751Element) {
+	var aR fp751X2
+
+	// convert from montgomery domain
+	copy(aR[:], x.A[:])
+	fp751MontgomeryReduce(a, &aR) 	 // = a mod p in [0, 2p)
+	fp751StrongReduce(a)          	 // = a mod p in [0, p)
+
+	for i:=range(aR) {
+		aR[i] = 0
+	}
+	copy(aR[:], x.B[:])
+	fp751MontgomeryReduce(b, &aR)
+	fp751StrongReduce(b)
 }
 
 //------------------------------------------------------------------------------
@@ -275,35 +321,6 @@ var zeroPrimeField = PrimeFieldElement{
 
 var onePrimeField = PrimeFieldElement{
 	A: Fp751Element{0x249ad, 0x0, 0x0, 0x0, 0x0, 0x8310000000000000, 0x5527b1e4375c6c66, 0x697797bf3f4f24d0, 0xc89db7b2ac5c4e2e, 0x4ca4b439d2076956, 0x10f7926c7512c7e9, 0x2d5b24bce5e2},
-}
-
-// Set dest = 0.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Zero() *PrimeFieldElement {
-	*dest = zeroPrimeField
-	return dest
-}
-
-// Set dest = 1.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) One() *PrimeFieldElement {
-	*dest = onePrimeField
-	return dest
-}
-
-// Set dest to x.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) SetUint64(x uint64) *PrimeFieldElement {
-	var xRR fp751X2
-	dest.A = Fp751Element{}                 // = 0
-	dest.A[0] = x                           // = x
-	fp751Mul(&xRR, &dest.A, &montgomeryRsq) // = x*R*R
-	fp751MontgomeryReduce(&dest.A, &xRR)    // = x*R mod p
-
-	return dest
 }
 
 // Set dest = lhs * rhs.
@@ -328,100 +345,10 @@ func (dest *PrimeFieldElement) Mul(lhs, rhs *PrimeFieldElement) *PrimeFieldEleme
 //
 // Returns dest to allow chaining operations.
 func (dest *PrimeFieldElement) Pow2k(x *PrimeFieldElement, k uint8) *PrimeFieldElement {
-	dest.Square(x)
+	dest.Mul(x, x)
 	for i := uint8(1); i < k; i++ {
-		dest.Square(dest)
+		dest.Mul(dest, dest)
 	}
-
-	return dest
-}
-
-// Set dest = x^2
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Square(x *PrimeFieldElement) *PrimeFieldElement {
-	a := &x.A // = a*R
-	b := &x.A // = b*R
-
-	var ab fp751X2
-	fp751Mul(&ab, a, b)                 // = a*b*R*R
-	fp751MontgomeryReduce(&dest.A, &ab) // = a*b*R mod p
-
-	return dest
-}
-
-// Set dest = -x
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Neg(x *PrimeFieldElement) *PrimeFieldElement {
-	dest.Sub(&zeroPrimeField, x)
-	return dest
-}
-
-// Set dest = lhs + rhs.
-//
-// Allowed to overlap lhs or rhs with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Add(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
-	fp751AddReduced(&dest.A, &lhs.A, &rhs.A)
-
-	return dest
-}
-
-// Set dest = lhs - rhs.
-//
-// Allowed to overlap lhs or rhs with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Sub(lhs, rhs *PrimeFieldElement) *PrimeFieldElement {
-	fp751SubReduced(&dest.A, &lhs.A, &rhs.A)
-
-	return dest
-}
-
-// Returns true if lhs = rhs.  Takes variable time.
-func (lhs *PrimeFieldElement) VartimeEq(rhs *PrimeFieldElement) bool {
-	return lhs.A.vartimeEq(rhs.A)
-}
-
-// If choice = 1u8, set (x,y) = (y,x). If choice = 0u8, set (x,y) = (x,y).
-//
-// Returns dest to allow chaining operations.
-func PrimeFieldConditionalSwap(x, y *PrimeFieldElement, choice uint8) {
-	fp751ConditionalSwap(&x.A, &y.A, choice)
-}
-
-// Set dest = sqrt(x), if x is a square.  If x is nonsquare dest is undefined.
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Sqrt(x *PrimeFieldElement) *PrimeFieldElement {
-	tmp_x := *x // Copy x in case dest == x
-	// Since x is assumed to be square, x = y^2
-	dest.P34(x)            // dest = (y^2)^((p-3)/4) = y^((p-3)/2)
-	dest.Mul(dest, &tmp_x) // dest = y^2 * y^((p-3)/2) = y^((p+1)/2)
-	// Now dest^2 = y^(p+1) = y^2 = x, so dest = sqrt(x)
-
-	return dest
-}
-
-// Set dest = 1/x.
-//
-// Allowed to overlap x with dest.
-//
-// Returns dest to allow chaining operations.
-func (dest *PrimeFieldElement) Inv(x *PrimeFieldElement) *PrimeFieldElement {
-	tmp_x := *x            // Copy x in case dest == x
-	dest.Square(x)         // dest = x^2
-	dest.P34(dest)         // dest = (x^2)^((p-3)/4) = x^((p-3)/2)
-	dest.Square(dest)      // dest = x^(p-3)
-	dest.Mul(dest, &tmp_x) // dest = x^(p-2)
 
 	return dest
 }
@@ -448,7 +375,7 @@ func (dest *PrimeFieldElement) P34(x *PrimeFieldElement) *PrimeFieldElement {
 	// Build a lookup table of odd multiples of x.
 	lookup := [16]PrimeFieldElement{}
 	xx := &PrimeFieldElement{}
-	xx.Square(x) // Set xx = x^2
+	xx.Mul(x, x) // Set xx = x^2
 	lookup[0] = *x
 	for i := 1; i < 16; i++ {
 		lookup[i].Mul(&lookup[i-1], xx)
@@ -497,50 +424,4 @@ func (x Fp751Element) vartimeEq(y Fp751Element) bool {
 	}
 
 	return eq
-}
-
-// Read an Fp751Element from little-endian bytes and convert to Montgomery form.
-//
-// The input byte slice must be at least 94 bytes long.
-func (x *Fp751Element) montgomeryFormFromBytes(input []byte) {
-	if len(input) < 94 {
-		panic("input byte slice too short")
-	}
-
-	var a Fp751Element
-	for i := 0; i < 94; i++ {
-		// set i = j*8 + k
-		j := i / 8
-		k := uint64(i % 8)
-		a[j] |= uint64(input[i]) << (8 * k)
-	}
-
-	var aRR fp751X2
-	fp751Mul(&aRR, &a, &montgomeryRsq) // = a*R*R
-	fp751MontgomeryReduce(x, &aRR)     // = a*R mod p
-}
-
-// Given an Fp751Element in Montgomery form, convert to little-endian bytes.
-//
-// The output byte slice must be at least 94 bytes long.
-func (x *Fp751Element) toBytesFromMontgomeryForm(output []byte) {
-	if len(output) < 94 {
-		panic("output byte slice too short")
-	}
-
-	var a Fp751Element
-	var aR fp751X2
-	copy(aR[:], x[:])              // = a*R
-	fp751MontgomeryReduce(&a, &aR) // = a mod p in [0, 2p)
-	fp751StrongReduce(&a)          // = a mod p in [0, p)
-
-	// 8*12 = 96, but we drop the last two bytes since p is 751 < 752=94*8 bits.
-	for i := 0; i < 94; i++ {
-		// set i = j*8 + k
-		j := i / 8
-		k := uint64(i % 8)
-		// Need parens because Go's operator precedence would interpret
-		// a[j] >> 8*k as (a[j] >> 8) * k
-		output[i] = byte(a[j] >> (8 * k))
-	}
 }

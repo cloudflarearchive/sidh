@@ -35,9 +35,13 @@ func radix64ToBigInt(x []uint64) *big.Int {
 	return val
 }
 
-func (x *PrimeFieldElement) toBigInt() *big.Int {
+func VartimeEq(x,y *PrimeFieldElement) bool {
+	return x.A.vartimeEq(y.A)
+}
+
+func (x *Fp751Element) toBigInt() *big.Int {
 	// Convert from Montgomery form
-	return x.A.toBigIntFromMontgomeryForm()
+	return x.toBigIntFromMontgomeryForm()
 }
 
 func (x *Fp751Element) toBigIntFromMontgomeryForm() *big.Int {
@@ -64,8 +68,8 @@ func TestPrimeFieldElementToBigInt(t *testing.T) {
 	// sage: assert(xR < 2*p)
 	// sage: (xR / R) % p
 	xBig, _ := new(big.Int).SetString("4469946751055876387821312289373600189787971305258234719850789711074696941114031433609871105823930699680637820852699269802003300352597419024286385747737509380032982821081644521634652750355306547718505685107272222083450567982240", 10)
-	if xBig.Cmp(x.toBigInt()) != 0 {
-		t.Error("Expected", xBig, "found", x.toBigInt())
+	if xBig.Cmp(x.A.toBigInt()) != 0 {
+		t.Error("Expected", xBig, "found", x.A.toBigInt())
 	}
 }
 
@@ -121,7 +125,6 @@ func TestOneExtensionFieldToBytes(t *testing.T) {
 
 	x.One()
 	x.ToBytes(xBytes[:])
-
 	if xBytes[0] != 1 {
 		t.Error("Expected 1, got", xBytes[0])
 	}
@@ -249,101 +252,16 @@ func TestExtensionFieldElementBatch3Inv(t *testing.T) {
 //------------------------------------------------------------------------------
 // Prime Field
 //------------------------------------------------------------------------------
-
-func TestPrimeFieldElementSetUint64VersusBigInt(t *testing.T) {
-	setUint64RoundTrips := func(x uint64) bool {
-		z := new(PrimeFieldElement).SetUint64(x).toBigInt().Uint64()
-		return x == z
-	}
-
-	if err := quick.Check(setUint64RoundTrips, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestPrimeFieldElementAddVersusBigInt(t *testing.T) {
-	addMatchesBigInt := func(x, y PrimeFieldElement) bool {
-		z := new(PrimeFieldElement)
-		z.Add(&x, &y)
-
-		check := new(big.Int)
-		check.Add(x.toBigInt(), y.toBigInt())
-		check.Mod(check, cln16prime)
-
-		return check.Cmp(z.toBigInt()) == 0
-	}
-
-	if err := quick.Check(addMatchesBigInt, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestPrimeFieldElementSubVersusBigInt(t *testing.T) {
-	subMatchesBigInt := func(x, y PrimeFieldElement) bool {
-		z := new(PrimeFieldElement)
-		z.Sub(&x, &y)
-
-		check := new(big.Int)
-		check.Sub(x.toBigInt(), y.toBigInt())
-		check.Mod(check, cln16prime)
-
-		return check.Cmp(z.toBigInt()) == 0
-	}
-
-	if err := quick.Check(subMatchesBigInt, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestPrimeFieldElementInv(t *testing.T) {
-	inverseIsCorrect := func(x PrimeFieldElement) bool {
-		z := new(PrimeFieldElement)
-		z.Inv(&x)
-
-		// Now z = (1/x), so (z * x) * x == x
-		z.Mul(z, &x).Mul(z, &x)
-
-		return z.VartimeEq(&x)
-	}
-
-	// This is more expensive; run fewer tests
-	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
-	if err := quick.Check(inverseIsCorrect, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
-func TestPrimeFieldElementSqrt(t *testing.T) {
-	inverseIsCorrect := func(x PrimeFieldElement) bool {
-		// Construct y = x^2 so we're sure y is square.
-		y := new(PrimeFieldElement)
-		y.Square(&x)
-
-		z := new(PrimeFieldElement)
-		z.Sqrt(y)
-
-		// Now z = sqrt(y), so z^2 == y
-		z.Square(z)
-		return z.VartimeEq(y)
-	}
-
-	// This is more expensive; run fewer tests
-	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
-	if err := quick.Check(inverseIsCorrect, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
-}
-
 func TestPrimeFieldElementMulVersusBigInt(t *testing.T) {
 	mulMatchesBigInt := func(x, y PrimeFieldElement) bool {
 		z := new(PrimeFieldElement)
 		z.Mul(&x, &y)
 
 		check := new(big.Int)
-		check.Mul(x.toBigInt(), y.toBigInt())
+		check.Mul(x.A.toBigInt(), y.A.toBigInt())
 		check.Mod(check, cln16prime)
 
-		return check.Cmp(z.toBigInt()) == 0
+		return check.Cmp(z.A.toBigInt()) == 0
 	}
 
 	if err := quick.Check(mulMatchesBigInt, quickCheckConfig); err != nil {
@@ -357,36 +275,16 @@ func TestPrimeFieldElementP34VersusBigInt(t *testing.T) {
 		z := new(PrimeFieldElement)
 		z.P34(&x)
 
-		check := x.toBigInt()
+		check := x.A.toBigInt()
 		check.Exp(check, p34, cln16prime)
 
-		return check.Cmp(z.toBigInt()) == 0
+		return check.Cmp(z.A.toBigInt()) == 0
 	}
 
 	// This is more expensive; run fewer tests
 	var quickCheckConfig = &quick.Config{MaxCount: (1 << (8 + quickCheckScaleFactor))}
 	if err := quick.Check(p34MatchesBigInt, quickCheckConfig); err != nil {
 		t.Error(err)
-	}
-}
-
-func TestFp751ElementConditionalSwap(t *testing.T) {
-	var one = Fp751Element{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
-	var two = Fp751Element{2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2}
-
-	var x = one
-	var y = two
-
-	fp751ConditionalSwap(&x, &y, 0)
-
-	if !(x == one && y == two) {
-		t.Error("Found", x, "expected", one)
-	}
-
-	fp751ConditionalSwap(&x, &y, 1)
-
-	if !(x == two && y == one) {
-		t.Error("Found", x, "expected", two)
 	}
 }
 
@@ -449,51 +347,6 @@ func BenchmarkPrimeFieldElementMul(b *testing.B) {
 
 	for n := 0; n < b.N; n++ {
 		w.Mul(z, z)
-	}
-}
-
-func BenchmarkPrimeFieldElementInv(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Inv(z)
-	}
-}
-
-func BenchmarkPrimeFieldElementSqrt(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Sqrt(z)
-	}
-}
-
-func BenchmarkPrimeFieldElementSquare(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Square(z)
-	}
-}
-
-func BenchmarkPrimeFieldElementAdd(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Add(z, z)
-	}
-}
-
-func BenchmarkPrimeFieldElementSub(b *testing.B) {
-	z := &PrimeFieldElement{A: bench_x}
-	w := new(PrimeFieldElement)
-
-	for n := 0; n < b.N; n++ {
-		w.Sub(z, z)
 	}
 }
 

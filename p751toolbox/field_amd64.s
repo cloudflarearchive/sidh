@@ -39,30 +39,6 @@
 #define REG_P2 SI
 #define REG_P3 DX
 
-// We can't write MOVQ $0, AX because Go's assembler incorrectly
-// optimizes this to XOR AX, AX, which clobbers the carry flags.
-//
-// This bug was defined to be "correct" behaviour (cf.
-// https://github.com/golang/go/issues/12405 ) by declaring that the MOV
-// pseudo-instruction clobbers flags, although this fact is mentioned
-// nowhere in the documentation for the Go assembler.
-//
-// Defining MOVQ to clobber flags has the effect that it is never safe
-// to interleave MOVQ with ADCQ and SBBQ instructions.  Since this is
-// required to write a carry chain longer than registers' working set,
-// all of the below code therefore relies on the unspecified and
-// undocumented behaviour that MOV won't clobber flags, except in the
-// case of the above-mentioned bug.
-//
-// However, there's also no specification of which instructions
-// correspond to machine instructions, and which are
-// pseudo-instructions (i.e., no specification of what the assembler
-// actually does), so this doesn't seem much worse than usual.
-//
-// Avoid the bug by dropping the bytes for `mov eax, 0` in directly:
-
-#define ZERO_AX_WITHOUT_CLOBBERING_FLAGS BYTE	$0xB8; BYTE $0; BYTE $0; BYTE $0; BYTE $0;
-
 TEXT ·fp751StrongReduce(SB), NOSPLIT, $0-8
 	MOVQ	x+0(FP), REG_P1
 
@@ -322,7 +298,7 @@ TEXT ·fp751AddReduced(SB), NOSPLIT, $0-24
 	MOVQ	R8, (72)(REG_P3)
 	MOVQ	R9, (80)(REG_P3)
 	MOVQ	R10, (88)(REG_P3)
-	ZERO_AX_WITHOUT_CLOBBERING_FLAGS
+	MOVQ	$0, AX
 	SBBQ	$0, AX
 
 	MOVQ	P751X2_0, SI
@@ -425,7 +401,7 @@ TEXT ·fp751SubReduced(SB), NOSPLIT, $0-24
 	MOVQ	(88)(REG_P1), AX
 	SBBQ	(88)(REG_P2), AX
 	MOVQ	AX, (88)(REG_P3)
-	ZERO_AX_WITHOUT_CLOBBERING_FLAGS
+	MOVQ	$0, AX
 	SBBQ	$0, AX
 
 	MOVQ	P751X2_0, SI
@@ -2625,7 +2601,7 @@ TEXT ·fp751X2SubLazy(SB), NOSPLIT, $0-24
 	MOVQ	DI, (184)(REG_P3)
 
 	// Now the carry flag is 1 if x-y < 0.  If so, add p*2^768.
-	ZERO_AX_WITHOUT_CLOBBERING_FLAGS
+	MOVQ	$0, AX
 	SBBQ	$0, AX
 
 	// Load p into registers:
