@@ -3,7 +3,7 @@
 package p751
 
 import (
-	"golang.org/x/sys/cpu"
+	cpu "github.com/cloudflare/p751sidh/internal/utils"
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
@@ -59,8 +59,8 @@ func fp751StrongReduce(x *FpElement)
 // On initialization, set the fp751MontgomeryReduce function pointer to the
 // fastest implementation depending on CPU capabilities.
 func init() {
-	if cpu.X86.HasBMI2 {
-		if cpu.X86.HasADX {
+	if cpu.HasBMI2 {
+		if cpu.HasADX {
 			fp751MontgomeryReduce = fp751MontgomeryReduceBMI2ADX
 		} else {
 			fp751MontgomeryReduce = fp751MontgomeryReduceBMI2

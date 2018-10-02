@@ -3,10 +3,11 @@
 package p751
 
 import (
-	"golang.org/x/sys/cpu"
+    . "github.com/cloudflare/p751sidh/internal/isogeny"
+	cpu "github.com/cloudflare/p751sidh/internal/utils"
+
 	"testing"
 	"testing/quick"
-    . "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
 func TestFp751MontgomeryReduce(t *testing.T) {
@@ -15,7 +16,7 @@ func TestFp751MontgomeryReduce(t *testing.T) {
 	fp751MontgomeryReduce = fp751MontgomeryReduceFallback
 	t.Run("PrimeFieldElementToBigInt", TestPrimeFieldElementToBigInt)
 
-	if !cpu.X86.HasBMI2 {
+	if !cpu.HasBMI2 {
 		return
 	}
 
@@ -43,7 +44,7 @@ func TestFp751MontgomeryReduce(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !cpu.X86.HasADX {
+	if !cpu.HasADX {
 		return
 	}
 

@@ -4,7 +4,7 @@ package p503
 
 import (
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
-	"golang.org/x/sys/cpu"
+	cpu "github.com/cloudflare/p751sidh/internal/utils"
 	"reflect"
 	"testing"
 	"testing/quick"
@@ -43,7 +43,7 @@ func testRedc(t *testing.T, redcFunc func(z *FpElement, x *FpElementX2)) {
 
 // Ensures corretness of implementation of mul operation which uses MULX
 func TestMulWithMULX(t *testing.T) {
-	if !cpu.X86.HasBMI2 {
+	if !cpu.HasBMI2 {
 		t.Skip("MULX not supported by the platform")
 	}
 	testMul(t, mulWithMULX)
@@ -51,7 +51,7 @@ func TestMulWithMULX(t *testing.T) {
 
 // Ensures corretness of implementation of mul operation which uses MULX and ADOX/ADCX
 func TestMulWithMULXADX(t *testing.T) {
-	if !(cpu.X86.HasADX && cpu.X86.HasBMI2) {
+	if !(cpu.HasADX && cpu.HasBMI2) {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
 	testMul(t, mulWithMULXADX)
@@ -59,7 +59,7 @@ func TestMulWithMULXADX(t *testing.T) {
 
 // Ensures corretness of Montgomery reduction implementation which uses MULX
 func TestRedcWithMULX(t *testing.T) {
-	if !cpu.X86.HasBMI2 {
+	if !cpu.HasBMI2 {
 		t.Skip("MULX not supported by the platform")
 	}
 	testRedc(t, redcWithMULX)
@@ -67,7 +67,7 @@ func TestRedcWithMULX(t *testing.T) {
 
 // Ensures corretness of Montgomery reduction implementation which uses MULX
 func TestRedcWithMULXADX(t *testing.T) {
-	if !(cpu.X86.HasADX && cpu.X86.HasBMI2) {
+	if !(cpu.HasADX && cpu.HasBMI2) {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
 	testRedc(t, redcWithMULXADX)

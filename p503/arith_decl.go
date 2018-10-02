@@ -4,7 +4,7 @@ package p503
 
 import (
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
-	"golang.org/x/sys/cpu"
+	cpu "github.com/cloudflare/p751sidh/internal/utils"
 )
 
 // If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
@@ -74,8 +74,8 @@ func redcWithMULXADX(z *FpElement, x *FpElementX2)
 // On initialization, set the fp503Mul function pointer to the
 // fastest implementation depending on CPU capabilities.
 func init() {
-	if cpu.X86.HasBMI2 {
-		if cpu.X86.HasADX {
+	if cpu.HasBMI2 {
+		if cpu.HasADX {
 			fp503Mul = mulWithMULXADX
 			fp503MontgomeryReduce = redcWithMULXADX
 		} else {
