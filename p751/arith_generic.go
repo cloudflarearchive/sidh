@@ -1,4 +1,4 @@
-// +build noasm arm64 arm
+// +build noasm !amd64
 
 package p751
 
