@@ -3,7 +3,7 @@
 package p751
 
 import (
-    . "github.com/cloudflare/p751sidh/internal/isogeny"
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 	cpu "github.com/cloudflare/p751sidh/internal/utils"
 
 	"testing"

@@ -2,8 +2,8 @@ package sidh
 
 import (
 	"errors"
-	"io"
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	"io"
 )
 
 // Id's correspond to bitlength of the prime field characteristic
@@ -189,7 +189,7 @@ func (prv *PrivateKey) Generate(rand io.Reader) error {
 // Generates public key.
 //
 // Constant time.
-func (prv *PrivateKey) GeneratePublicKey() (*PublicKey) {
+func (prv *PrivateKey) GeneratePublicKey() *PublicKey {
 	if (prv.keyVariant & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
 		return publicKeyGenA(prv)
 	}

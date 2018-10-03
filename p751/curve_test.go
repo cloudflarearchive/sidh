@@ -2,9 +2,9 @@ package p751
 
 import (
 	"bytes"
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 	"testing"
 	"testing/quick"
-    . "github.com/cloudflare/p751sidh/internal/isogeny"
 )
 
 func TestOne(t *testing.T) {
@@ -164,9 +164,9 @@ func TestPointTripleVersusAddDouble(t *testing.T) {
 		eqivParams3 := kCurveOps.CalcCurveParamsEquiv3(&params.Cparam)
 		P2 = params.Point
 		P3 = params.Point
-		kCurveOps.Pow2k(&P2, &eqivParams4, 1)	// = x([2]P)
-		kCurveOps.Pow3k(&P3, &eqivParams3, 1)	// = x([3]P)
-		P2plusP = AddProjFp2(&P2, &params.Point, &params.Point)	// = x([2]P + P)
+		kCurveOps.Pow2k(&P2, &eqivParams4, 1)                   // = x([2]P)
+		kCurveOps.Pow3k(&P3, &eqivParams3, 1)                   // = x([3]P)
+		P2plusP = AddProjFp2(&P2, &params.Point, &params.Point) // = x([2]P + P)
 		return VartimeEqProjFp2(&P3, &P2plusP)
 	}
 

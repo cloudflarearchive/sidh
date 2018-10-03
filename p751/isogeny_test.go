@@ -1,8 +1,8 @@
 package p751
 
 import (
-	"testing"
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	"testing"
 )
 
 func TestFourIsogenyVersusSage(t *testing.T) {

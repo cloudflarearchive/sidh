@@ -14,18 +14,18 @@ import (
 /* -------------------------------------------------------------------------
    Test data
    -------------------------------------------------------------------------*/
-var tdata = map[PrimeFieldId]struct{
+var tdata = map[PrimeFieldId]struct {
 	name string
-	PkA string
-	PrA string
-	PkB string
-	PrB string
+	PkA  string
+	PrA  string
+	PkB  string
+	PrB  string
 }{
 	FP_503: {
 		name: "P-503",
-		PrA:"B0AD510708F4ABCF3E0D97DC2F2FF112D9D2AAE49D97FFD1E4267F21C6E71C03",
-		PrB:"A885A8B889520A6DBAD9FB33365E5B77FDED629440A16A533F259A510F63A822",
-		PkA:"A6BADBA04518A924B20046B59AC197DCDF0EA48014C9E228C4994CCA432F360E" +
+		PrA:  "B0AD510708F4ABCF3E0D97DC2F2FF112D9D2AAE49D97FFD1E4267F21C6E71C03",
+		PrB:  "A885A8B889520A6DBAD9FB33365E5B77FDED629440A16A533F259A510F63A822",
+		PkA: "A6BADBA04518A924B20046B59AC197DCDF0EA48014C9E228C4994CCA432F360E" +
 			"2D527AFB06CA7C96EE5CEE19BAD53BF9218A3961CAD7EC092BD8D9EBB22A3D51" +
 			"33008895A3F1F6A023F91E0FE06A00A622FD6335DAC107F8EC4283DC2632F080" +
 			"4E64B390DAD8A2572F1947C67FDF4F8787D140CE2C6B24E752DA9A195040EDFA" +
@@ -53,12 +53,12 @@ var tdata = map[PrimeFieldId]struct{
 	FP_751: {
 		name: "P-751",
 		// PrA - Alice's Private Key: 2*randint(0,2^371)
-		PrA:"C09957CC83045FB4C3726384D784476ACB6FFD92E5B15B3C2D451BA063F1BD4CED8FBCF682A98DD0954D3" +
+		PrA: "C09957CC83045FB4C3726384D784476ACB6FFD92E5B15B3C2D451BA063F1BD4CED8FBCF682A98DD0954D3" +
 			"7BCAF730E",
 		// PrB - Bob's Private Key: 3*randint(0,3^238)
-		PrB:"393E8510E78A16D2DC1AACA9C9D17E7E78DB630881D8599C7040D05BB5557ECAE8165C45D5366ECB37B00" +
+		PrB: "393E8510E78A16D2DC1AACA9C9D17E7E78DB630881D8599C7040D05BB5557ECAE8165C45D5366ECB37B00" +
 			"969740AF201",
-		PkA:"74D8EF08CB74EC99BF08B6FBE4FB3D048873B67F018E44988B9D70C564D058401D20E093C7DF0C66F022C" +
+		PkA: "74D8EF08CB74EC99BF08B6FBE4FB3D048873B67F018E44988B9D70C564D058401D20E093C7DF0C66F022C" +
 			"823E5139D2EA0EE137804B4820E950B046A90B0597759A0B6A197C56270128EA089FA1A2007DDE3430B37" +
 			"A3E6350BD47B7F513863741C125FA63DEDAFC475C13DB59E533055B7CBE4B2F32672DF2DF97E03E29617B" +
 			"0E9B6A35B58ABB26527A721142701EB147C7050E1D9125DA577B08CD51C8BB50627B8B47FACFC9C7C07DD" +
@@ -89,7 +89,6 @@ var tdata = map[PrimeFieldId]struct{
 	},
 }
 
-
 /* -------------------------------------------------------------------------
    Helpers
    -------------------------------------------------------------------------*/
@@ -102,8 +101,9 @@ func checkErr(t testing.TB, err error, msg string) {
 
 // Utility used for running same test with all registered prime fields
 type MultiIdTestingFunc func(testing.TB, PrimeFieldId)
+
 func Do(f MultiIdTestingFunc, t testing.TB) {
-	for id,val:=range(tdata) {
+	for id, val := range tdata {
 		fmt.Printf("\tTesting: %s\n", val.name)
 		f(t, id)
 	}
@@ -190,9 +190,9 @@ func testKeyAgreement(t testing.TB, id PrimeFieldId, pkA, prA, pkB, prB string) 
 
 	// KeyPairs
 	alicePublic := convToPub(pkA, KeyVariant_SIDH_A, id)
-	bobPublic   := convToPub(pkB, KeyVariant_SIDH_B, id)
-	alicePrivate:= convToPrv(prA, KeyVariant_SIDH_A, id)
-	bobPrivate  := convToPrv(prB, KeyVariant_SIDH_B, id)
+	bobPublic := convToPub(pkB, KeyVariant_SIDH_B, id)
+	alicePrivate := convToPrv(prA, KeyVariant_SIDH_A, id)
+	bobPrivate := convToPrv(prB, KeyVariant_SIDH_B, id)
 
 	// Do actual test
 	s1, e := DeriveSecret(bobPrivate, alicePublic)
@@ -255,10 +255,9 @@ func testImportExport(t testing.TB, id PrimeFieldId) {
 
 func testPrivateKeyBelowMax(t testing.TB, id PrimeFieldId) {
 	params := Params(id)
-	for variant,keySz:=range(
-		map[KeyVariant]*DomainParams {
-			KeyVariant_SIDH_A: &params.A,
-			KeyVariant_SIDH_B: &params.B}){
+	for variant, keySz := range map[KeyVariant]*DomainParams{
+		KeyVariant_SIDH_A: &params.A,
+		KeyVariant_SIDH_B: &params.B} {
 
 		func(v KeyVariant, dp *DomainParams) {
 			var blen = int(dp.SecretByteLen)
@@ -270,13 +269,13 @@ func testPrivateKeyBelowMax(t testing.TB, id PrimeFieldId) {
 			maxSecertVal.Sub(maxSecertVal, big.NewInt(1))
 
 			// Do same test 1000 times
-			for i:=0; i<1000; i++ {
+			for i := 0; i < 1000; i++ {
 				err := prv.Generate(rand.Reader)
 				checkErr(t, err, "Private key generation")
 
 				// Convert to big-endian, as that's what expected by (*Int)SetBytes()
 				secretBytes := prv.Export()
-				for i:=0; i<int(blen/2); i++ {
+				for i := 0; i < int(blen/2); i++ {
 					tmp := secretBytes[i] ^ secretBytes[blen-i-1]
 					secretBytes[i] = tmp ^ secretBytes[i]
 					secretBytes[blen-i-1] = tmp ^ secretBytes[blen-i-1]
@@ -287,12 +286,12 @@ func testPrivateKeyBelowMax(t testing.TB, id PrimeFieldId) {
 					t.Error("Generated private key is wrong")
 				}
 			}
-		}(variant,keySz)
+		}(variant, keySz)
 	}
 }
 
 func TestKeyAgreement(t *testing.T) {
-	for id,val:=range(tdata) {
+	for id, val := range tdata {
 		fmt.Printf("\tTesting: %s\n", val.name)
 		testKeyAgreement(t, id, tdata[id].PkA, tdata[id].PrA, tdata[id].PkB, tdata[id].PrB)
 	}
@@ -308,9 +307,9 @@ func TestKeyAgreementP751_AliceEvenNumber(t *testing.T) {
 /* -------------------------------------------------------------------------
    Wrappers for 'testing' module
    -------------------------------------------------------------------------*/
-func TestKeygen(t *testing.T) {Do(testKeygen, t)}
-func TestRoundtrip(t *testing.T) {Do(testRoundtrip, t)}
-func TestImportExport(t *testing.T) {Do(testImportExport, t)}
+func TestKeygen(t *testing.T)       { Do(testKeygen, t) }
+func TestRoundtrip(t *testing.T)    { Do(testRoundtrip, t) }
+func TestImportExport(t *testing.T) { Do(testImportExport, t) }
 
 /* -------------------------------------------------------------------------
    Benchmarking

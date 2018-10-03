@@ -3,8 +3,7 @@ package p751
 import . "github.com/cloudflare/p751sidh/internal/isogeny"
 
 // 2*p751
-var (
-)
+var ()
 
 //------------------------------------------------------------------------------
 // Implementtaion of FieldOperations
@@ -148,8 +147,8 @@ func (fp751Ops) ToMontgomery(x *Fp2Element) {
 	var aRR FpElementX2
 
 	// convert to montgomery domain
-	fp751Mul(&aRR, &x.A, &p751R2)		// = a*R*R
-	fp751MontgomeryReduce(&x.A, &aRR)   // = a*R mod p
+	fp751Mul(&aRR, &x.A, &p751R2)     // = a*R*R
+	fp751MontgomeryReduce(&x.A, &aRR) // = a*R mod p
 	fp751Mul(&aRR, &x.B, &p751R2)
 	fp751MontgomeryReduce(&x.B, &aRR)
 }
@@ -164,9 +163,9 @@ func (fp751Ops) FromMontgomery(x *Fp2Element, out *Fp2Element) {
 
 	// convert from montgomery domain
 	copy(aR[:], x.A[:])
-	fp751MontgomeryReduce(&out.A, &aR)    // = a mod p in [0, 2p)
-	fp751StrongReduce(&out.A)             // = a mod p in [0, p)
-	for i:=range(aR) {
+	fp751MontgomeryReduce(&out.A, &aR) // = a mod p in [0, 2p)
+	fp751StrongReduce(&out.A)          // = a mod p in [0, p)
+	for i := range aR {
 		aR[i] = 0
 	}
 	copy(aR[:], x.B[:])

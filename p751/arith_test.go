@@ -1,10 +1,10 @@
 package p751
 
 import (
+	. "github.com/cloudflare/p751sidh/internal/isogeny"
 	"math/big"
 	"testing"
-    "testing/quick"
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	"testing/quick"
 )
 
 func TestPrimeFieldElementToBigInt(t *testing.T) {
@@ -149,7 +149,7 @@ func TestFp2ElementBatch3Inv(t *testing.T) {
 		var y1, y2, y3 Fp2Element
 		kCurveOps.Fp2Batch3Inv(&x1.ExtElem, &x2.ExtElem, &x3.ExtElem, &y1, &y2, &y3)
 
-		return (VartimeEqFp2(&x1Inv,&y1) && VartimeEqFp2(&x2Inv,&y2) && VartimeEqFp2(&x3Inv,&y3))
+		return (VartimeEqFp2(&x1Inv, &y1) && VartimeEqFp2(&x2Inv, &y2) && VartimeEqFp2(&x3Inv, &y3))
 	}
 
 	// This is more expensive; run fewer tests

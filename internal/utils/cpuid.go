@@ -9,6 +9,7 @@ package utils
 
 // Signals support for MULX which is in BMI2
 var HasBMI2 bool
+
 // Signals support for MULX and BMI2
 var HasADX bool
 
@@ -18,17 +19,17 @@ func cpuid(eaxArg, ecxArg uint32) (eax, ebx, ecx, edx uint32)
 
 // Returns true in case bit 'n' in 'bits' is set, otherwise false
 func bitn(bits uint32, n uint8) bool {
-    return (bits>>n)&1 == 1
+	return (bits>>n)&1 == 1
 }
 
 func init() {
-    // CPUID returns max possible input that can be requested
-    max, _, _, _ := cpuid(0,0)
-    if max < 7 {
-        return
-    }
+	// CPUID returns max possible input that can be requested
+	max, _, _, _ := cpuid(0, 0)
+	if max < 7 {
+		return
+	}
 
-    _, ebx, _, _ := cpuid(7,0)
-    HasBMI2 = bitn(ebx, 19)
-    HasADX = bitn(ebx, 7)
+	_, ebx, _, _ := cpuid(7, 0)
+	HasBMI2 = bitn(ebx, 19)
+	HasADX = bitn(ebx, 7)
 }

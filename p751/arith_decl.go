@@ -3,8 +3,8 @@
 package p751
 
 import (
-	cpu "github.com/cloudflare/p751sidh/internal/utils"
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	cpu "github.com/cloudflare/p751sidh/internal/utils"
 )
 
 // If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
