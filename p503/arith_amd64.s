@@ -354,7 +354,8 @@
 // Template for calculating the Montgomery reduction algorithm described in
 // section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf. Template must be
 // customized with schoolbook multiplicaton for 128 x 320-bit number.
-// This macro reuses memory of IN value and *changes* it.
+// This macro reuses memory of IN value and *changes* it. Smashes registers
+// R[8-15], BX, CX
 // Input:
 //    * IN: 1024-bit number to be reduced
 //    * MULS: either MULS_128x320_MULX or MULS_128x320_MULXADX
@@ -690,33 +691,22 @@ TEXT ·fp503SubReduced(SB), NOSPLIT, $0-24
 
 	RET
 
-TEXT ·mulWithMULXADX(SB), NOSPLIT, $104-24
-	// Actual implementation
+TEXT ·fp503Mul(SB), NOSPLIT, $104-24
 	MOVQ    z+ 0(FP), CX
-	MOVQ    x+ 8(FP), REG_P2
-	MOVQ    y+16(FP), REG_P1
-	MUL(CX, REG_P2, REG_P1, MULS256_MULXADX)
-	RET
+	MOVQ    x+ 8(FP), REG_P1
+	MOVQ    y+16(FP), REG_P2
 
-TEXT ·mulWithMULX(SB), NOSPLIT, $104-24
-	// Actual implementation
-	MOVQ    z+ 0(FP), CX
-	MOVQ    x+ 8(FP), REG_P2
-	MOVQ    y+16(FP), REG_P1
-	MUL(CX, REG_P2, REG_P1, MULS256_MULX)
-	RET
+	// Check wether to use optimized implementation
+	CMPB    ·useADXMULX(SB), $1
+	JE      mul_with_mulx_adx
+	CMPB    ·useMULX(SB), $1
+	JE      mul_with_mulx
 
-TEXT ·mul(SB), $96-24
-	// Uses variant of Karatsuba method.
+	// Generic x86 implementation (below) uses variant of Karatsuba method.
 	//
 	// Here we store the destination in CX instead of in REG_P3 because the
 	// multiplication instructions use DX as an implicit destination
 	// operand: MULQ $REG sets DX:AX <-- AX * $REG.
-
-	// Actual implementation
-	MOVQ	z+0(FP), CX
-	MOVQ	x+8(FP), REG_P1
-	MOVQ	y+16(FP), REG_P2
 
 	// RAX and RDX will be used for a mask (0-borrow)
 	XORQ	AX, AX
@@ -1186,12 +1176,28 @@ TEXT ·mul(SB), $96-24
 	ADCQ    $0, DX;        	MOVQ    DX, (104)(CX)
 	ADCQ    $0, DI;         MOVQ    DI, (112)(CX)
 	ADCQ    $0, SI;     	MOVQ    SI, (120)(CX)
-
 	RET
 
-TEXT ·redc(SB), $0-16
-	MOVQ	z+0(FP), REG_P2
-	MOVQ	x+8(FP), REG_P1
+mul_with_mulx_adx:
+	// Mul implementation for CPUs supporting two independent carry chain
+	// (ADOX/ADCX) instructions and carry-less MULX multiplier
+	MUL(CX, REG_P1, REG_P2, MULS256_MULXADX)
+	RET
+
+mul_with_mulx:
+	// Mul implementation for CPUs supporting carry-less MULX multiplier.
+	MUL(CX, REG_P1, REG_P2, MULS256_MULX)
+	RET
+
+TEXT ·fp503MontgomeryReduce(SB), $0-16
+	MOVQ    z+0(FP), REG_P2
+	MOVQ    x+8(FP), REG_P1
+
+	// Check wether to use optimized implementation
+	CMPB    ·useADXMULX(SB), $1
+	JE      redc_with_mulx_adx
+	CMPB    ·useMULX(SB), $1
+	JE      redc_with_mulx
 
 	MOVQ    (REG_P1), R11
 	MOVQ    P503P1_3, AX
@@ -1495,19 +1501,19 @@ TEXT ·redc(SB), $0-16
 	ADCQ    $0, R10
 	ADDQ    (120)(REG_P1), R10     // Z7
 	MOVQ    R10, (56)(REG_P2)      // Z7
-
 	RET
 
-TEXT ·redcWithMULX(SB), $0-16
-	MOVQ    z+0(FP), DI
-	MOVQ    x+8(FP), SI
-	REDC(DI, SI, MULS_128x320_MULX)
+redc_with_mulx_adx:
+	// Implementation of the Montgomery reduction for CPUs
+	// supporting two independent carry chain (ADOX/ADCX)
+	// instructions and carry-less MULX multiplier
+	REDC(REG_P2, REG_P1, MULS_128x320_MULXADX)
 	RET
 
-TEXT ·redcWithMULXADX(SB), $0-16
-	MOVQ    z+0(FP), DI
-	MOVQ    x+8(FP), SI
-	REDC(DI, SI, MULS_128x320_MULXADX)
+redc_with_mulx:
+	// Implementation of the Montgomery reduction for CPUs
+	// supporting carry-less MULX multiplier.
+	REDC(REG_P2, REG_P1, MULS_128x320_MULX)
 	RET
 
 TEXT ·fp503AddLazy(SB), NOSPLIT, $0-24
