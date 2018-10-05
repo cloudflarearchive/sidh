@@ -1607,177 +1607,143 @@ TEXT ·fp751Mul(SB), $96-24
 	ADCQ	DX, T2			\
 	ADCQ	AX, T4
 
-#define fp751MontgomeryReduceCommonPart1(M0, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)\
-	XORQ	T7, T7			\
-	MOVQ	48+C, AX		\
-	MOVQ	56+C, DX		\
-	MOVQ	64+C, T9		\
-	ADDQ	40+M0, AX		\
-	ADCQ	48+M0, DX		\
-	ADCQ	56+M0, T9		\
-	MOVQ	AX, 40+M0		\
-	MOVQ	DX, 48+M0		\
-	MOVQ	T9, 56+M0		\
-	ADCQ	64+M0, T8		\
-	ADCQ	72+M0, T0		\
-	ADCQ	80+M0, T1		\
-	ADCQ	88+M0, T2		\
-	ADCQ	96+M0, T3		\
-	ADCQ	104+M0, T4		\
-	ADCQ	112+M0, T5		\
-	ADCQ	120+M0, T6		\
-	ADCQ	128+M0, T7		\
-	MOVQ	T8, 64+M0		\
-	MOVQ	T0, 72+M0		\
-	MOVQ	T1, 80+M0		\
-	MOVQ	T2, 88+M0		\
-	MOVQ	T3, 96+M0		\
-	MOVQ	T4, 104+M0		\
-	MOVQ	T5, 112+M0		\
-	MOVQ	T6, 120+M0		\
-	MOVQ	T7, 128+M0		\
-	MOVQ	136+M0, T0		\
-	MOVQ	144+M0, T1		\
-	MOVQ	152+M0, T2		\
-	MOVQ	160+M0, T3		\
-	MOVQ	168+M0, T4		\
-	MOVQ	176+M0, T5		\
-	MOVQ	184+M0, T6		\
-	ADCQ	$0, T0			\
-	ADCQ	$0, T1			\
-	ADCQ	$0, T2			\
-	ADCQ	$0, T3			\
-	ADCQ	$0, T4			\
-	ADCQ	$0, T5			\
-	ADCQ	$0, T6			\
-	MOVQ	T0, 136+M0		\
-	MOVQ	T1, 144+M0		\
-	MOVQ	T2, 152+M0		\
-	MOVQ	T3, 160+M0		\
-	MOVQ	T4, 168+M0		\
-	MOVQ	T5, 176+M0		\
-	MOVQ	T6, 184+M0
+// Template for calculating the Montgomery reduction algorithm described in
+// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf. Template must be
+// customized with schoolbook multiplicaton for 256 x 448-bit number.
+// This macro reuses memory of IN value and *changes* it. Smashes registers
+// R[8-15], AX, BX, CX, DX, BP.
+// Input:
+//    * M0: 1536-bit number to be reduced
+//    * C : either mul256x448bmi2 or mul256x448bmi2adx
+// Output: OUT 768-bit
+#define REDC(C, M0, MULS) 	\
+    \ // a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+    MULS(M0, ·p751p1, 48+C, R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15) \
+    XORQ    R15, R15        \
+    MOVQ    48+C, AX        \
+    MOVQ    56+C, DX        \
+    MOVQ    64+C, BX        \
+    ADDQ    40+M0, AX       \
+    ADCQ    48+M0, DX       \
+    ADCQ    56+M0, BX       \
+    MOVQ    AX, 40+M0       \
+    MOVQ    DX, 48+M0       \
+    MOVQ    BX, 56+M0       \
+    ADCQ    64+M0, BP       \
+    ADCQ    72+M0, R8       \
+    ADCQ    80+M0, R9       \
+    ADCQ    88+M0, R10      \
+    ADCQ    96+M0, R11      \
+    ADCQ    104+M0, R12     \
+    ADCQ    112+M0, R13     \
+    ADCQ    120+M0, R14     \
+    ADCQ    128+M0, R15     \
+    MOVQ    BP, 64+M0       \
+    MOVQ    R8, 72+M0       \
+    MOVQ    R9, 80+M0       \
+    MOVQ    R10, 88+M0      \
+    MOVQ    R11, 96+M0      \
+    MOVQ    R12, 104+M0     \
+    MOVQ    R13, 112+M0     \
+    MOVQ    R14, 120+M0     \
+    MOVQ    R15, 128+M0     \
+    MOVQ    136+M0, R8      \
+    MOVQ    144+M0, R9      \
+    MOVQ    152+M0, R10     \
+    MOVQ    160+M0, R11     \
+    MOVQ    168+M0, R12     \
+    MOVQ    176+M0, R13     \
+    MOVQ    184+M0, R14     \
+    ADCQ    $0, R8          \
+    ADCQ    $0, R9          \
+    ADCQ    $0, R10         \
+    ADCQ    $0, R11         \
+    ADCQ    $0, R12         \
+    ADCQ    $0, R13         \
+    ADCQ    $0, R14         \
+    MOVQ    R8, 136+M0      \
+    MOVQ    R9, 144+M0      \
+    MOVQ    R10, 152+M0     \
+    MOVQ    R11, 160+M0     \
+    MOVQ    R12, 168+M0     \
+    MOVQ    R13, 176+M0     \
+    MOVQ    R14, 184+M0     \
+    \ // a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+    MULS(32+M0, ·p751p1, 48+C, R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15) \
+    XORQ    R15, R15          \
+    MOVQ    48+C, AX        \
+    MOVQ    56+C, DX        \
+    MOVQ    64+C, BX        \
+    ADDQ    72+M0, AX       \
+    ADCQ    80+M0, DX       \
+    ADCQ    88+M0, BX       \
+    MOVQ    AX, 72+M0       \
+    MOVQ    DX, 80+M0       \
+    MOVQ    BX, 88+M0       \
+    ADCQ    96+M0, BP       \
+    ADCQ    104+M0, R8      \
+    ADCQ    112+M0, R9      \
+    ADCQ    120+M0, R10     \
+    ADCQ    128+M0, R11     \
+    ADCQ    136+M0, R12     \
+    ADCQ    144+M0, R13     \
+    ADCQ    152+M0, R14     \
+    ADCQ    160+M0, R15     \
+    MOVQ    BP, 0+C         \   // Final result c0
+    MOVQ    R8, 104+M0      \
+    MOVQ    R9, 112+M0      \
+    MOVQ    R10, 120+M0     \
+    MOVQ    R11, 128+M0     \
+    MOVQ    R12, 136+M0     \
+    MOVQ    R13, 144+M0     \
+    MOVQ    R14, 152+M0     \
+    MOVQ    R15, 160+M0     \
+    MOVQ    168+M0, R12     \
+    MOVQ    176+M0, R13     \
+    MOVQ    184+M0, R14     \
+    ADCQ    $0, R12         \
+    ADCQ    $0, R13         \
+    ADCQ    $0, R14         \
+    MOVQ    R12, 168+M0     \
+    MOVQ    R13, 176+M0     \
+    MOVQ    R14, 184+M0     \
+    \ // a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
+    MULS(64+M0, ·p751p1, 48+C, R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15) \
+    MOVQ    48+C, AX        \   // Final result c1:c11
+    MOVQ    56+C, DX        \
+    MOVQ    64+C, BX        \
+    ADDQ    104+M0, AX      \
+    ADCQ    112+M0, DX      \
+    ADCQ    120+M0, BX      \
+    MOVQ    AX, 8+C         \
+    MOVQ    DX, 16+C        \
+    MOVQ    BX, 24+C        \
+    ADCQ    128+M0, BP      \
+    ADCQ    136+M0, R8      \
+    ADCQ    144+M0, R9      \
+    ADCQ    152+M0, R10     \
+    ADCQ    160+M0, R11     \
+    ADCQ    168+M0, R12     \
+    ADCQ    176+M0, R13     \
+    ADCQ    184+M0, R14     \
+    MOVQ    BP, 32+C        \
+    MOVQ    R8, 40+C        \
+    MOVQ    R9, 48+C        \
+    MOVQ    R10, 56+C       \
+    MOVQ    R11, 64+C       \
+    MOVQ    R12, 72+C       \
+    MOVQ    R13, 80+C       \
+    MOVQ    R14, 88+C
 
-#define fp751MontgomeryReduceCommonPart2(M0, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)\
-	XORQ	T7, T7			\
-	MOVQ	48+C, AX		\
-	MOVQ	56+C, DX		\
-	MOVQ	64+C, T9		\
-	ADDQ	72+M0, AX		\
-	ADCQ	80+M0, DX		\
-	ADCQ	88+M0, T9		\
-	MOVQ	AX, 72+M0		\
-	MOVQ	DX, 80+M0		\
-	MOVQ	T9, 88+M0		\
-	ADCQ	96+M0, T8		\
-	ADCQ	104+M0, T0		\
-	ADCQ	112+M0, T1		\
-	ADCQ	120+M0, T2		\
-	ADCQ	128+M0, T3		\
-	ADCQ	136+M0, T4		\
-	ADCQ	144+M0, T5		\
-	ADCQ	152+M0, T6		\
-	ADCQ	160+M0, T7		\
-	MOVQ	T8, 0+C			\	// Final result c0
-	MOVQ	T0, 104+M0		\
-	MOVQ	T1, 112+M0		\
-	MOVQ	T2, 120+M0		\
-	MOVQ	T3, 128+M0		\
-	MOVQ	T4, 136+M0		\
-	MOVQ	T5, 144+M0		\
-	MOVQ	T6, 152+M0		\
-	MOVQ	T7, 160+M0		\
-	MOVQ	168+M0, T4		\
-	MOVQ	176+M0, T5		\
-	MOVQ	184+M0, T6		\
-	ADCQ	$0, T4			\
-	ADCQ	$0, T5			\
-	ADCQ	$0, T6			\
-	MOVQ	T4, 168+M0		\
-	MOVQ	T5, 176+M0		\
-	MOVQ	T6, 184+M0
-
-#define fp751MontgomeryReduceCommonPart3(M0, C, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9)\
-	MOVQ	48+C, AX		\	// Final result c1:c11
-	MOVQ	56+C, DX		\
-	MOVQ	64+C, T9		\
-	ADDQ	104+M0, AX		\
-	ADCQ	112+M0, DX		\
-	ADCQ	120+M0, T9		\
-	MOVQ	AX, 8+C			\
-	MOVQ	DX, 16+C		\
-	MOVQ	T9, 24+C		\
-	ADCQ	128+M0, T8		\
-	ADCQ	136+M0, T0		\
-	ADCQ	144+M0, T1		\
-	ADCQ	152+M0, T2		\
-	ADCQ	160+M0, T3		\
-	ADCQ	168+M0, T4		\
-	ADCQ	176+M0, T5		\
-	ADCQ	184+M0, T6		\
-	MOVQ	T8, 32+C		\
-	MOVQ	T0, 40+C		\
-	MOVQ	T1, 48+C		\
-	MOVQ	T2, 56+C		\
-	MOVQ	T3, 64+C		\
-	MOVQ	T4, 72+C		\
-	MOVQ	T5, 80+C		\
-	MOVQ	T6, 88+C
-
-// This implements the Montgomery reduction algorithm described in
-// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf.
-// This assumes that the BMI2 and ADX instruction set extensions are available.
-TEXT ·fp751MontgomeryReduceBMI2ADX(SB), $0-16
+TEXT ·fp751MontgomeryReduce(SB), $0-16
 	MOVQ z+0(FP), REG_P2
 	MOVQ x+8(FP), REG_P1
 
-	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2adx(0(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-	fp751MontgomeryReduceCommonPart1(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
-
-	// a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2adx(32(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-	fp751MontgomeryReduceCommonPart2(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
-
-	// a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2adx(64(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-	fp751MontgomeryReduceCommonPart3(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
-
-	RET
-
-// This implements the Montgomery reduction algorithm described in
-// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf.
-// This assumes that the BMI2 instruction set extension is available.
-TEXT ·fp751MontgomeryReduceBMI2(SB), $0-16
-	MOVQ z+0(FP), REG_P2
-	MOVQ x+8(FP), REG_P1
-
-	// a[0-3] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2(0(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-	fp751MontgomeryReduceCommonPart1(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
-
-	// a[4-7] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2(32(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-	fp751MontgomeryReduceCommonPart2(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
-
-	// a[8-11] x p751p1_nz --> result: [reg_p2+48], [reg_p2+56], [reg_p2+64], and rbp, r8:r14
-	mul256x448bmi2(64(REG_P1), ·p751p1, 48(REG_P2), R8, R9, R13, R10, R14, R12, R11, BP, BX, CX, R15)
-
-	fp751MontgomeryReduceCommonPart3(0(REG_P1), 0(REG_P2), R8, R9, R10, R11, R12, R13, R14, R15, BP, BX)
-
-	RET
-
-// This implements the straightforward Montgomery reduction algorithm without
-// using specific instruction set extensions.
-TEXT ·fp751MontgomeryReduceFallback(SB), $0-16
-
-	MOVQ z+0(FP), REG_P2
-	MOVQ x+8(FP), REG_P1
+	// Check wether to use optimized implementation
+	CMPB    ·useADXMULX(SB), $1
+	JE      redc_with_mulx_adx
+	CMPB    ·useMULX(SB), $1
+	JE      redc_with_mulx
 
 	MOVQ	(REG_P1), R11
 	MOVQ	P751P1_5, AX
@@ -2379,7 +2345,20 @@ TEXT ·fp751MontgomeryReduceFallback(SB), $0-16
 	ADCQ	$0, R10
 	ADDQ	(184)(REG_P1), R10		// Z11
 	MOVQ	R10, (88)(REG_P2)		// Z11
+	RET
 
+redc_with_mulx_adx:
+	// This implements the Montgomery reduction algorithm described in
+	// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf.
+	// This assumes that the BMI2 and ADX instruction set extensions are available.
+	REDC(0(REG_P2), 0(REG_P1), mul256x448bmi2adx)
+	RET
+
+redc_with_mulx:
+	// This implements the Montgomery reduction algorithm described in
+	// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf.
+	// This assumes that the BMI2 instruction set extension is available.
+	REDC(0(REG_P2), 0(REG_P1), mul256x448bmi2)
 	RET
 
 TEXT ·fp751AddLazy(SB), NOSPLIT, $0-24

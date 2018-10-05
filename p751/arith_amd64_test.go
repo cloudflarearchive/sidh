@@ -5,71 +5,71 @@ package p751
 import (
 	. "github.com/cloudflare/p751sidh/internal/isogeny"
 	cpu "github.com/cloudflare/p751sidh/internal/utils"
-
+	"reflect"
 	"testing"
 	"testing/quick"
 )
 
-func TestFp751MontgomeryReduce(t *testing.T) {
-	// First make sure that at least one value with a known result reduces
-	// correctly as defined in TestPrimeFieldElementToBigInt.
-	fp751MontgomeryReduce = fp751MontgomeryReduceFallback
-	t.Run("PrimeFieldElementToBigInt", TestPrimeFieldElementToBigInt)
+type OptimFlag uint
 
+const (
+	kUse_MUL     OptimFlag = 1 << 0
+	kUse_MULX              = 1 << 1
+	kUse_MULXADX           = 1 << 2
+)
+
+// Utility function used for testing REDC implementations. Tests caller provided
+// redcFunc against redc()
+func testRedc(t *testing.T, f1, f2 OptimFlag) {
+	doRedcTest := func(aRR FpElementX2) bool {
+		defer recognizecpu()
+		var resRedcF1, resRedcF2 FpElement
+		var aRRcpy = aRR
+
+		// Compute redc with first implementation
+		useMULX = (kUse_MULX & f1) == kUse_MULX
+		useADXMULX = (kUse_MULXADX & f1) == kUse_MULXADX
+		fp751MontgomeryReduce(&resRedcF1, &aRR)
+
+		// Compute redc with second implementation
+		useMULX = (kUse_MULX & f2) == kUse_MULX
+		useADXMULX = (kUse_MULXADX & f2) == kUse_MULXADX
+		fp751MontgomeryReduce(&resRedcF2, &aRRcpy)
+
+		// Compare results
+		return reflect.DeepEqual(resRedcF2, resRedcF1)
+	}
+
+	if err := quick.Check(doRedcTest, quickCheckConfig); err != nil {
+		t.Error(err)
+	}
+}
+
+// Ensures corretness of Montgomery reduction implementation which uses MULX
+func TestRedcWithMULX(t *testing.T) {
+	defer recognizecpu()
 	if !cpu.HasBMI2 {
-		return
+		t.Skip("MULX not supported by the platform")
 	}
+	testRedc(t, kUse_MULX, kUse_MUL)
+}
 
-	fp751MontgomeryReduce = fp751MontgomeryReduceBMI2
-	t.Run("PrimeFieldElementToBigInt", TestPrimeFieldElementToBigInt)
-
-	// Also check that the BMI2 implementation produces the same results
-	// as the fallback implementation.
-	compareMontgomeryReduce := func(x, y primeFieldElement) bool {
-		var z, zbackup FpElementX2
-		var zred1, zred2 FpElement
-
-		fp751Mul(&z, &x.A, &y.A)
-		zbackup = z
-
-		fp751MontgomeryReduceFallback(&zred1, &z)
-		// z may be destroyed.
-		z = zbackup
-		fp751MontgomeryReduceBMI2(&zred2, &z)
-
-		return zred1 == zred2
+// Ensures corretness of Montgomery reduction implementation which uses MULX
+// and ADX
+func TestRedcWithMULXADX(t *testing.T) {
+	defer recognizecpu()
+	if !(cpu.HasADX && cpu.HasBMI2) {
+		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
+	testRedc(t, kUse_MULXADX, kUse_MUL)
+}
 
-	if err := quick.Check(compareMontgomeryReduce, quickCheckConfig); err != nil {
-		t.Error(err)
+// Ensures corretness of Montgomery reduction implementation which uses MULX
+// and ADX.
+func TestRedcWithMULXADXAgainstMULX(t *testing.T) {
+	defer recognizecpu()
+	if !(cpu.HasADX && cpu.HasBMI2) {
+		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
-
-	if !cpu.HasADX {
-		return
-	}
-
-	fp751MontgomeryReduce = fp751MontgomeryReduceBMI2ADX
-	t.Run("PrimeFieldElementToBigInt", TestPrimeFieldElementToBigInt)
-
-	// Check that the BMI2ADX implementation produces the same results as
-	// the BMI2 implementation. By transitivity, it should also produce the
-	// same results as the fallback implementation.
-	compareMontgomeryReduce = func(x, y primeFieldElement) bool {
-		var z, zbackup FpElementX2
-		var zred1, zred2 FpElement
-
-		fp751Mul(&z, &x.A, &y.A)
-		zbackup = z
-
-		fp751MontgomeryReduceBMI2(&zred1, &z)
-		// z may be destroyed.
-		z = zbackup
-		fp751MontgomeryReduceBMI2ADX(&zred2, &z)
-
-		return zred1 == zred2
-	}
-
-	if err := quick.Check(compareMontgomeryReduce, quickCheckConfig); err != nil {
-		t.Error(err)
-	}
+	testRedc(t, kUse_MULXADX, kUse_MULX)
 }
