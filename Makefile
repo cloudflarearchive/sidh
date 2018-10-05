@@ -3,6 +3,7 @@ MK_FILE_PATH = $(lastword $(MAKEFILE_LIST))
 PRJ_DIR      = $(abspath $(dir $(MK_FILE_PATH)))
 GOPATH_LOCAL = $(PRJ_DIR)/build
 GOPATH_DIR   = github.com/cloudflare/p751sidh
+VENDOR_DIR   = build/vendor
 CSHAKE_PKG   ?= github.com/henrydcase/nobs/hash/sha3
 TARGETS      = p503 p751 sidh sike
 GO           ?= go
@@ -57,8 +58,19 @@ cover-%: prep_targets
 	cat coverage_$*.txt >> coverage.txt
 	rm coverage_$*.txt
 
+vendor: clean
+	mkdir -p $(VENDOR_DIR)/github_com/cloudflare/p751sidh/
+	rsync -a . $(VENDOR_DIR)/github_com/cloudflare/p751sidh/ \
+		--exclude=$(VENDOR_DIR) \
+		--exclude=.git          \
+		--exclude=.travis.yml   \
+		--exclude=README.md     \
+		--exclude=Makefile      \
+		--exclude=build
+
+	find $(VENDOR_DIR) -type f -print0 -name "*.go" | xargs -0 sed -i 's/github\.com/github_com/g'
+
 bench:   $(addprefix bench-,   $(TARGETS))
 cover:   $(addprefix cover-,   $(TARGETS))
 install: $(addprefix install-, $(TARGETS))
 test:    $(addprefix test-,    $(TARGETS))
-
