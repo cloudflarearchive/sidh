@@ -14,7 +14,7 @@ import (
 /* -------------------------------------------------------------------------
    Test data
    -------------------------------------------------------------------------*/
-var tdata = map[PrimeFieldId]struct {
+var tdata = map[uint8]struct {
 	name string
 	PkA  string
 	PrA  string
@@ -100,7 +100,7 @@ func checkErr(t testing.TB, err error, msg string) {
 }
 
 // Utility used for running same test with all registered prime fields
-type MultiIdTestingFunc func(testing.TB, PrimeFieldId)
+type MultiIdTestingFunc func(testing.TB, uint8)
 
 func Do(f MultiIdTestingFunc, t testing.TB) {
 	for id, val := range tdata {
@@ -110,7 +110,7 @@ func Do(f MultiIdTestingFunc, t testing.TB) {
 }
 
 // Converts string to private key
-func convToPrv(s string, v KeyVariant, id PrimeFieldId) *PrivateKey {
+func convToPrv(s string, v KeyVariant, id uint8) *PrivateKey {
 	key := NewPrivateKey(id, v)
 	hex, e := hex.DecodeString(s)
 	if e != nil {
@@ -124,7 +124,7 @@ func convToPrv(s string, v KeyVariant, id PrimeFieldId) *PrivateKey {
 }
 
 // Converts string to public key
-func convToPub(s string, v KeyVariant, id PrimeFieldId) *PublicKey {
+func convToPub(s string, v KeyVariant, id uint8) *PublicKey {
 	key := NewPublicKey(id, v)
 	hex, e := hex.DecodeString(s)
 	if e != nil {
@@ -140,7 +140,7 @@ func convToPub(s string, v KeyVariant, id PrimeFieldId) *PublicKey {
 /* -------------------------------------------------------------------------
    Unit tests
    -------------------------------------------------------------------------*/
-func testKeygen(t testing.TB, id PrimeFieldId) {
+func testKeygen(t testing.TB, id uint8) {
 	alicePrivate := convToPrv(tdata[id].PrA, KeyVariant_SIDH_A, id)
 	bobPrivate := convToPrv(tdata[id].PrB, KeyVariant_SIDH_B, id)
 	expPubA := convToPub(tdata[id].PkA, KeyVariant_SIDH_A, id)
@@ -157,7 +157,7 @@ func testKeygen(t testing.TB, id PrimeFieldId) {
 	}
 }
 
-func testRoundtrip(t testing.TB, id PrimeFieldId) {
+func testRoundtrip(t testing.TB, id uint8) {
 	var err error
 
 	prvA := NewPrivateKey(id, KeyVariant_SIDH_A)
@@ -185,7 +185,7 @@ func testRoundtrip(t testing.TB, id PrimeFieldId) {
 	}
 }
 
-func testKeyAgreement(t testing.TB, id PrimeFieldId, pkA, prA, pkB, prB string) {
+func testKeyAgreement(t testing.TB, id uint8, pkA, prA, pkB, prB string) {
 	var e error
 
 	// KeyPairs
@@ -225,7 +225,7 @@ func testKeyAgreement(t testing.TB, id PrimeFieldId, pkA, prA, pkB, prB string) 
 	}
 }
 
-func testImportExport(t testing.TB, id PrimeFieldId) {
+func testImportExport(t testing.TB, id uint8) {
 	var err error
 	a := NewPublicKey(id, KeyVariant_SIDH_A)
 	b := NewPublicKey(id, KeyVariant_SIDH_B)
@@ -253,7 +253,7 @@ func testImportExport(t testing.TB, id PrimeFieldId) {
 	}
 }
 
-func testPrivateKeyBelowMax(t testing.TB, id PrimeFieldId) {
+func testPrivateKeyBelowMax(t testing.TB, id uint8) {
 	params := Params(id)
 	for variant, keySz := range map[KeyVariant]*DomainParams{
 		KeyVariant_SIDH_A: &params.A,

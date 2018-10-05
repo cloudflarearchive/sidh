@@ -13,11 +13,10 @@ import (
 	"fmt"
 
 	rand "crypto/rand"
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
 	. "github.com/cloudflare/p751sidh/sidh"
 )
 
-type MultiIdTestingFunc func(*testing.T, PrimeFieldId)
+type MultiIdTestingFunc func(*testing.T, uint8)
 
 func Do(f MultiIdTestingFunc, t *testing.T) {
 	for id, val := range tdata {
@@ -26,7 +25,7 @@ func Do(f MultiIdTestingFunc, t *testing.T) {
 	}
 }
 
-var tdata = map[PrimeFieldId]struct {
+var tdata = map[uint8]struct {
 	name    string
 	KatFile string
 	PkB     string
@@ -52,7 +51,7 @@ func checkErr(t testing.TB, err error, msg string) {
 }
 
 // Encrypt, Decrypt, check if input/output plaintext is the same
-func testPKERoundTrip(t *testing.T, id PrimeFieldId) {
+func testPKERoundTrip(t *testing.T, id uint8) {
 	// Message to be encrypted
 	var params = Params(id)
 	var msg = make([]byte, params.MsgLen)
@@ -89,7 +88,7 @@ func testPKERoundTrip(t *testing.T, id PrimeFieldId) {
 }
 
 // Generate key and check if can encrypt
-func testPKEKeyGeneration(t *testing.T, id PrimeFieldId) {
+func testPKEKeyGeneration(t *testing.T, id uint8) {
 	// Message to be encrypted
 	var params = Params(id)
 	var msg = make([]byte, params.MsgLen)
@@ -114,7 +113,7 @@ func testPKEKeyGeneration(t *testing.T, id PrimeFieldId) {
 	}
 }
 
-func testNegativePKE(t *testing.T, id PrimeFieldId) {
+func testNegativePKE(t *testing.T, id uint8) {
 	var msg [40]byte
 	var err error
 	var params = Params(id)
@@ -145,7 +144,7 @@ func testNegativePKE(t *testing.T, id PrimeFieldId) {
 	}
 }
 
-func testKEMRoundTrip(t *testing.T, pkB, skB []byte, id PrimeFieldId) {
+func testKEMRoundTrip(t *testing.T, pkB, skB []byte, id uint8) {
 	// Import keys
 	pk := NewPublicKey(id, KeyVariant_SIKE)
 	sk := NewPrivateKey(id, KeyVariant_SIKE)
@@ -178,7 +177,7 @@ func TestKEMRoundTrip(t *testing.T) {
 	}
 }
 
-func testKEMKeyGeneration(t *testing.T, id PrimeFieldId) {
+func testKEMKeyGeneration(t *testing.T, id uint8) {
 	// Generate key
 	sk := NewPrivateKey(id, KeyVariant_SIKE)
 	checkErr(t, sk.Generate(rand.Reader), "error: key generation")
@@ -195,7 +194,7 @@ func testKEMKeyGeneration(t *testing.T, id PrimeFieldId) {
 	}
 }
 
-func testNegativeKEM(t *testing.T, id PrimeFieldId) {
+func testNegativeKEM(t *testing.T, id uint8) {
 	sk := NewPrivateKey(id, KeyVariant_SIKE)
 	checkErr(t, sk.Generate(rand.Reader), "error: key generation")
 	pk := sk.GeneratePublicKey()
@@ -228,7 +227,7 @@ func testNegativeKEM(t *testing.T, id PrimeFieldId) {
 
 // In case invalid ciphertext is provided, SIKE's decapsulation must
 // return same (but unpredictable) result for a given key.
-func testNegativeKEMSameWrongResult(t *testing.T, id PrimeFieldId) {
+func testNegativeKEMSameWrongResult(t *testing.T, id uint8) {
 	sk := NewPrivateKey(id, KeyVariant_SIKE)
 	checkErr(t, sk.Generate(rand.Reader), "error: key generation")
 	pk := sk.GeneratePublicKey()
@@ -283,7 +282,7 @@ func readAndCheckLine(r *bufio.Reader) []byte {
 	return ret
 }
 
-func testKeygen(pk, sk []byte, id PrimeFieldId) bool {
+func testKeygen(pk, sk []byte, id uint8) bool {
 	// Import provided private key
 	var prvKey = NewPrivateKey(id, KeyVariant_SIKE)
 	if prvKey.Import(sk) != nil {
@@ -295,7 +294,7 @@ func testKeygen(pk, sk []byte, id PrimeFieldId) bool {
 	return bytes.Equal(pubKey.Export(), pk)
 }
 
-func testDecapsulation(pk, sk, ct, ssExpected []byte, id PrimeFieldId) bool {
+func testDecapsulation(pk, sk, ct, ssExpected []byte, id uint8) bool {
 	var pubKey = NewPublicKey(id, KeyVariant_SIKE)
 	var prvKey = NewPrivateKey(id, KeyVariant_SIKE)
 	if pubKey.Import(pk) != nil || prvKey.Import(sk) != nil {
@@ -313,7 +312,7 @@ func testDecapsulation(pk, sk, ct, ssExpected []byte, id PrimeFieldId) bool {
 	return bytes.Equal(ssGot, ssExpected)
 }
 
-func testSIKE_KAT(t *testing.T, id PrimeFieldId) {
+func testSIKE_KAT(t *testing.T, id uint8) {
 	params := Params(id)
 	f, err := os.Open(tdata[id].KatFile)
 	if err != nil {

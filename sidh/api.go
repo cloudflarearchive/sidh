@@ -6,10 +6,13 @@ import (
 	"io"
 )
 
+// I keep it bool in order to be able to apply logical NOT
+type KeyVariant uint
+
 // Id's correspond to bitlength of the prime field characteristic
 // Currently FP_751 is the only one supported by this implementation
 const (
-	FP_503 PrimeFieldId = iota
+	FP_503 uint8 = iota
 	FP_751
 	FP_964
 	maxPrimeFieldId
@@ -65,7 +68,7 @@ func (key *key) Variant() KeyVariant {
 
 // NewPrivateKey initializes private key.
 // Usage of this function guarantees that the object is correctly initialized.
-func NewPrivateKey(id PrimeFieldId, v KeyVariant) *PrivateKey {
+func NewPrivateKey(id uint8, v KeyVariant) *PrivateKey {
 	prv := &PrivateKey{key: key{params: Params(id), keyVariant: v}}
 	if (v & KeyVariant_SIDH_A) == KeyVariant_SIDH_A {
 		prv.Scalar = make([]byte, prv.params.A.SecretByteLen)
@@ -80,7 +83,7 @@ func NewPrivateKey(id PrimeFieldId, v KeyVariant) *PrivateKey {
 
 // NewPublicKey initializes public key.
 // Usage of this function guarantees that the object is correctly initialized.
-func NewPublicKey(id PrimeFieldId, v KeyVariant) *PublicKey {
+func NewPublicKey(id uint8, v KeyVariant) *PublicKey {
 	return &PublicKey{key: key{params: Params(id), keyVariant: v}}
 }
 
