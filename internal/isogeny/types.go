@@ -4,10 +4,6 @@ const (
 	FP_MAX_WORDS = 12 // Currently p751.NumWords
 )
 
-// I keep it bool in order to be able to apply logical NOT
-type KeyVariant uint
-type PrimeFieldId uint
-
 // Representation of an element of the base field F_p.
 //
 // No particular meaning is assigned to the representation -- it could represent
@@ -36,7 +32,7 @@ type DomainParams struct {
 }
 
 type SidhParams struct {
-	Id PrimeFieldId
+	Id uint8
 	// Bytelen of P
 	Bytelen int
 	// The public key size, in bytes.
