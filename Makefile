@@ -2,7 +2,7 @@
 MK_FILE_PATH = $(lastword $(MAKEFILE_LIST))
 PRJ_DIR      = $(abspath $(dir $(MK_FILE_PATH)))
 GOPATH_LOCAL = $(PRJ_DIR)/build
-GOPATH_DIR   = github.com/henrydcase/p751sidh-cf
+GOPATH_DIR   = github.com/cloudflare/p751sidh
 VENDOR_DIR   = build/vendor
 CSHAKE_PKG   ?= github.com/henrydcase/nobs/hash/sha3
 TARGETS      = p503 p751 sidh sike
