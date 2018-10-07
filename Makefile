@@ -2,7 +2,7 @@
 MK_FILE_PATH = $(lastword $(MAKEFILE_LIST))
 PRJ_DIR      = $(abspath $(dir $(MK_FILE_PATH)))
 GOPATH_LOCAL = $(PRJ_DIR)/build
-GOPATH_DIR   = github.com/cloudflare/p751sidh
+GOPATH_DIR   = github.com/cloudflare/sidh
 VENDOR_DIR   = build/vendor
 CSHAKE_PKG   ?= github.com/henrydcase/nobs/hash/sha3
 TARGETS      = p503 p751 sidh sike
@@ -59,8 +59,8 @@ cover-%: prep_targets
 	rm coverage_$*.txt
 
 vendor: clean
-	mkdir -p $(VENDOR_DIR)/github_com/cloudflare/p751sidh/
-	rsync -a . $(VENDOR_DIR)/github_com/cloudflare/p751sidh/ \
+	mkdir -p $(VENDOR_DIR)/github_com/cloudflare/sidh/
+	rsync -a . $(VENDOR_DIR)/github_com/cloudflare/sidh/ \
 		--exclude=$(VENDOR_DIR) \
 		--exclude=.git          \
 		--exclude=.travis.yml   \

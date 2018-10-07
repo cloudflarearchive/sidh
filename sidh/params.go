@@ -1,9 +1,9 @@
 package sidh
 
 import (
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
-	p503 "github.com/cloudflare/p751sidh/p503"
-	p751 "github.com/cloudflare/p751sidh/p751"
+	. "github.com/cloudflare/sidh/internal/isogeny"
+	p503 "github.com/cloudflare/sidh/p503"
+	p751 "github.com/cloudflare/sidh/p751"
 )
 
 // Keeps mapping: SIDH prime field ID to domain parameters

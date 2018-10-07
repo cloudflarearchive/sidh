@@ -1,6 +1,6 @@
 package p751
 
-import . "github.com/cloudflare/p751sidh/internal/isogeny"
+import . "github.com/cloudflare/sidh/internal/isogeny"
 
 const (
 	// SIDH public key byte size

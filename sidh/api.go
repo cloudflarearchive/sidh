@@ -2,7 +2,7 @@ package sidh
 
 import (
 	"errors"
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	. "github.com/cloudflare/sidh/internal/isogeny"
 	"io"
 )
 

@@ -4,7 +4,7 @@ package p751
 
 import (
 	"fmt"
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	. "github.com/cloudflare/sidh/internal/isogeny"
 	"math/big"
 	"math/rand"
 	"reflect"

@@ -1,7 +1,7 @@
 package p751
 
 import (
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	. "github.com/cloudflare/sidh/internal/isogeny"
 	"math/big"
 	"testing"
 	"testing/quick"

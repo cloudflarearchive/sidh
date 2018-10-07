@@ -13,7 +13,7 @@ import (
 	"fmt"
 
 	rand "crypto/rand"
-	. "github.com/cloudflare/p751sidh/sidh"
+	. "github.com/cloudflare/sidh/sidh"
 )
 
 type MultiIdTestingFunc func(*testing.T, uint8)

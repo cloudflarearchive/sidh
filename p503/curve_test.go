@@ -2,7 +2,7 @@ package p503
 
 import (
 	"bytes"
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	. "github.com/cloudflare/sidh/internal/isogeny"
 	"testing"
 	"testing/quick"
 )

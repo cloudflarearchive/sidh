@@ -3,7 +3,7 @@ package p503
 // Tools used for testing and debugging
 
 import (
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
+	. "github.com/cloudflare/sidh/internal/isogeny"
 	"math/big"
 	"math/rand"
 	"reflect"

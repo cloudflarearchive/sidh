@@ -8,7 +8,7 @@ import (
 	"io"
 	// TODO: Use implementation from xcrypto, once PR below merged
 	// https://go-review.googlesource.com/c/crypto/+/111281/
-	. "github.com/cloudflare/p751sidh/sidh"
+	. "github.com/cloudflare/sidh/sidh"
 	cshake "github.com/henrydcase/nobs/hash/sha3"
 )
 

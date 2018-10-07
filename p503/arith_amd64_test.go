@@ -3,8 +3,8 @@
 package p503
 
 import (
-	. "github.com/cloudflare/p751sidh/internal/isogeny"
-	cpu "github.com/cloudflare/p751sidh/internal/utils"
+	. "github.com/cloudflare/sidh/internal/isogeny"
+	cpu "github.com/cloudflare/sidh/internal/utils"
 	"reflect"
 	"testing"
 	"testing/quick"
