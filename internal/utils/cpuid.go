@@ -10,8 +10,8 @@ package utils
 // Signals support for MULX which is in BMI2
 var HasBMI2 bool
 
-// Signals support for MULX and BMI2
-var HasADX bool
+// Signals support for ADX and BMI2
+var HasADXandBMI2 bool
 
 // Performs CPUID and returns values of registers
 // go:nosplit
@@ -22,7 +22,7 @@ func bitn(bits uint32, n uint8) bool {
 	return (bits>>n)&1 == 1
 }
 
-func init() {
+func RecognizeCpu() {
 	// CPUID returns max possible input that can be requested
 	max, _, _, _ := cpuid(0, 0)
 	if max < 7 {
@@ -31,5 +31,9 @@ func init() {
 
 	_, ebx, _, _ := cpuid(7, 0)
 	HasBMI2 = bitn(ebx, 19)
-	HasADX = bitn(ebx, 7)
+	HasADXandBMI2 = bitn(ebx, 7) && HasBMI2
+}
+
+func init() {
+	RecognizeCpu()
 }

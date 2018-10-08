@@ -13,26 +13,26 @@ import (
 type OptimFlag uint
 
 const (
-	kUse_MUL     OptimFlag = 1 << 0
-	kUse_MULX              = 1 << 1
-	kUse_MULXADX           = 1 << 2
+	kUse_MUL        OptimFlag = 1 << 0
+	kUse_MULX                 = 1 << 1
+	kUse_BMI2andADX           = 1 << 2
 )
 
 // Utility function used for testing Mul implementations. Tests caller provided
 // mulFunc against mul()
 func testMul(t *testing.T, f1, f2 OptimFlag) {
 	doMulTest := func(multiplier, multiplicant FpElement) bool {
-		defer recognizecpu()
+		defer cpu.RecognizeCpu()
 		var resMulRef, resMulOptim FpElementX2
 
 		// Compute multiplier*multiplicant with first implementation
-		useMULX = (kUse_MULX & f1) == kUse_MULX
-		useADXMULX = (kUse_MULXADX & f1) == kUse_MULXADX
+		cpu.HasBMI2 = (kUse_MULX & f1) == kUse_MULX
+		cpu.HasADXandBMI2 = (kUse_BMI2andADX & f1) == kUse_BMI2andADX
 		fp503Mul(&resMulOptim, &multiplier, &multiplicant)
 
 		// Compute multiplier*multiplicant with second implementation
-		useMULX = (kUse_MULX & f2) == kUse_MULX
-		useADXMULX = (kUse_MULXADX & f2) == kUse_MULXADX
+		cpu.HasBMI2 = (kUse_MULX & f2) == kUse_MULX
+		cpu.HasADXandBMI2 = (kUse_BMI2andADX & f2) == kUse_BMI2andADX
 		fp503Mul(&resMulRef, &multiplier, &multiplicant)
 
 		// Compare results
@@ -48,18 +48,18 @@ func testMul(t *testing.T, f1, f2 OptimFlag) {
 // redcFunc against redc()
 func testRedc(t *testing.T, f1, f2 OptimFlag) {
 	doRedcTest := func(aRR FpElementX2) bool {
-		defer recognizecpu()
+		defer cpu.RecognizeCpu()
 		var resRedcF1, resRedcF2 FpElement
 		var aRRcpy = aRR
 
 		// Compute redc with first implementation
-		useMULX = (kUse_MULX & f1) == kUse_MULX
-		useADXMULX = (kUse_MULXADX & f1) == kUse_MULXADX
+		cpu.HasBMI2 = (kUse_MULX & f1) == kUse_MULX
+		cpu.HasADXandBMI2 = (kUse_BMI2andADX & f1) == kUse_BMI2andADX
 		fp503MontgomeryReduce(&resRedcF1, &aRR)
 
 		// Compute redc with second implementation
-		useMULX = (kUse_MULX & f2) == kUse_MULX
-		useADXMULX = (kUse_MULXADX & f2) == kUse_MULXADX
+		cpu.HasBMI2 = (kUse_MULX & f2) == kUse_MULX
+		cpu.HasADXandBMI2 = (kUse_BMI2andADX & f2) == kUse_BMI2andADX
 		fp503MontgomeryReduce(&resRedcF2, &aRRcpy)
 
 		// Compare results
@@ -73,7 +73,7 @@ func testRedc(t *testing.T, f1, f2 OptimFlag) {
 
 // Ensures corretness of implementation of mul operation which uses MULX
 func TestMulWithMULX(t *testing.T) {
-	defer recognizecpu()
+	defer cpu.RecognizeCpu()
 	if !cpu.HasBMI2 {
 		t.Skip("MULX not supported by the platform")
 	}
@@ -82,25 +82,25 @@ func TestMulWithMULX(t *testing.T) {
 
 // Ensures corretness of implementation of mul operation which uses MULX and ADOX/ADCX
 func TestMulWithMULXADX(t *testing.T) {
-	defer recognizecpu()
-	if !(cpu.HasADX && cpu.HasBMI2) {
+	defer cpu.RecognizeCpu()
+	if !cpu.HasADXandBMI2 {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
-	testMul(t, kUse_MULXADX, kUse_MUL)
+	testMul(t, kUse_BMI2andADX, kUse_MUL)
 }
 
 // Ensures corretness of implementation of mul operation which uses MULX and ADOX/ADCX
 func TestMulWithMULXADXAgainstMULX(t *testing.T) {
-	defer recognizecpu()
-	if !(cpu.HasADX && cpu.HasBMI2) {
+	defer cpu.RecognizeCpu()
+	if !cpu.HasADXandBMI2 {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
-	testMul(t, kUse_MULX, kUse_MULXADX)
+	testMul(t, kUse_MULX, kUse_BMI2andADX)
 }
 
 // Ensures corretness of Montgomery reduction implementation which uses MULX
 func TestRedcWithMULX(t *testing.T) {
-	defer recognizecpu()
+	defer cpu.RecognizeCpu()
 	if !cpu.HasBMI2 {
 		t.Skip("MULX not supported by the platform")
 	}
@@ -110,19 +110,19 @@ func TestRedcWithMULX(t *testing.T) {
 // Ensures corretness of Montgomery reduction implementation which uses MULX
 // and ADX
 func TestRedcWithMULXADX(t *testing.T) {
-	defer recognizecpu()
-	if !(cpu.HasADX && cpu.HasBMI2) {
+	defer cpu.RecognizeCpu()
+	if !cpu.HasADXandBMI2 {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
-	testRedc(t, kUse_MULXADX, kUse_MUL)
+	testRedc(t, kUse_BMI2andADX, kUse_MUL)
 }
 
 // Ensures corretness of Montgomery reduction implementation which uses MULX
 // and ADX.
 func TestRedcWithMULXADXAgainstMULX(t *testing.T) {
-	defer recognizecpu()
-	if !(cpu.HasADX && cpu.HasBMI2) {
+	defer cpu.RecognizeCpu()
+	if !cpu.HasADXandBMI2 {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
-	testRedc(t, kUse_MULXADX, kUse_MULX)
+	testRedc(t, kUse_BMI2andADX, kUse_MULX)
 }
