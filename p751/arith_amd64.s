@@ -1741,7 +1741,7 @@ TEXT ·fp751MontgomeryReduce(SB), $0-16
 
 	// Check wether to use optimized implementation
 	CMPB    github·com∕cloudflare∕sidh∕internal∕utils·HasADXandBMI2(SB), $1
-	JE      redc_with_mulx_adx
+	JE      redc_with_mulx_adcx_adox
 	CMPB    github·com∕cloudflare∕sidh∕internal∕utils·HasBMI2(SB), $1
 	JE      redc_with_mulx
 
@@ -2347,7 +2347,7 @@ TEXT ·fp751MontgomeryReduce(SB), $0-16
 	MOVQ	R10, (88)(REG_P2)		// Z11
 	RET
 
-redc_with_mulx_adx:
+redc_with_mulx_adcx_adox:
 	// This implements the Montgomery reduction algorithm described in
 	// section 5.2.3 of https://eprint.iacr.org/2017/1015.pdf.
 	// This assumes that the BMI2 and ADX instruction set extensions are available.

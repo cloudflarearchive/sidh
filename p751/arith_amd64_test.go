@@ -14,9 +14,12 @@ import (
 type OptimFlag uint
 
 const (
-	kUse_MUL        OptimFlag = 1 << 0
-	kUse_MULX                 = 1 << 1
-	kUse_ADXandBMI2           = 1 << 2
+	// Indicates that optimisation which uses MUL instruction should be used
+	kUse_MUL OptimFlag = 1 << 0
+	// Indicates that optimisation which uses MULX instruction should be used
+	kUse_MULX = 1 << 1
+	// Indicates that optimisation which uses MULX, ADOX and ADCX instructions should be used
+	kUse_MULXandADxX = 1 << 2
 )
 
 // Utility function used for testing REDC implementations. Tests caller provided
@@ -29,12 +32,12 @@ func testRedc(t *testing.T, f1, f2 OptimFlag) {
 
 		// Compute redc with first implementation
 		cpu.HasBMI2 = (kUse_MULX & f1) == kUse_MULX
-		cpu.HasADXandBMI2 = (kUse_ADXandBMI2 & f1) == kUse_ADXandBMI2
+		cpu.HasADXandBMI2 = (kUse_MULXandADxX & f1) == kUse_MULXandADxX
 		fp751MontgomeryReduce(&resRedcF1, &aRR)
 
 		// Compute redc with second implementation
 		cpu.HasBMI2 = (kUse_MULX & f2) == kUse_MULX
-		cpu.HasADXandBMI2 = (kUse_ADXandBMI2 & f2) == kUse_ADXandBMI2
+		cpu.HasADXandBMI2 = (kUse_MULXandADxX & f2) == kUse_MULXandADxX
 		fp751MontgomeryReduce(&resRedcF2, &aRRcpy)
 
 		// Compare results
@@ -46,7 +49,7 @@ func testRedc(t *testing.T, f1, f2 OptimFlag) {
 	}
 }
 
-// Ensures corretness of Montgomery reduction implementation which uses MULX
+// Ensures correctness of Montgomery reduction implementation which uses MULX
 func TestRedcWithMULX(t *testing.T) {
 	defer cpu.RecognizeCpu()
 	if !cpu.HasBMI2 {
@@ -55,22 +58,22 @@ func TestRedcWithMULX(t *testing.T) {
 	testRedc(t, kUse_MULX, kUse_MUL)
 }
 
-// Ensures corretness of Montgomery reduction implementation which uses MULX
-// and ADX
-func TestRedcWithMULXADX(t *testing.T) {
+// Ensures correctness of Montgomery reduction implementation which uses MULX
+// and ADCX/ADOX.
+func TestRedcWithMULXADxX(t *testing.T) {
 	defer cpu.RecognizeCpu()
 	if !cpu.HasADXandBMI2 {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
-	testRedc(t, kUse_ADXandBMI2, kUse_MUL)
+	testRedc(t, kUse_MULXandADxX, kUse_MUL)
 }
 
-// Ensures corretness of Montgomery reduction implementation which uses MULX
-// and ADX.
-func TestRedcWithMULXADXAgainstMULX(t *testing.T) {
+// Ensures correctness of Montgomery reduction implementation which uses MULX
+// and ADCX/ADOX.
+func TestRedcWithMULXADxXAgainstMULX(t *testing.T) {
 	defer cpu.RecognizeCpu()
 	if !cpu.HasADXandBMI2 {
 		t.Skip("MULX, ADCX and ADOX not supported by the platform")
 	}
-	testRedc(t, kUse_ADXandBMI2, kUse_MULX)
+	testRedc(t, kUse_MULXandADxX, kUse_MULX)
 }
