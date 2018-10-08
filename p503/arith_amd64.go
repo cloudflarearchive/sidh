@@ -2,7 +2,7 @@
 
 package p503
 
-import cpu "github.com/cloudflare/p751sidh/internal/utils"
+import cpu "github.com/cloudflare/sidh/internal/utils"
 
 // There couple of reasons for having those variables here:
 // * to have an access to them from assembly
