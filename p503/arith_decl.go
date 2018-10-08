@@ -4,6 +4,9 @@ package p503
 
 import (
 	. "github.com/cloudflare/sidh/internal/isogeny"
+	// This is imported only because arith_amd64.s needs
+	// some symbols from cpuid.go
+	_ "github.com/cloudflare/sidh/internal/utils"
 )
 
 // If choice = 0, leave x,y unchanged. If choice = 1, set x,y = y,x.
