@@ -108,7 +108,7 @@
 // Input: I0 and I1.
 // Output: O
 // All the other arguments resgisters are used for storing temporary values
-#define MULS256_MULXADX(O, I0, I1, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) \
+#define MULS256_MULX_ADCX_ADOX(O, I0, I1, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) \
 							\   // U0[0]
 	MOVQ     0+I0, DX       \   // MULX requires multiplayer in DX
 							\   // T0:T1 = I1*DX
@@ -230,7 +230,7 @@
 	MULS_128x320(I0, I1, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, ADDQ, ADDQ, ADCQ, ADCQ)
 
 // Multiplies 128-bit with 320-bit integer. Optimized with  MULX, ADOX and ADCX instructions
-#define MULS_128x320_MULXADX(I0, I1, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) \
+#define MULS_128x320_MULX_ADCX_ADOX(I0, I1, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9) \
 	MULS_128x320(I0, I1, T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, ADOXQ, ADCXQ, ADOXQ, ADCXQ)
 
 // Template of a macro performing multiplication of two 512-bit numbers. It uses one
@@ -238,7 +238,7 @@
 // customized with macro performing schoolbook multiplication.
 // Input:
 //  * I0, I1 - two 512-bit numbers
-//  * MULS - either MULS256_MULX or MULS256_MULXADX
+//  * MULS - either MULS256_MULX or MULS256_MULX_ADCX_ADOX
 // Output: OUT - 1024-bit long
 #define MUL(OUT, I0, I1, MULS) \
 	\ // R[8-11]: U1+U0
@@ -358,7 +358,7 @@
 // R[8-15], BX, CX
 // Input:
 //    * IN: 1024-bit number to be reduced
-//    * MULS: either MULS_128x320_MULX or MULS_128x320_MULXADX
+//    * MULS: either MULS_128x320_MULX or MULS_128x320_MULX_ADCX_ADOX
 // Output: OUT 512-bit
 #define REDC(OUT, IN, MULS) \
 	MULS(0(IN), ·p503p1, R8, R9, R10, R11, R12, R13, R14, BX, CX, R15) \
@@ -1181,7 +1181,7 @@ TEXT ·fp503Mul(SB), NOSPLIT, $104-24
 mul_with_mulx_adcx_adox:
 	// Mul implementation for CPUs supporting two independent carry chain
 	// (ADOX/ADCX) instructions and carry-less MULX multiplier
-	MUL(CX, REG_P1, REG_P2, MULS256_MULXADX)
+	MUL(CX, REG_P1, REG_P2, MULS256_MULX_ADCX_ADOX)
 	RET
 
 mul_with_mulx:
@@ -1507,7 +1507,7 @@ redc_with_mulx_adcx_adox:
 	// Implementation of the Montgomery reduction for CPUs
 	// supporting two independent carry chain (ADOX/ADCX)
 	// instructions and carry-less MULX multiplier
-	REDC(REG_P2, REG_P1, MULS_128x320_MULXADX)
+	REDC(REG_P2, REG_P1, MULS_128x320_MULX_ADCX_ADOX)
 	RET
 
 redc_with_mulx:
