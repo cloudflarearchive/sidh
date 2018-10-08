@@ -698,7 +698,7 @@ TEXT ·fp503Mul(SB), NOSPLIT, $104-24
 
 	// Check wether to use optimized implementation
 	CMPB    github·com∕cloudflare∕sidh∕internal∕utils·HasADXandBMI2(SB), $1
-	JE      mul_with_mulx_adx
+	JE      mul_with_mulx_adcx_adox
 	CMPB    github·com∕cloudflare∕sidh∕internal∕utils·HasBMI2(SB), $1
 	JE      mul_with_mulx
 
@@ -1178,7 +1178,7 @@ TEXT ·fp503Mul(SB), NOSPLIT, $104-24
 	ADCQ    $0, SI;     	MOVQ    SI, (120)(CX)
 	RET
 
-mul_with_mulx_adx:
+mul_with_mulx_adcx_adox:
 	// Mul implementation for CPUs supporting two independent carry chain
 	// (ADOX/ADCX) instructions and carry-less MULX multiplier
 	MUL(CX, REG_P1, REG_P2, MULS256_MULXADX)
@@ -1195,7 +1195,7 @@ TEXT ·fp503MontgomeryReduce(SB), $0-16
 
 	// Check wether to use optimized implementation
 	CMPB    github·com∕cloudflare∕sidh∕internal∕utils·HasADXandBMI2(SB), $1
-	JE      redc_with_mulx_adx
+	JE      redc_with_mulx_adcx_adox
 	CMPB    github·com∕cloudflare∕sidh∕internal∕utils·HasBMI2(SB), $1
 	JE      redc_with_mulx
 
@@ -1503,7 +1503,7 @@ TEXT ·fp503MontgomeryReduce(SB), $0-16
 	MOVQ    R10, (56)(REG_P2)      // Z7
 	RET
 
-redc_with_mulx_adx:
+redc_with_mulx_adcx_adox:
 	// Implementation of the Montgomery reduction for CPUs
 	// supporting two independent carry chain (ADOX/ADCX)
 	// instructions and carry-less MULX multiplier
