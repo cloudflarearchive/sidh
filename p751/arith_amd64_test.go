@@ -6,6 +6,7 @@ import (
 	. "github.com/cloudflare/sidh/internal/isogeny"
 	cpu "github.com/cloudflare/sidh/internal/utils"
 
+	"reflect"
 	"testing"
 	"testing/quick"
 )
