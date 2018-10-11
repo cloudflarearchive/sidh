@@ -600,7 +600,9 @@ TEXT ·fp503Mul(SB), NOSPLIT, $0-24
 	ADC	T3, Z5
 
 // This implements the shifted 2^(B*w) Montgomery reduction from
-// https://eprint.iacr.org/2016/986.pdf with B = 4, w = 64
+// https://eprint.iacr.org/2016/986.pdf, section Section 3.2, with
+// B = 4, w = 64. Performance results were reported in
+// https://eprint.iacr.org/2018/700.pdf Section 6.
 TEXT ·fp503MontgomeryReduce(SB), NOSPLIT, $0-16
 	MOVD	x+8(FP), R0
 
