@@ -89,7 +89,7 @@ TEXT ·fp503AddReduced(SB), NOSPLIT, $0-24
 	SBCS	R17, R10
 	SBC	ZR, ZR, R19
 
-	// Add 2 * p503 back but anded with the mask in R19
+	// If x + y - 2 * p503 < 0, R19 is 1 and 2 * p503 should be added
 	AND	R19, R11
 	AND	R19, R12
 	AND	R19, R13
@@ -139,7 +139,7 @@ TEXT ·fp503SubReduced(SB), NOSPLIT, $0-24
 	SBCS	R14, R10
 	SBC	ZR, ZR, R19
 
-	// Add 2 * p503 back but anded with the mask in R19
+	// If x - y < 0, R19 is 1 and 2 * p503 should be added
 	LDP	·p503x2+0(SB), (R11, R12)
 	LDP	·p503x2+24(SB), (R13, R14)
 	AND	R19, R11
@@ -295,7 +295,7 @@ TEXT ·fp503X2SubLazy(SB), NOSPLIT, $0-24
 	SBCS	R14, R10
 	SBC	ZR, ZR, R15
 
-	// Add p503 back but anded with the mask in R15
+	// If x - y < 0, R15 is 1 and p503 should be added
 	LDP	·p503+16(SB), (R16, R17)
 	LDP	·p503+32(SB), (R19, R20)
 	AND	R15, R16
@@ -410,6 +410,9 @@ TEXT ·fp503X2SubLazy(SB), NOSPLIT, $0-24
 	ADCS	T0, Z6		\
 	ADC	Y0, ZR, Z7
 
+
+// This implements two-level Karatsuba with a 128x128 Comba multiplier
+// at the bottom
 TEXT ·fp503Mul(SB), NOSPLIT, $0-24
 	MOVD	z+0(FP), R2
 	MOVD	x+8(FP), R0
@@ -596,6 +599,8 @@ TEXT ·fp503Mul(SB), NOSPLIT, $0-24
 	ADDS	T2, Z4		\
 	ADC	T3, Z5
 
+// This implements the shifted 2^(B*w) Montgomery reduction from
+// https://eprint.iacr.org/2016/986.pdf with B = 4, w = 64
 TEXT ·fp503MontgomeryReduce(SB), NOSPLIT, $0-16
 	MOVD	x+8(FP), R0
 
@@ -603,13 +608,13 @@ TEXT ·fp503MontgomeryReduce(SB), NOSPLIT, $0-16
 	LDP	0(R0), (R2, R3)
 
 	// Load the prime constant in R25-R29
-	LDP	·p503MontgomeryConst+32(SB), (R25, R26)
-	LDP	·p503MontgomeryConst+48(SB), (R27, R29)
+	LDP	·p503p1s8+32(SB), (R25, R26)
+	LDP	·p503p1s8+48(SB), (R27, R29)
 
-	// [x0,x1] * p503MontgomeryConst to R4-R9
-	MUL	R2, R25, R4		// x0 * p503MontgomeryConst0
+	// [x0,x1] * p503p1s8 to R4-R9
+	MUL	R2, R25, R4		// x0 * p503p1s8[0]
 	UMULH	R2, R25, R7
-	MUL	R2, R26, R5		// x0 * p503MontgomeryConst1
+	MUL	R2, R26, R5		// x0 * p503p1s8[1]
 	UMULH	R2, R26, R6
 
 	mul128x256comba(R2, R3, R25, R26, R27, R29, R4, R5, R6, R7, R8, R9, R10, R11, R12, R13)
@@ -639,7 +644,7 @@ TEXT ·fp503MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R8, R15
 	LDP	64(R0), (R16, R17)
 	LDP	80(R0), (R19, R20)
-	MUL	R3, R25, R4		// x2 * p503MontgomeryConst0
+	MUL	R3, R25, R4		// x2 * p503p1s8[0]
 	UMULH	R3, R25, R7
 	ADCS	R9, R16
 	ADCS	R10, R17
@@ -647,14 +652,14 @@ TEXT ·fp503MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	ZR, R20
 	LDP	96(R0), (R21, R22)
 	LDP	112(R0), (R23, R24)
-	MUL	R3, R26, R5		// x2 * p503MontgomeryConst1
+	MUL	R3, R26, R5		// x2 * p503p1s8[1]
 	UMULH	R3, R26, R6
 	ADCS	ZR, R21
 	ADCS	ZR, R22
 	ADCS	ZR, R23
 	ADC	ZR, R24
 
-	// [x2,x3] * p503MontgomeryConst to R4-R9
+	// [x2,x3] * p503p1s8 to R4-R9
 	mul128x256comba(R3, R11, R25, R26, R27, R29, R4, R5, R6, R7, R8, R9, R10, R0, R1, R2)
 
 	ORR	R9>>8, ZR, R10
@@ -674,19 +679,19 @@ TEXT ·fp503MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R5, R14			// x6
 	ADCS	R6, R15
 	ADCS	R7, R16
-	MUL	R12, R25, R4		// x4 * p503MontgomeryConst0
+	MUL	R12, R25, R4		// x4 * p503p1s8[0]
 	UMULH	R12, R25, R7
 	ADCS	R8, R17
 	ADCS	R9, R19
 	ADCS	R10, R20
 	ADCS	ZR, R21
-	MUL	R12, R26, R5		// x4 * p503MontgomeryConst1
+	MUL	R12, R26, R5		// x4 * p503p1s8[1]
 	UMULH	R12, R26, R6
 	ADCS	ZR, R22
 	ADCS	ZR, R23
 	ADC	ZR, R24
 
-	// [x4,x5] * p503MontgomeryConst to R4-R9
+	// [x4,x5] * p503p1s8 to R4-R9
 	mul128x256comba(R12, R13, R25, R26, R27, R29, R4, R5, R6, R7, R8, R9, R10, R0, R1, R2)
 
 	ORR	R9>>8, ZR, R10
@@ -706,17 +711,17 @@ TEXT ·fp503MontgomeryReduce(SB), NOSPLIT, $0-16
 	ADCS	R5, R16			// x8
 	ADCS	R6, R17
 	ADCS	R7, R19
-	MUL	R14, R25, R4		// x6 * p503MontgomeryConst0
+	MUL	R14, R25, R4		// x6 * p503p1s8[0]
 	UMULH	R14, R25, R7
 	ADCS	R8, R20
 	ADCS	R9, R21
 	ADCS	R10, R22
-	MUL	R14, R26, R5		// x6 * p503MontgomeryConst1
+	MUL	R14, R26, R5		// x6 * p503p1s8[1]
 	UMULH	R14, R26, R6
 	ADCS	ZR, R23
 	ADC	ZR, R24
 
-	// [x6,x7] * p503MontgomeryConst to R4-R9
+	// [x6,x7] * p503p1s8 to R4-R9
 	mul128x256comba(R14, R15, R25, R26, R27, R29, R4, R5, R6, R7, R8, R9, R10, R0, R1, R2)
 
 	ORR	R9>>8, ZR, R10

@@ -121,7 +121,7 @@ TEXT ·fp751AddReduced(SB), NOSPLIT, $0-24
 	SBCS	R24, R14
 	SBC	ZR, ZR, R25
 
-	// Add 2 * p751 back but anded with the mask in R25
+	// If x + y - 2 * p751 < 0, R25 is 1 and 2 * p751 should be added
 	AND	R25, R15
 	AND	R25, R16
 	AND 	R25, R17
@@ -188,7 +188,7 @@ TEXT ·fp751SubReduced(SB), NOSPLIT, $0-24
 	SBCS	R19, R14
 	SBC	ZR, ZR, R15
 
-	// Add 2 * p751 back but anded with the mask in R15
+	// If x - y < 0, R15 is 1 and 2 * p751 should be added
 	LDP	·p751x2+0(SB), (R16, R17)
 	AND	R15, R16
 	AND	R15, R17
@@ -409,7 +409,7 @@ TEXT ·fp751X2SubLazy(SB), NOSPLIT, $0-24
 	SBCS	R19, R14
 	SBC	ZR, ZR, R15
 
-	// Add p751 back but anded with the mask in R15
+	// If x - y < 0, R15 is 1 and p751 should be added
 	MOVD	·p751+0(SB), R20
 	AND	R15, R20
 	LDP	·p751+40(SB), (R16, R17)
