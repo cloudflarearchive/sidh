@@ -1,4 +1,4 @@
-// +build amd64, !noasm
+// +build amd64,!noasm
 
 // Sets capabilities flags for x86 according to information received from
 // CPUID. It was written in accordance with
