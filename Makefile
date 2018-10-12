@@ -67,8 +67,8 @@ vendor: clean
 		--exclude=README.md     \
 		--exclude=Makefile      \
 		--exclude=build
-
 	find $(VENDOR_DIR) -type f -print0 -name "*.go" | xargs -0 sed -i 's/github\.com/github_com/g'
+	find $(VENDOR_DIR) -type f -print0 -name "*.go" | xargs -0 sed -i 's/github·com/github_com/g'
 
 bench:   $(addprefix bench-,   $(TARGETS))
 cover:   $(addprefix cover-,   $(TARGETS))
