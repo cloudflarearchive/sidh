@@ -43,11 +43,11 @@ copy-target-%:
 prep_targets: build_env $(addprefix copy-target-, $(TARGETS))
 
 install-%: prep_targets
-	GOPATH=$(GOPATH_LOCAL) $(GO) install $(OPTS) $(GOPATH_DIR)/$*
+	GOPATH=$(GOPATH_LOCAL) GOARCH=$(GOARCH) $(GO) install $(OPTS) $(GOPATH_DIR)/$*
 
 test-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) $(GO) vet $(GOPATH_DIR)/$*
-	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
+	GOPATH=$(GOPATH_LOCAL) GOARCH=$(GOARCH) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
 
 bench-%: prep_targets
 	GOMAXPROCS=1 GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$* $(BENCH_OPTS)
@@ -58,6 +58,7 @@ cover-%: prep_targets
 	cat coverage_$*.txt >> coverage.txt
 	rm coverage_$*.txt
 
+# This is a target used when vendoring to standard library
 vendor: clean
 	mkdir -p $(VENDOR_DIR)/github_com/cloudflare/sidh/
 	rsync -a . $(VENDOR_DIR)/github_com/cloudflare/sidh/ \
@@ -70,8 +71,17 @@ vendor: clean
 	# This swaps all imports with github.com to github_com, so that standard library doesn't
 	# try to access external libraries.
 	find $(VENDOR_DIR) -type f -iname "*.go" -print0  | xargs -0 sed -i 's/github\.com/github_com/g'
-	# Similar as above, but specific to assembly files. When referencing variable from assembly code
-	find $(VENDOR_DIR) -type f -iname "*.s" -print0 | xargs -0 sed -i 's/github·com/vendor∕github_com/g'
+
+# Target used when vendoring a package
+vendor-package: clean
+	mkdir -p $(VENDOR_DIR)/github.com/cloudflare/sidh/
+	rsync -a . $(VENDOR_DIR)/github.com/cloudflare/sidh/ \
+		--exclude=$(VENDOR_DIR) \
+		--exclude=.git          \
+		--exclude=.travis.yml   \
+		--exclude=README.md     \
+		--exclude=Makefile      \
+		--exclude=build
 
 bench:   $(addprefix bench-,   $(TARGETS))
 cover:   $(addprefix cover-,   $(TARGETS))

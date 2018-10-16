@@ -1,6 +1,9 @@
 package p751
 
-import . "github.com/cloudflare/sidh/internal/isogeny"
+import (
+	. "github.com/cloudflare/sidh/internal/isogeny"
+	cpu "github.com/cloudflare/sidh/internal/utils"
+)
 
 const (
 	// SIDH public key byte size
@@ -19,6 +22,17 @@ const (
 	strategySizeB = 238
 	// Number of 64-bit limbs used to store Fp element
 	NumWords = 12
+)
+
+// CPU Capabilities. Those flags are reffered by assembly code. According to
+// https://github.com/golang/go/issues/28230, variables reffered from the
+// assembly must be in the same package.
+// Those are variables not constants in order to facilitate testing.
+var (
+	// Signals support for MULX which is in BMI2
+	HasBMI2 = cpu.X86.HasBMI2
+	// Signals support for ADX and BMI2
+	HasADXandBMI2 = cpu.X86.HasBMI2 && cpu.X86.HasADX
 )
 
 // The x-coordinate of PA
