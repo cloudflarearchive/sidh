@@ -43,11 +43,11 @@ copy-target-%:
 prep_targets: build_env $(addprefix copy-target-, $(TARGETS))
 
 install-%: prep_targets
-	GOPATH=$(GOPATH_LOCAL) $(GO) install $(OPTS) $(GOPATH_DIR)/$*
+	GOPATH=$(GOPATH_LOCAL) GOARCH=$(GOARCH) $(GO) install $(OPTS) $(GOPATH_DIR)/$*
 
 test-%: prep_targets
 	GOPATH=$(GOPATH_LOCAL) $(GO) vet $(GOPATH_DIR)/$*
-	GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
+	GOPATH=$(GOPATH_LOCAL) GOARCH=$(GOARCH) $(GO) test $(OPTS) $(GOPATH_DIR)/$*
 
 bench-%: prep_targets
 	GOMAXPROCS=1 GOPATH=$(GOPATH_LOCAL) $(GO) test $(OPTS) $(GOPATH_DIR)/$* $(BENCH_OPTS)
@@ -70,8 +70,6 @@ vendor: clean
 	# This swaps all imports with github.com to github_com, so that standard library doesn't
 	# try to access external libraries.
 	find $(VENDOR_DIR) -type f -iname "*.go" -print0  | xargs -0 sed -i 's/github\.com/github_com/g'
-	# Similar as above, but specific to assembly files. When referencing variable from assembly code
-	find $(VENDOR_DIR) -type f -iname "*.s" -print0 | xargs -0 sed -i 's/github·com/vendor∕github_com/g'
 
 bench:   $(addprefix bench-,   $(TARGETS))
 cover:   $(addprefix cover-,   $(TARGETS))
