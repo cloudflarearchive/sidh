@@ -38,7 +38,7 @@ type SidhParams struct {
 	// The public key size, in bytes.
 	PublicKeySize int
 	// The shared secret size, in bytes.
-	SharedSecretSize uint
+	SharedSecretSize int
 	// 2- and 3-torsion group parameter definitions
 	A, B DomainParams
 	// Precomputed identity element in the Fp2 in Montgomery domain
@@ -47,9 +47,9 @@ type SidhParams struct {
 	HalfFp2 Fp2Element
 	// Length of SIKE secret message. Must be one of {24,32,40},
 	// depending on size of prime field used (see [SIKE], 1.4 and 5.1)
-	MsgLen uint
+	MsgLen int
 	// Length of SIKE ephemeral KEM key (see [SIKE], 1.4 and 5.1)
-	KemSize uint
+	KemSize int
 	// Access to field arithmetic
 	Op FieldOps
 }

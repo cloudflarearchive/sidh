@@ -59,7 +59,7 @@ func encrypt(skA *PrivateKey, pkA, pkB *PublicKey, ptext []byte) ([]byte, error)
 // or wrongly formated input was provided.
 func Encrypt(rng io.Reader, pub *PublicKey, ptext []byte) ([]byte, error) {
 	var params = pub.Params()
-	var ptextLen = uint(len(ptext))
+	var ptextLen = len(ptext)
 	// c1 must be security level + 64 bits (see [SIKE] 1.4 and 4.3.3)
 	if ptextLen != (params.KemSize + 8) {
 		return nil, errors.New("Unsupported message length")
