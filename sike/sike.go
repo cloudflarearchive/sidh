@@ -3,13 +3,12 @@
 package sike
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
-	"io"
-	// TODO: Use implementation from xcrypto, once PR below merged
-	// https://go-review.googlesource.com/c/crypto/+/111281/
 	. "github.com/cloudflare/sidh/sidh"
-	cshake "github.com/henrydcase/nobs/hash/sha3"
+	"io"
 )
 
 // Constants used for cSHAKE customization
@@ -19,11 +18,11 @@ var G = []byte{0x00, 0x00}
 var H = []byte{0x01, 0x00}
 var F = []byte{0x02, 0x00}
 
-// Generates cShake-256 sum
-func cshakeSum(out, in, S []byte) {
-	h := cshake.NewCShake256(nil, S)
-	h.Write(in)
-	h.Read(out)
+// Generates HMAC-SHA256 sum
+func HMAC(out, in, S []byte) {
+	h := hmac.New(sha256.New, in)
+	h.Write(S)
+	copy(out, h.Sum(nil))
 }
 
 func encrypt(skA *PrivateKey, pkA, pkB *PublicKey, ptext []byte) ([]byte, error) {
@@ -39,7 +38,7 @@ func encrypt(skA *PrivateKey, pkA, pkB *PublicKey, ptext []byte) ([]byte, error)
 		return nil, err
 	}
 
-	cshakeSum(n[:ptextLen], j, F)
+	HMAC(n[:ptextLen], j, F)
 	for i, _ := range ptext {
 		n[i] ^= ptext[i]
 	}
@@ -105,11 +104,10 @@ func Decrypt(prv *PrivateKey, ctext []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	cshakeSum(n[:c1_len], j, F)
+	HMAC(n[:c1_len], j, F)
 	for i, _ := range n[:c1_len] {
 		n[i] ^= ctext[pk_len+i]
 	}
-
 	return n[:c1_len], nil
 }
 
@@ -136,12 +134,12 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 		return nil, nil, err
 	}
 
-	h := cshake.NewCShake256(nil, G)
-	h.Write(ptext)
-	h.Write(pub.Export())
-	h.Read(r)
-
-	// cSHAKE256 implementation is byte oriented. Ensure bitlength is not bigger then to 2^e2-1
+	var hmac_key = make([]byte, len(ptext)+pub.Size())
+	copy(hmac_key, ptext)
+	copy(hmac_key[len(ptext):], pub.Export())
+	HMAC(r, hmac_key, G)
+	hmac_key = hmac_key[:]
+	// Ensure bitlength is not bigger then to 2^e2-1
 	r[len(r)-1] &= (1 << (params.A.SecretBitLen % 8)) - 1
 
 	// (c0 || c1) = Enc(pkA, ptext; r)
@@ -158,11 +156,9 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 	}
 
 	// K = H(ptext||(c0||c1))
-	h = cshake.NewCShake256(nil, H)
-	h.Write(ptext)
-	h.Write(ctext)
-	h.Read(secret)
-
+	copy(hmac_key, ptext)
+	copy(hmac_key[len(ptext):], ctext)
+	HMAC(secret, hmac_key, H)
 	return ctext, secret, nil
 }
 
@@ -183,12 +179,12 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 	}
 
 	// r' = G(m'||pub)
-	h := cshake.NewCShake256(nil, G)
-	h.Write(m)
-	h.Write(pub.Export())
-	h.Read(r)
-
-	// cSHAKE256 implementation is byte oriented: Ensure bitlength is not bigger than 2^e2-1
+	var hmac_key = make([]byte, len(m)+pub.Size())
+	copy(hmac_key, m)
+	copy(hmac_key[len(m):], pub.Export())
+	HMAC(r, hmac_key, G)
+	hmac_key = hmac_key[:]
+	// Ensure bitlength is not bigger than 2^e2-1
 	r[len(r)-1] &= (1 << (params.A.SecretBitLen % 8)) - 1
 
 	// Never fails
@@ -198,9 +194,8 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 	pkA := skA.GeneratePublicKey()
 	c0 := pkA.Export()
 
-	h = cshake.NewCShake256(nil, H)
 	if subtle.ConstantTimeCompare(c0, ctext[:len(c0)]) == 1 {
-		h.Write(m)
+		copy(hmac_key, m)
 	} else {
 		// S is chosen at random when generating a key and unknown to other party. It
 		// may seem weird, but it's correct. It is important that S is unpredictable
@@ -209,9 +204,9 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 		//
 		// See more details in "On the security of supersingular isogeny cryptosystems"
 		// (S. Galbraith, et al., 2016, ePrint #859).
-		h.Write(prv.S)
+		copy(hmac_key, prv.S)
 	}
-	h.Write(ctext)
-	h.Read(secret)
+	copy(hmac_key[len(m):], ctext)
+	HMAC(secret, hmac_key, H)
 	return secret, nil
 }

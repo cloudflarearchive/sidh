@@ -313,6 +313,7 @@ func testDecapsulation(pk, sk, ct, ssExpected []byte, id uint8) bool {
 }
 
 func testSIKE_KAT(t *testing.T, id uint8) {
+	t.Skip() // Skips this test as KATs are for cSHAKE
 	params := Params(id)
 	f, err := os.Open(tdata[id].KatFile)
 	if err != nil {
