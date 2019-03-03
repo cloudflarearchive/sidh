@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
+	"fmt"
 	. "github.com/cloudflare/sidh/sidh"
 	"io"
 )
@@ -23,6 +24,7 @@ func HMAC(out, in, S []byte) {
 	h := hmac.New(sha256.New, in)
 	h.Write(S)
 	copy(out, h.Sum(nil))
+	//	fmt.Printf("> %X\n", out)
 }
 
 func encrypt(skA *PrivateKey, pkA, pkB *PublicKey, ptext []byte) ([]byte, error) {
@@ -134,11 +136,10 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 		return nil, nil, err
 	}
 
-	var hmac_key = make([]byte, len(ptext)+pub.Size())
-	copy(hmac_key, ptext)
+	var hmac_key [378 + 24 + 24]byte //make([]byte, len(ptext)+pub.Size())
+	copy(hmac_key[:], ptext)
 	copy(hmac_key[len(ptext):], pub.Export())
-	HMAC(r, hmac_key, G)
-	hmac_key = hmac_key[:]
+	HMAC(r, hmac_key[:len(ptext)+pub.Size()], G)
 	// Ensure bitlength is not bigger then to 2^e2-1
 	r[len(r)-1] &= (1 << (params.A.SecretBitLen % 8)) - 1
 
@@ -156,9 +157,9 @@ func Encapsulate(rng io.Reader, pub *PublicKey) (ctext []byte, secret []byte, er
 	}
 
 	// K = H(ptext||(c0||c1))
-	copy(hmac_key, ptext)
+	copy(hmac_key[:], ptext)
 	copy(hmac_key[len(ptext):], ctext)
-	HMAC(secret, hmac_key, H)
+	HMAC(secret, hmac_key[:len(ptext)+len(ctext)], H)
 	return ctext, secret, nil
 }
 
@@ -179,11 +180,10 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 	}
 
 	// r' = G(m'||pub)
-	var hmac_key = make([]byte, len(m)+pub.Size())
-	copy(hmac_key, m)
+	var hmac_key [378 + 24 + 24]byte //make([]byte, len(m)+pub.Size())
+	copy(hmac_key[:], m)
 	copy(hmac_key[len(m):], pub.Export())
-	HMAC(r, hmac_key, G)
-	hmac_key = hmac_key[:]
+	HMAC(r, hmac_key[:len(m)+pub.Size()], G)
 	// Ensure bitlength is not bigger than 2^e2-1
 	r[len(r)-1] &= (1 << (params.A.SecretBitLen % 8)) - 1
 
@@ -195,7 +195,7 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 	c0 := pkA.Export()
 
 	if subtle.ConstantTimeCompare(c0, ctext[:len(c0)]) == 1 {
-		copy(hmac_key, m)
+		copy(hmac_key[:], m)
 	} else {
 		// S is chosen at random when generating a key and unknown to other party. It
 		// may seem weird, but it's correct. It is important that S is unpredictable
@@ -204,9 +204,9 @@ func Decapsulate(prv *PrivateKey, pub *PublicKey, ctext []byte) ([]byte, error) 
 		//
 		// See more details in "On the security of supersingular isogeny cryptosystems"
 		// (S. Galbraith, et al., 2016, ePrint #859).
-		copy(hmac_key, prv.S)
+		copy(hmac_key[:], prv.S)
 	}
 	copy(hmac_key[len(m):], ctext)
-	HMAC(secret, hmac_key, H)
+	HMAC(secret, hmac_key[:len(m)+len(ctext)], H)
 	return secret, nil
 }
