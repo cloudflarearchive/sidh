@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"errors"
-	"fmt"
 	. "github.com/cloudflare/sidh/sidh"
 	"io"
 )
