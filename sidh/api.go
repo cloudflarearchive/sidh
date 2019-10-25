@@ -169,7 +169,9 @@ func (prv *PrivateKey) Generate(rand io.Reader) error {
 	if prv.keyVariant == KeyVariant_SIKE && err == nil {
 		_, err = io.ReadFull(rand, prv.S)
 	}
-
+	if err != nil {
+		return err
+	}
 	// Private key generation takes advantage of the fact that keyspace for secret
 	// key is (0, 2^x - 1), for some possitivite value of 'x' (see SIKE, 1.3.8).
 	// It means that all bytes in the secret key, but the last one, can take any
